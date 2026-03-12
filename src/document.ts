@@ -3,11 +3,32 @@
  */
 
 import type { Emu } from "./types.ts";
-import type { Col, Row, SlideChild } from "./layout.ts";
-import type { SceneNode } from "./scene.ts";
+import type { CropRect, Fill, ImageFit } from "./style.ts";
+import type { SlideChild } from "./layout.ts";
+
+/** Slide background image properties. */
+export interface BackgroundImageProps {
+  readonly data: Uint8Array;
+  readonly contentType: string;
+  readonly description?: string;
+  readonly fit?: ImageFit;
+  readonly crop?: CropRect;
+  readonly alpha?: number;
+}
+
+/** A slide background. */
+export type Background =
+  | { readonly kind: "fill"; readonly fill: Fill }
+  | ({ readonly kind: "image" } & BackgroundImageProps);
+
+/** Slide-level props. */
+export interface SlideProps {
+  readonly background?: Background;
+}
 
 /** A slide containing layout roots and/or absolute scene nodes. */
 export interface Slide {
+  readonly props: SlideProps;
   readonly children: ReadonlyArray<SlideChild>;
 }
 
@@ -25,11 +46,31 @@ export interface Presentation {
   readonly slides: ReadonlyArray<Slide>;
 }
 
+/** Create a slide background from a fill. */
+export function backgroundFill(fill: Fill): Background {
+  return { kind: "fill", fill };
+}
+
+/** Create a slide background from an image. */
+export function backgroundImage(props: BackgroundImageProps): Background {
+  return { kind: "image", ...props };
+}
+
+function isSlideProps(value: SlideProps | SlideChild): value is SlideProps {
+  return typeof value === "object" && value !== null && !("kind" in value) &&
+    !("x" in value) && !("children" in value);
+}
+
 /** Create a slide. */
 export function slide(
-  ...children: ReadonlyArray<Row | Col | SceneNode>
+  first?: SlideProps | SlideChild,
+  ...rest: ReadonlyArray<SlideChild>
 ): Slide {
-  return { children };
+  if (first === undefined) return { props: {}, children: [] };
+  if (isSlideProps(first)) {
+    return { props: first, children: rest };
+  }
+  return { props: {}, children: [first, ...rest] };
 }
 
 /** Create a presentation from slides. */

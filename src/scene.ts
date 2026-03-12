@@ -76,6 +76,9 @@ export function sceneTextbox(
     fill: props.fill,
     line: props.line,
     verticalAlign: props.verticalAlign,
+    inset: props.inset,
+    fit: props.fit,
+    shadow: props.shadow,
   };
 }
 
@@ -96,6 +99,9 @@ export function sceneShape(
     fill: props.fill,
     line: props.line,
     verticalAlign: props.verticalAlign,
+    inset: props.inset,
+    fit: props.fit,
+    shadow: props.shadow,
   };
 }
 
@@ -160,6 +166,9 @@ export function placeLeaf(
         fill: leaf.fill,
         line: leaf.line,
         verticalAlign: leaf.verticalAlign,
+        inset: leaf.inset,
+        fit: leaf.fit,
+        shadow: leaf.shadow,
       };
     case "shape":
       return {
@@ -173,6 +182,9 @@ export function placeLeaf(
         fill: leaf.fill,
         line: leaf.line,
         verticalAlign: leaf.verticalAlign,
+        inset: leaf.inset,
+        fit: leaf.fit,
+        shadow: leaf.shadow,
       };
     case "image":
       return {

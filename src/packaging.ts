@@ -26,6 +26,7 @@ import {
   renderTableStyles,
   renderTheme,
   renderViewProps,
+  type SlideBackground,
   type SlideRef,
   type SlideShape,
 } from "./ooxml/mod.ts";
@@ -52,6 +53,7 @@ export interface HyperlinkResource {
 /** A slide definition for packaging. */
 export interface PackageSlide {
   readonly shapes: ReadonlyArray<SlideShape>;
+  readonly background?: SlideBackground;
   /** Images referenced by shapes on this slide. Map from rId to resource. */
   readonly images?: ReadonlyMap<string, ImageResource>;
   /** Hyperlinks referenced by shapes. Map from rId to resource. */
@@ -232,7 +234,7 @@ export function generatePptx(options: PackageOptions): Uint8Array {
     if (!slide) continue;
 
     files[`ppt/slides/slide${i + 1}.xml`] = encode(
-      renderSlide(slide.shapes),
+      renderSlide(slide.shapes, slide.background),
     );
 
     // Build per-slide relationships

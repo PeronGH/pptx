@@ -25,6 +25,8 @@ export {
   bulletChar,
   bulletNone,
   cellStyle,
+  gradientStop,
+  linearGradient,
   lineStyle,
   mergeBoxStyles,
   mergeCellStyles,
@@ -32,6 +34,7 @@ export {
   mergeTextStyles,
   noFill,
   paragraphStyle,
+  shadow,
   solidFill,
   textStyle,
 } from "./style.ts";
@@ -40,13 +43,19 @@ export type {
   BoxStyle,
   Bullet,
   CellStyle,
+  CropRect,
   CrossAlignment,
   Fill,
+  GradientStop,
+  ImageFit,
   Insets,
+  LineDash,
   LineStyle,
   MainAlignment,
   ParagraphStyle,
+  Shadow,
   Spacing,
+  TextFit,
   TextStyle,
   VerticalAlignment,
 } from "./style.ts";
@@ -64,8 +73,17 @@ export type {
   TextBox,
 } from "./nodes.ts";
 
-export { col, item, resolveSlideChildren, row } from "./layout.ts";
+export {
+  align,
+  col,
+  item,
+  resolveSlideChildren,
+  row,
+  stack,
+} from "./layout.ts";
 export type {
+  Align,
+  AlignAxis,
   Col,
   ContainerProps,
   LayoutItem,
@@ -73,6 +91,8 @@ export type {
   LayoutNode,
   Row,
   SlideChild,
+  Stack,
+  StackProps,
 } from "./layout.ts";
 
 export {
@@ -94,7 +114,19 @@ export type {
   SceneTextBox,
 } from "./scene.ts";
 
-export { presentation, slide } from "./document.ts";
-export type { Presentation, PresentationOptions, Slide } from "./document.ts";
+export {
+  backgroundFill,
+  backgroundImage,
+  presentation,
+  slide,
+} from "./document.ts";
+export type {
+  Background,
+  BackgroundImageProps,
+  Presentation,
+  PresentationOptions,
+  Slide,
+  SlideProps,
+} from "./document.ts";
 
 export { generate } from "./generate.ts";

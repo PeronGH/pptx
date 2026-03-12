@@ -3,7 +3,7 @@
  */
 
 import type { Emu } from "./types.ts";
-import type { BoxStyle, CellStyle } from "./style.ts";
+import type { BoxStyle, CellStyle, CropRect, ImageFit } from "./style.ts";
 import type { Paragraph, ParagraphContent } from "./text.ts";
 import { toParagraph } from "./text.ts";
 
@@ -37,6 +37,9 @@ export interface ImageProps {
   readonly data: Uint8Array;
   readonly contentType: string;
   readonly description?: string;
+  readonly fit?: ImageFit;
+  readonly crop?: CropRect;
+  readonly alpha?: number;
 }
 
 /** A positionless image leaf. */

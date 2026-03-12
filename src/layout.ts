@@ -6,7 +6,7 @@ import type { Emu } from "./types.ts";
 import type { CrossAlignment, Insets, MainAlignment } from "./style.ts";
 import type { LeafNode } from "./nodes.ts";
 import type { Frame, SceneNode } from "./scene.ts";
-import { placeLeaf } from "./scene.ts";
+import { isSceneNode, placeLeaf } from "./scene.ts";
 
 /** Layout metadata applied to a child within a row or column. */
 export interface LayoutItemProps {
@@ -25,6 +25,14 @@ export interface ContainerProps {
   readonly justify?: MainAlignment;
   readonly align?: CrossAlignment;
 }
+
+/** Props for an overlay stack container. */
+export interface StackProps {
+  readonly padding?: Emu | Insets;
+}
+
+/** Alignment options within an align wrapper. */
+export type AlignAxis = "start" | "center" | "end";
 
 /** A layout item wrapping a child node. */
 export interface LayoutItem {
@@ -50,14 +58,33 @@ export interface Col extends ContainerProps {
   readonly children: ReadonlyArray<LayoutItem>;
 }
 
+/** An overlay stack container. */
+export interface Stack extends StackProps {
+  readonly kind: "stack";
+  readonly children: ReadonlyArray<LayoutNode>;
+}
+
+/** Align a child within its parent frame. */
+export interface Align {
+  readonly kind: "align";
+  readonly child: LayoutNode;
+  readonly x: AlignAxis;
+  readonly y: AlignAxis;
+  readonly padding?: Emu | Insets;
+  readonly w?: Emu;
+  readonly h?: Emu;
+  readonly aspectRatio?: number;
+}
+
 /** Any layout-resolvable node. */
-export type LayoutNode = LeafNode | Row | Col;
+export type LayoutNode = LeafNode | Row | Col | Stack | Align;
 
 /** A top-level slide child. */
-export type SlideChild = SceneNode | Row | Col;
+export type SlideChild = SceneNode | Row | Col | Stack | Align;
 
 type RowChild = LayoutItem | LayoutNode;
 type ColChild = LayoutItem | LayoutNode;
+type StackChild = LayoutNode;
 
 function isContainerProps(
   value: ContainerProps | RowChild,
@@ -138,6 +165,37 @@ export function col(
   };
 }
 
+/** Create an overlay stack container. */
+export function stack(
+  first?: StackProps | StackChild,
+  ...rest: ReadonlyArray<StackChild>
+): Stack {
+  if (first === undefined) return { kind: "stack", children: [] };
+  if (
+    typeof first === "object" &&
+    first !== null &&
+    !("kind" in first)
+  ) {
+    return {
+      kind: "stack",
+      padding: first.padding,
+      children: rest,
+    };
+  }
+  return {
+    kind: "stack",
+    children: [first, ...rest],
+  };
+}
+
+/** Align a child within its parent frame. */
+export function align(
+  props: Omit<Align, "kind" | "child">,
+  child: LayoutNode,
+): Align {
+  return { kind: "align", child, ...props };
+}
+
 interface ResolvedInsets {
   readonly top: Emu;
   readonly right: Emu;
@@ -182,7 +240,7 @@ function resolveSlideChild(
   child: SlideChild,
   frame: Frame,
 ): ReadonlyArray<SceneNode> {
-  if ("x" in child && "y" in child && "w" in child && "h" in child) {
+  if (isSceneNode(child)) {
     return [child];
   }
   return resolveLayoutNode(child, frame);
@@ -210,6 +268,71 @@ function resolveLayoutNode(
       return resolveAxisContainer("row", node, frame);
     case "col":
       return resolveAxisContainer("col", node, frame);
+    case "stack":
+      return resolveStack(node, frame);
+    case "align":
+      return resolveAlign(node, frame);
+  }
+}
+
+function insetFrame(frame: Frame, padding: Emu | Insets | undefined): Frame {
+  const insets = toInsets(padding);
+  return {
+    x: asEmu(frame.x + insets.left),
+    y: asEmu(frame.y + insets.top),
+    w: asEmu(Math.max(0, frame.w - insets.left - insets.right)),
+    h: asEmu(Math.max(0, frame.h - insets.top - insets.bottom)),
+  };
+}
+
+function resolveStack(
+  stackNode: Stack,
+  frame: Frame,
+): ReadonlyArray<SceneNode> {
+  const inner = insetFrame(frame, stackNode.padding);
+  return stackNode.children.flatMap((child) => resolveLayoutNode(child, inner));
+}
+
+function resolveAlign(node: Align, frame: Frame): ReadonlyArray<SceneNode> {
+  const inner = insetFrame(frame, node.padding);
+  let width = node.w;
+  let height = node.h;
+
+  if (
+    width === undefined && height !== undefined &&
+    node.aspectRatio !== undefined
+  ) {
+    width = asEmu(height * node.aspectRatio);
+  }
+  if (
+    height === undefined && width !== undefined &&
+    node.aspectRatio !== undefined
+  ) {
+    height = asEmu(width / node.aspectRatio);
+  }
+
+  const rect: Frame = {
+    x: alignAxis(inner.x, inner.w, width ?? inner.w, node.x),
+    y: alignAxis(inner.y, inner.h, height ?? inner.h, node.y),
+    w: width ?? inner.w,
+    h: height ?? inner.h,
+  };
+  return resolveLayoutNode(node.child, rect);
+}
+
+function alignAxis(
+  start: Emu,
+  available: Emu,
+  size: Emu,
+  align: AlignAxis,
+): Emu {
+  switch (align) {
+    case "start":
+      return start;
+    case "center":
+      return asEmu(start + (available - size) / 2);
+    case "end":
+      return asEmu(start + available - size);
   }
 }
 

@@ -9,11 +9,31 @@
  *
  * @example
  * ```ts
- * import { generate, presentation, slide, scene, p, bold, st } from "@pixel/pptx";
+ * import {
+ *   backgroundFill,
+ *   bold,
+ *   generate,
+ *   linearGradient,
+ *   gradientStop,
+ *   p,
+ *   presentation,
+ *   scene,
+ *   slide,
+ *   st,
+ * } from "@pixel/pptx";
  *
  * const pptx = generate(presentation(
  *   { title: "My Presentation" },
  *   slide(
+ *     {
+ *       background: backgroundFill(
+ *         linearGradient(
+ *           90,
+ *           gradientStop(st.pct(0), st.hex("FFFFFF")),
+ *           gradientStop(st.pct(100), st.hex("EAF2FF")),
+ *         ),
+ *       ),
+ *     },
  *     scene.textbox({ x: st.in(1), y: st.in(1), w: st.in(8), h: st.in(1) },
  *       p(bold("Hello"), ", World!"),
  *     ),
@@ -27,6 +47,9 @@
 
 // Builder functions
 export {
+  align,
+  backgroundFill,
+  backgroundImage,
   bold,
   boldItalic,
   boxStyle,
@@ -36,9 +59,11 @@ export {
   cellStyle,
   col,
   generate,
+  gradientStop,
   image,
   italic,
   item,
+  linearGradient,
   lineStyle,
   link,
   mergeBoxStyles,
@@ -56,9 +81,11 @@ export {
   sceneShape,
   sceneTable,
   sceneTextbox,
+  shadow,
   shape,
   slide,
   solidFill,
+  stack,
   table,
   td,
   text,
@@ -73,22 +100,30 @@ export { st } from "./src/st.ts";
 
 // Types
 export type {
+  Align,
+  AlignAxis,
   Alignment,
+  Background,
+  BackgroundImageProps,
   BoxStyle,
   Bullet,
   CellStyle,
   Col,
   ContainerProps,
+  CropRect,
   CrossAlignment,
   Fill,
   Frame,
+  GradientStop,
   Image,
+  ImageFit,
   ImageProps,
   Insets,
   LayoutItem,
   LayoutItemProps,
   LayoutNode,
   LeafNode,
+  LineDash,
   LineStyle,
   MainAlignment,
   Paragraph,
@@ -104,16 +139,21 @@ export type {
   SceneTable,
   SceneTableProps,
   SceneTextBox,
+  Shadow,
   Shape,
   Slide,
   SlideChild,
+  SlideProps,
   Spacing,
+  Stack,
+  StackProps,
   Table,
   TableCell,
   TableProps,
   TableRow,
   TextBox,
   TextContent,
+  TextFit,
   TextRun,
   TextStyle,
   VerticalAlignment,

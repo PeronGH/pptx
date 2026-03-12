@@ -4,23 +4,37 @@
 
 import { st } from "./st.ts";
 import type { Emu } from "./types.ts";
-import type { Alignment, Fill, LineStyle, VerticalAlignment } from "./style.ts";
+import type {
+  Alignment,
+  Fill,
+  Insets,
+  LineStyle,
+  Shadow,
+  TextFit,
+  VerticalAlignment,
+} from "./style.ts";
 import type { Paragraph, TextRun } from "./text.ts";
-import type { Presentation } from "./document.ts";
+import type { Background, Presentation } from "./document.ts";
+import { resolveImageFit } from "./image_fit.ts";
 import { resolveSlideChildren } from "./layout.ts";
-import type { SceneNode } from "./scene.ts";
+import type { Frame, SceneNode } from "./scene.ts";
 import type { TableCell, TableRow } from "./nodes.ts";
 import type { HyperlinkResource, ImageResource } from "./packaging.ts";
 import { generatePptx } from "./packaging.ts";
 import { RelationshipIdGenerator } from "./ooxml/relationships.ts";
 import type {
+  CropRect as InternalCropRect,
   Fill as InternalFill,
+  Insets as InternalInsets,
   LineProperties as InternalLine,
   PictureShape,
+  Shadow as InternalShadow,
+  SlideBackground,
   SlideShape,
   TableCell as InternalTableCell,
   TableRow as InternalTableRow,
   TableShape as InternalTableShape,
+  TextFit as InternalTextFit,
   TextParagraph as InternalParagraph,
   TextRun as InternalRun,
   VerticalAlignment as InternalVAlign,
@@ -58,6 +72,12 @@ function toInternalFill(fill: Fill): InternalFill {
   switch (fill.kind) {
     case "solid":
       return { kind: "solid", color: fill.color, alpha: fill.alpha };
+    case "linear-gradient":
+      return {
+        kind: "linear-gradient",
+        angle: fill.angle,
+        stops: fill.stops,
+      };
     case "none":
       return { kind: "none" };
   }
@@ -67,7 +87,42 @@ function toInternalLine(line: LineStyle): InternalLine {
   return {
     width: line.width,
     fill: line.fill ? toInternalFill(line.fill) : undefined,
+    dash: line.dash,
   };
+}
+
+function toInternalInsets(
+  inset: Emu | Insets | undefined,
+): InternalInsets | undefined {
+  if (inset === undefined) return undefined;
+  if (typeof inset === "number") {
+    return { top: inset, right: inset, bottom: inset, left: inset };
+  }
+  return {
+    top: inset.top,
+    right: inset.right,
+    bottom: inset.bottom,
+    left: inset.left,
+  };
+}
+
+function toInternalShadow(
+  shadow: Shadow | undefined,
+): InternalShadow | undefined {
+  if (!shadow) return undefined;
+  return {
+    color: shadow.color,
+    blur: shadow.blur,
+    distance: shadow.distance,
+    angle: shadow.angle,
+    alpha: shadow.alpha,
+  };
+}
+
+function toInternalTextFit(
+  fit: TextFit | undefined,
+): InternalTextFit | undefined {
+  return fit;
 }
 
 function toInternalRun(run: TextRun, ctx: SlideContext): InternalRun {
@@ -112,6 +167,11 @@ function toInternalCell(
       toInternalParagraph(paragraph, ctx)
     ),
     fill: cell.fill ? toInternalFill(cell.fill) : undefined,
+    line: cell.line ? toInternalLine(cell.line) : undefined,
+    padding: toInternalInsets(cell.padding),
+    verticalAlignment: cell.verticalAlign
+      ? VALIGN_MAP[cell.verticalAlign]
+      : undefined,
   };
 }
 
@@ -145,6 +205,9 @@ function toInternalShape(
         verticalAlignment: node.verticalAlign
           ? VALIGN_MAP[node.verticalAlign]
           : undefined,
+        inset: toInternalInsets(node.inset),
+        fit: toInternalTextFit(node.fit),
+        shadow: toInternalShadow(node.shadow),
       };
     case "shape":
       return {
@@ -162,6 +225,9 @@ function toInternalShape(
         verticalAlignment: node.verticalAlign
           ? VALIGN_MAP[node.verticalAlign]
           : undefined,
+        inset: toInternalInsets(node.inset),
+        fit: toInternalTextFit(node.fit),
+        shadow: toInternalShadow(node.shadow),
       };
     case "image": {
       const rId = ctx.relGen.next();
@@ -170,14 +236,23 @@ function toInternalShape(
         extension: mimeToExtension(node.contentType),
         contentType: node.contentType,
       });
+      const resolved = resolveImageFit(
+        { x: node.x, y: node.y, w: node.w, h: node.h },
+        node.data,
+        node.contentType,
+        node.fit,
+        node.crop,
+      );
       return {
         kind: "picture",
-        x: node.x,
-        y: node.y,
-        cx: node.w,
-        cy: node.h,
+        x: resolved.frame.x,
+        y: resolved.frame.y,
+        cx: resolved.frame.w,
+        cy: resolved.frame.h,
         rId,
         description: node.description,
+        crop: resolved.crop as InternalCropRect | undefined,
+        alpha: node.alpha,
       } satisfies PictureShape;
     }
     case "table":
@@ -191,6 +266,45 @@ function toInternalShape(
         rows: node.rows.map((row) => toInternalTableRow(row, ctx)),
       } satisfies InternalTableShape;
   }
+}
+
+function backgroundToFill(
+  background: Background | undefined,
+): SlideBackground | undefined {
+  if (!background || background.kind !== "fill") return undefined;
+  return { fill: toInternalFill(background.fill) };
+}
+
+function backgroundToPicture(
+  background: Background | undefined,
+  slideFrame: Frame,
+  ctx: SlideContext,
+): PictureShape | undefined {
+  if (!background || background.kind !== "image") return undefined;
+  const rId = ctx.relGen.next();
+  ctx.images.set(rId, {
+    data: background.data,
+    extension: mimeToExtension(background.contentType),
+    contentType: background.contentType,
+  });
+  const resolved = resolveImageFit(
+    slideFrame,
+    background.data,
+    background.contentType,
+    background.fit,
+    background.crop,
+  );
+  return {
+    kind: "picture",
+    x: resolved.frame.x,
+    y: resolved.frame.y,
+    cx: resolved.frame.w,
+    cy: resolved.frame.h,
+    rId,
+    description: background.description,
+    crop: resolved.crop as InternalCropRect | undefined,
+    alpha: background.alpha,
+  };
 }
 
 function mimeToExtension(mime: string): string {
@@ -226,8 +340,17 @@ export function generate(presentation: Presentation): Uint8Array {
   const slides = presentation.slides.map((slide) => {
     const sceneNodes = resolveSlideChildren(slide.children, slideFrame);
     const ctx = createSlideContext();
+    const backgroundPicture = backgroundToPicture(
+      slide.props.background,
+      slideFrame,
+      ctx,
+    );
     return {
-      shapes: sceneNodes.map((node) => toInternalShape(node, ctx)),
+      shapes: [
+        ...(backgroundPicture ? [backgroundPicture] : []),
+        ...sceneNodes.map((node) => toInternalShape(node, ctx)),
+      ],
+      background: backgroundToFill(slide.props.background),
       images: ctx.images.size > 0 ? ctx.images : undefined,
       hyperlinks: ctx.hyperlinks.size > 0 ? ctx.hyperlinks : undefined,
     };

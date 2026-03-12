@@ -5,8 +5,8 @@ absolute-positioned scene nodes and then to OOXML.
 
 The public surface is split into:
 
-- A **DSL layer** for composition: `row()`, `col()`, `item()`, `textbox()`,
-  `shape()`, `image()`, `table()`
+- A **DSL layer** for composition: `row()`, `col()`, `stack()`, `align()`,
+  `item()`, `textbox()`, `shape()`, `image()`, `table()`
 - A **scene escape hatch** for precise placement: `scene.textbox()`,
   `scene.shape()`, `scene.image()`, `scene.table()`
 - A single `generate()` step that writes a valid PPTX package
@@ -34,11 +34,14 @@ import {
 
 ```ts
 import {
+  backgroundFill,
   bold,
   boxStyle,
   generate,
+  gradientStop,
   image,
   item,
+  linearGradient,
   p,
   presentation,
   row,
@@ -55,6 +58,15 @@ import {
 const deck = presentation(
   { title: "Quarterly Review" },
   slide(
+    {
+      background: backgroundFill(
+        linearGradient(
+          90,
+          gradientStop(st.pct(0), st.hex("FFF8F1")),
+          gradientStop(st.pct(100), st.hex("F2F6FB")),
+        ),
+      ),
+    },
     scene.shape(
       "rect",
       {
@@ -106,16 +118,18 @@ Deno.writeFileSync("report.pptx", generate(deck));
 | Function                            | Description                                         |
 | ----------------------------------- | --------------------------------------------------- |
 | `presentation(options?, ...slides)` | Create a presentation                               |
-| `slide(...children)`                | Create a slide from layout roots and/or scene nodes |
+| `slide(props?, ...children)`        | Create a slide from layout roots and/or scene nodes |
 | `generate(presentation)`            | Generate PPTX as `Uint8Array`                       |
 
 ### Layout DSL
 
-| Function                   | Description                                                 |
-| -------------------------- | ----------------------------------------------------------- |
-| `row(props?, ...children)` | Horizontal flex-like container                              |
-| `col(props?, ...children)` | Vertical flex-like container                                |
-| `item(props?, child)`      | Child layout wrapper for `grow`, `basis`, `alignSelf`, etc. |
+| Function                     | Description                                                 |
+| ---------------------------- | ----------------------------------------------------------- |
+| `row(props?, ...children)`   | Horizontal flex-like container                              |
+| `col(props?, ...children)`   | Vertical flex-like container                                |
+| `stack(props?, ...children)` | Overlay container                                           |
+| `align(props, child)`        | Align a child within its parent frame                       |
+| `item(props?, child)`        | Child layout wrapper for `grow`, `basis`, `alignSelf`, etc. |
 
 Container props:
 
@@ -133,25 +147,49 @@ Item props:
 - `alignSelf?: "start" | "center" | "end" | "stretch"`
 - `aspectRatio?: number`
 
+Stack props:
+
+- `padding?: Emu | { top?, right?, bottom?, left? }`
+
+Align props:
+
+- `x: "start" | "center" | "end"`
+- `y: "start" | "center" | "end"`
+- `padding?: Emu | { top?, right?, bottom?, left? }`
+- `w?: Emu`
+- `h?: Emu`
+- `aspectRatio?: number`
+
+### Slide backgrounds
+
+| Function                 | Description                    |
+| ------------------------ | ------------------------------ |
+| `backgroundFill(fill)`   | Slide background from a fill   |
+| `backgroundImage(props)` | Slide background from an image |
+
+`slide()` accepts:
+
+- `background?: Background`
+
 ### Positionless leaves
 
-| Function                                     | Description                    |
-| -------------------------------------------- | ------------------------------ |
-| `textbox(style?, ...paragraphs)`             | Positionless text box leaf     |
-| `shape(preset, style?, ...paragraphs)`       | Positionless preset shape leaf |
-| `image({ data, contentType, description? })` | Positionless image leaf        |
-| `table({ cols }, ...rows)`                   | Positionless table leaf        |
-| `tr(height, ...cells)`                       | Table row                      |
-| `td(style?, ...paragraphs)`                  | Table cell                     |
+| Function                                                          | Description                    |
+| ----------------------------------------------------------------- | ------------------------------ |
+| `textbox(style?, ...paragraphs)`                                  | Positionless text box leaf     |
+| `shape(preset, style?, ...paragraphs)`                            | Positionless preset shape leaf |
+| `image({ data, contentType, description?, fit?, crop?, alpha? })` | Positionless image leaf        |
+| `table({ cols }, ...rows)`                                        | Positionless table leaf        |
+| `tr(height, ...cells)`                                            | Table row                      |
+| `td(style?, ...paragraphs)`                                       | Table cell                     |
 
 ### Scene escape hatch
 
-| Function                                                       | Description       |
-| -------------------------------------------------------------- | ----------------- |
-| `scene.textbox({ x, y, w, h, ...style }, ...paragraphs)`       | Absolute text box |
-| `scene.shape(preset, { x, y, w, h, ...style }, ...paragraphs)` | Absolute shape    |
-| `scene.image({ x, y, w, h, data, contentType, description? })` | Absolute image    |
-| `scene.table({ x, y, w, h, cols }, ...rows)`                   | Absolute table    |
+| Function                                                                            | Description       |
+| ----------------------------------------------------------------------------------- | ----------------- |
+| `scene.textbox({ x, y, w, h, ...style }, ...paragraphs)`                            | Absolute text box |
+| `scene.shape(preset, { x, y, w, h, ...style }, ...paragraphs)`                      | Absolute shape    |
+| `scene.image({ x, y, w, h, data, contentType, description?, fit?, crop?, alpha? })` | Absolute image    |
+| `scene.table({ x, y, w, h, cols }, ...rows)`                                        | Absolute table    |
 
 Use `scene.*` when you need exact placement or when the layout DSL is not the
 right abstraction for a slide.
@@ -184,11 +222,20 @@ right abstraction for a slide.
 Supporting style/value helpers:
 
 - `solidFill(color, alpha?)`
+- `linearGradient(angle, ...stops)`
+- `gradientStop(pos, color, alpha?)`
 - `noFill()`
-- `lineStyle({ width?, fill? })`
+- `lineStyle({ width?, fill?, dash? })`
+- `shadow({ color, blur, distance, angle, alpha? })`
 - `bulletChar(char)`
 - `bulletAutoNum(type)`
 - `bulletNone()`
+
+Selected styling fields:
+
+- `BoxStyle`: `fill`, `line`, `verticalAlign`, `inset`, `fit`, `shadow`
+- `CellStyle`: `fill`, `line`, `padding`, `verticalAlign`
+- `ImageProps`: `fit`, `crop`, `alpha`
 
 ### Units
 
@@ -219,22 +266,23 @@ These are the same function implementations used by `st.*`, not a second API.
 | Positionless DSL leaves                       | ✓      |
 | Row/column/item layout DSL                    | ✓      |
 | Typed scene escape hatch                      | ✓      |
+| Slide backgrounds                             | ✓      |
 | Text boxes with rich text                     | ✓      |
 | Bold, italic, underline                       | ✓      |
 | Font size, color, family                      | ✓      |
 | Paragraph alignment, levels, bullets, spacing | ✓      |
+| Text insets and fit modes                     | ✓      |
 | Preset shapes                                 | ✓      |
 | Shape/textbox fill and line styling           | ✓      |
+| Linear gradients                              | ✓      |
+| Shadow effects                                | ✓      |
 | Vertical text alignment                       | ✓      |
 | Embedded images                               | ✓      |
-| Tables with cell fill styling                 | ✓      |
+| Image fit/crop modes                          | ✓      |
+| Tables with cell fill/border/padding styling  | ✓      |
 | Hyperlinks                                    | ✓      |
 | Custom slide dimensions                       | ✓      |
 | Multiple slides                               | ✓      |
-| Slide backgrounds                             | ✗      |
-| Explicit image fit/crop modes                 | ✗      |
-| Explicit text fit modes                       | ✗      |
-| Gradients/effects                             | ✗      |
 | Charts                                        | ✗      |
 | Animations/transitions                        | ✗      |
 | Slide masters/layouts                         | ✗      |

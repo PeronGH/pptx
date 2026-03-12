@@ -8,47 +8,82 @@
  */
 
 import { el, renderXmlDocument, type XmlElement } from "../xml.ts";
-import type { Emu, HexColor, HundredthPoint } from "../types.ts";
+import type { Emu, HexColor, HundredthPoint, Percentage } from "../types.ts";
 import { NS_A, NS_P, NS_R } from "./namespaces.ts";
 
-// ---------------------------------------------------------------------------
-// Fill and line types. ECMA-376 §20.1.8 (fill), §20.1.2.2.24 (a:ln).
-// ---------------------------------------------------------------------------
-
-/** Solid color fill. ECMA-376 §20.1.8.54 (a:solidFill). */
+/** Solid color fill. */
 export interface SolidFill {
   readonly kind: "solid";
   readonly color: HexColor;
-  /** Transparency in 1/1000ths of a percent (0 = opaque, 100000 = invisible). */
   readonly alpha?: number;
 }
 
-/** No fill. ECMA-376 §20.1.8.44 (a:noFill). */
+/** Linear gradient stop. */
+export interface GradientStop {
+  readonly pos: Percentage;
+  readonly color: HexColor;
+  readonly alpha?: number;
+}
+
+/** Linear gradient fill. */
+export interface LinearGradientFill {
+  readonly kind: "linear-gradient";
+  readonly angle: number;
+  readonly stops: ReadonlyArray<GradientStop>;
+}
+
+/** No fill. */
 export interface NoFill {
   readonly kind: "none";
 }
 
-/** Fill specification for shapes. */
-export type Fill = SolidFill | NoFill;
+/** Fill specification. */
+export type Fill = SolidFill | LinearGradientFill | NoFill;
 
-/** Line (outline) properties. ECMA-376 §20.1.2.2.24 (a:ln). */
+/** Supported line dash styles. */
+export type LineDash = "solid" | "dash" | "dot" | "dash-dot";
+
+/** Line properties. */
 export interface LineProperties {
-  /** Line width in EMUs. ECMA-376 §20.1.10.35 (ST_LineWidth). */
   readonly width?: Emu;
   readonly fill?: Fill;
+  readonly dash?: LineDash;
 }
 
-// ---------------------------------------------------------------------------
-// Text types. ECMA-376 §21.1.2.
-// ---------------------------------------------------------------------------
+/** Insets for text bodies and table cells. */
+export interface Insets {
+  readonly top?: Emu;
+  readonly right?: Emu;
+  readonly bottom?: Emu;
+  readonly left?: Emu;
+}
 
-/** A hyperlink on a text run. ECMA-376 §21.1.2.3.5 (a:hlinkClick). */
+/** Supported text fit modes. */
+export type TextFit = "none" | "shrink-text" | "resize-shape";
+
+/** Simple outer shadow effect. */
+export interface Shadow {
+  readonly color: HexColor;
+  readonly blur: Emu;
+  readonly distance: Emu;
+  readonly angle: number;
+  readonly alpha?: number;
+}
+
+/** Crop percentages relative to the image source. */
+export interface CropRect {
+  readonly top?: Percentage;
+  readonly right?: Percentage;
+  readonly bottom?: Percentage;
+  readonly left?: Percentage;
+}
+
+/** Hyperlink relationship info. */
 export interface HyperlinkInfo {
-  /** Relationship ID referencing the hyperlink target. */
   readonly rId: string;
 }
 
-/** A text run within a paragraph. ECMA-376 §21.1.2.3.8 (a:r). */
+/** A text run. */
 export interface TextRun {
   readonly text: string;
   readonly bold?: boolean;
@@ -60,34 +95,33 @@ export interface TextRun {
   readonly hyperlink?: HyperlinkInfo;
 }
 
-/** Bullet specification for a paragraph. */
+/** Bullet character. */
 export interface BulletChar {
   readonly kind: "char";
   readonly char: string;
 }
 
-/** Auto-numbered bullet. ECMA-376 §21.1.2.4.1 (a:buAutoNum). */
+/** Auto-numbered bullet. */
 export interface BulletAutoNum {
   readonly kind: "autonum";
-  /** Numbering type, e.g. "arabicPeriod", "romanUcPeriod". */
   readonly type: string;
 }
 
-/** No bullets. ECMA-376 §21.1.2.4.4 (a:buNone). */
+/** No bullets. */
 export interface BulletNone {
   readonly kind: "none";
 }
 
-/** Bullet type union. */
+/** Bullet union. */
 export type Bullet = BulletChar | BulletAutoNum | BulletNone;
 
-/** Paragraph spacing in EMUs. ECMA-376 §21.1.2.2.10 (a:spcBef/a:spcAft). */
+/** Paragraph spacing in EMUs. */
 export interface ParagraphSpacing {
   readonly before?: Emu;
   readonly after?: Emu;
 }
 
-/** A text paragraph containing runs. ECMA-376 §21.1.2.2.6 (a:p). */
+/** A text paragraph. */
 export interface TextParagraph {
   readonly runs: ReadonlyArray<TextRun>;
   readonly level?: number;
@@ -96,14 +130,10 @@ export interface TextParagraph {
   readonly spacing?: ParagraphSpacing;
 }
 
-/** Vertical alignment for text body. ECMA-376 §21.1.2.1.1 (a:bodyPr anchor). */
+/** Vertical alignment for text bodies. */
 export type VerticalAlignment = "t" | "ctr" | "b";
 
-// ---------------------------------------------------------------------------
-// Shape types.
-// ---------------------------------------------------------------------------
-
-/** A text box shape. ECMA-376 §19.3.1.43 (sp). */
+/** Shape-backed text box. */
 export interface TextBoxShape {
   readonly kind: "textbox";
   readonly x: Emu;
@@ -114,9 +144,12 @@ export interface TextBoxShape {
   readonly fill?: Fill;
   readonly line?: LineProperties;
   readonly verticalAlignment?: VerticalAlignment;
+  readonly inset?: Insets;
+  readonly fit?: TextFit;
+  readonly shadow?: Shadow;
 }
 
-/** A preset geometry shape. ECMA-376 §20.1.9.18 (a:prstGeom). */
+/** Preset shape. */
 export interface PresetShape {
   readonly kind: "preset";
   readonly x: Emu;
@@ -128,21 +161,40 @@ export interface PresetShape {
   readonly fill?: Fill;
   readonly line?: LineProperties;
   readonly verticalAlignment?: VerticalAlignment;
+  readonly inset?: Insets;
+  readonly fit?: TextFit;
+  readonly shadow?: Shadow;
 }
 
-/** A picture shape. ECMA-376 §19.3.1.37 (p:pic). */
+/** Picture shape. */
 export interface PictureShape {
   readonly kind: "picture";
   readonly x: Emu;
   readonly y: Emu;
   readonly cx: Emu;
   readonly cy: Emu;
-  /** Relationship ID for the embedded image. */
   readonly rId: string;
   readonly description?: string;
+  readonly crop?: CropRect;
+  readonly alpha?: number;
 }
 
-/** A table shape. ECMA-376 §19.3.1.22 (p:graphicFrame). */
+/** A table cell. */
+export interface TableCell {
+  readonly paragraphs: ReadonlyArray<TextParagraph>;
+  readonly fill?: Fill;
+  readonly line?: LineProperties;
+  readonly padding?: Insets;
+  readonly verticalAlignment?: VerticalAlignment;
+}
+
+/** A table row. */
+export interface TableRow {
+  readonly height: Emu;
+  readonly cells: ReadonlyArray<TableCell>;
+}
+
+/** Table shape. */
 export interface TableShape {
   readonly kind: "table";
   readonly x: Emu;
@@ -153,16 +205,9 @@ export interface TableShape {
   readonly rows: ReadonlyArray<TableRow>;
 }
 
-/** A table row. ECMA-376 §21.1.3.16 (a:tr). */
-export interface TableRow {
-  readonly height: Emu;
-  readonly cells: ReadonlyArray<TableCell>;
-}
-
-/** A table cell. ECMA-376 §21.1.3.15 (a:tc). */
-export interface TableCell {
-  readonly paragraphs: ReadonlyArray<TextParagraph>;
-  readonly fill?: Fill;
+/** Slide background. */
+export interface SlideBackground {
+  readonly fill: Fill;
 }
 
 /** Union of all shape types on a slide. */
@@ -172,12 +217,11 @@ export type SlideShape =
   | PictureShape
   | TableShape;
 
-// ---------------------------------------------------------------------------
-// Rendering.
-// ---------------------------------------------------------------------------
-
-/** Generate a slide XML part. ECMA-376 §13.3.8. */
-export function renderSlide(shapes: ReadonlyArray<SlideShape>): string {
+/** Generate a slide XML part. */
+export function renderSlide(
+  shapes: ReadonlyArray<SlideShape>,
+  background?: SlideBackground,
+): string {
   let nextId = 2;
   const shapeElements: XmlElement[] = shapes.map((shape) => {
     const id = nextId++;
@@ -193,6 +237,28 @@ export function renderSlide(shapes: ReadonlyArray<SlideShape>): string {
     }
   });
 
+  const cSldChildren: XmlElement[] = [];
+  if (background) {
+    cSldChildren.push(
+      el("p:bg", {}, el("p:bgPr", {}, renderFill(background.fill))),
+    );
+  }
+  cSldChildren.push(
+    el(
+      "p:spTree",
+      {},
+      el(
+        "p:nvGrpSpPr",
+        {},
+        el("p:cNvPr", { id: "1", name: "" }),
+        el("p:cNvGrpSpPr", {}),
+        el("p:nvPr", {}),
+      ),
+      el("p:grpSpPr", {}),
+      ...shapeElements,
+    ),
+  );
+
   const root = el(
     "p:sld",
     {
@@ -200,53 +266,70 @@ export function renderSlide(shapes: ReadonlyArray<SlideShape>): string {
       "xmlns:p": NS_P,
       "xmlns:r": NS_R,
     },
-    el(
-      "p:cSld",
-      {},
-      el(
-        "p:spTree",
-        {},
-        el(
-          "p:nvGrpSpPr",
-          {},
-          el("p:cNvPr", { id: "1", name: "" }),
-          el("p:cNvGrpSpPr", {}),
-          el("p:nvPr", {}),
-        ),
-        el("p:grpSpPr", {}),
-        ...shapeElements,
-      ),
-    ),
+    el("p:cSld", {}, ...cSldChildren),
     el("p:clrMapOvr", {}, el("a:masterClrMapping", {})),
   );
 
   return renderXmlDocument(root);
 }
 
-// ---------------------------------------------------------------------------
-// Fill / line rendering helpers.
-// ---------------------------------------------------------------------------
+function degreesToAngle(degrees: number): string {
+  return String(Math.round(degrees * 60000));
+}
+
+function renderColor(color: HexColor, alpha?: number): XmlElement {
+  const children: XmlElement[] = [];
+  if (alpha !== undefined) {
+    children.push(el("a:alpha", { val: String(alpha) }));
+  }
+  return el("a:srgbClr", { val: color }, ...children);
+}
 
 function renderFill(fill: Fill | undefined): XmlElement | undefined {
   if (!fill) return undefined;
   switch (fill.kind) {
-    case "solid": {
-      const clrChildren: XmlElement[] = [];
-      if (fill.alpha !== undefined) {
-        clrChildren.push(el("a:alpha", { val: String(fill.alpha) }));
-      }
+    case "solid":
+      return el("a:solidFill", {}, renderColor(fill.color, fill.alpha));
+    case "linear-gradient":
       return el(
-        "a:solidFill",
-        {},
-        el("a:srgbClr", { val: fill.color }, ...clrChildren),
+        "a:gradFill",
+        { rotWithShape: "1" },
+        el(
+          "a:gsLst",
+          {},
+          ...fill.stops.map((stop) =>
+            el(
+              "a:gs",
+              { pos: String(stop.pos) },
+              renderColor(stop.color, stop.alpha),
+            )
+          ),
+        ),
+        el("a:lin", { ang: degreesToAngle(fill.angle), scaled: "1" }),
       );
-    }
     case "none":
       return el("a:noFill", {});
   }
 }
 
-function renderLine(line: LineProperties | undefined): XmlElement | undefined {
+function dashValue(dash: LineDash | undefined): string | undefined {
+  switch (dash) {
+    case undefined:
+    case "solid":
+      return "solid";
+    case "dash":
+      return "dash";
+    case "dot":
+      return "sysDot";
+    case "dash-dot":
+      return "dashDot";
+  }
+}
+
+function renderLine(
+  line: LineProperties | undefined,
+  tag = "a:ln",
+): XmlElement | undefined {
   if (!line) return undefined;
   const attrs: Record<string, string | undefined> = {};
   if (line.width !== undefined) attrs["w"] = String(line.width);
@@ -255,17 +338,72 @@ function renderLine(line: LineProperties | undefined): XmlElement | undefined {
     const fillEl = renderFill(line.fill);
     if (fillEl) children.push(fillEl);
   }
-  return el("a:ln", attrs, ...children);
+  const dash = dashValue(line.dash);
+  if (dash) {
+    children.push(el("a:prstDash", { val: dash }));
+  }
+  return el(tag, attrs, ...children);
 }
 
-// ---------------------------------------------------------------------------
-// Shape renderers.
-// ---------------------------------------------------------------------------
+function renderShadow(shadow: Shadow | undefined): XmlElement | undefined {
+  if (!shadow) return undefined;
+  return el(
+    "a:effectLst",
+    {},
+    el(
+      "a:outerShdw",
+      {
+        blurRad: String(shadow.blur),
+        dist: String(shadow.distance),
+        dir: degreesToAngle(shadow.angle),
+        rotWithShape: "0",
+      },
+      renderColor(shadow.color, shadow.alpha),
+    ),
+  );
+}
 
-/**
- * Render a text box shape. ECMA-376 §19.3.1.43.
- * Text boxes use cNvSpPr with txBox="1".
- */
+function renderCropRect(crop: CropRect | undefined): XmlElement | undefined {
+  if (!crop) return undefined;
+  const attrs: Record<string, string | undefined> = {
+    t: crop.top !== undefined ? String(crop.top) : undefined,
+    r: crop.right !== undefined ? String(crop.right) : undefined,
+    b: crop.bottom !== undefined ? String(crop.bottom) : undefined,
+    l: crop.left !== undefined ? String(crop.left) : undefined,
+  };
+  return el("a:srcRect", attrs);
+}
+
+function renderTextFit(
+  fit: TextFit | undefined,
+  defaultFit?: TextFit,
+): XmlElement | undefined {
+  switch (fit ?? defaultFit) {
+    case "none":
+      return el("a:noAutofit", {});
+    case "shrink-text":
+      return el("a:normAutofit", {});
+    case "resize-shape":
+      return el("a:spAutoFit", {});
+    case undefined:
+      return undefined;
+  }
+}
+
+function renderBodyPr(
+  attrs: Record<string, string>,
+  inset: Insets | undefined,
+  fit: TextFit | undefined,
+  defaultFit?: TextFit,
+): XmlElement {
+  const bodyAttrs: Record<string, string> = { ...attrs };
+  if (inset?.left !== undefined) bodyAttrs["lIns"] = String(inset.left);
+  if (inset?.right !== undefined) bodyAttrs["rIns"] = String(inset.right);
+  if (inset?.top !== undefined) bodyAttrs["tIns"] = String(inset.top);
+  if (inset?.bottom !== undefined) bodyAttrs["bIns"] = String(inset.bottom);
+  return el("a:bodyPr", bodyAttrs, renderTextFit(fit, defaultFit));
+}
+
 function renderTextBoxSp(id: number, shape: TextBoxShape): XmlElement {
   const spPrChildren: XmlElement[] = [
     el(
@@ -282,6 +420,9 @@ function renderTextBoxSp(id: number, shape: TextBoxShape): XmlElement {
 
   const lineEl = renderLine(shape.line);
   if (lineEl) spPrChildren.push(lineEl);
+
+  const shadowEl = renderShadow(shape.shadow);
+  if (shadowEl) spPrChildren.push(shadowEl);
 
   const bodyPrAttrs: Record<string, string> = { wrap: "square" };
   if (shape.verticalAlignment) bodyPrAttrs["anchor"] = shape.verticalAlignment;
@@ -300,17 +441,13 @@ function renderTextBoxSp(id: number, shape: TextBoxShape): XmlElement {
     el(
       "p:txBody",
       {},
-      el("a:bodyPr", bodyPrAttrs, el("a:spAutoFit", {})),
+      renderBodyPr(bodyPrAttrs, shape.inset, shape.fit, "resize-shape"),
       el("a:lstStyle", {}),
       ...shape.paragraphs.map(renderParagraph),
     ),
   );
 }
 
-/**
- * Render a preset geometry shape. ECMA-376 §20.1.9.18.
- * Preset shapes use a:prstGeom with a named preset.
- */
 function renderPresetSp(id: number, shape: PresetShape): XmlElement {
   const spPrChildren: XmlElement[] = [
     el(
@@ -330,6 +467,9 @@ function renderPresetSp(id: number, shape: PresetShape): XmlElement {
   const lineEl = renderLine(shape.line);
   if (lineEl) spPrChildren.push(lineEl);
 
+  const shadowEl = renderShadow(shape.shadow);
+  if (shadowEl) spPrChildren.push(shadowEl);
+
   const children: XmlElement[] = [
     el(
       "p:nvSpPr",
@@ -341,8 +481,7 @@ function renderPresetSp(id: number, shape: PresetShape): XmlElement {
     el("p:spPr", {}, ...spPrChildren),
   ];
 
-  // Only add style if no explicit fill (preserve theme defaults)
-  if (!shape.fill && !shape.line) {
+  if (!shape.fill && !shape.line && !shape.shadow) {
     children.push(
       el(
         "p:style",
@@ -363,7 +502,6 @@ function renderPresetSp(id: number, shape: PresetShape): XmlElement {
   if (paragraphs.length > 0) {
     const bodyPrAttrs: Record<string, string> = {
       rtlCol: "0",
-      anchor: "ctr",
     };
     if (shape.verticalAlignment) {
       bodyPrAttrs["anchor"] = shape.verticalAlignment;
@@ -372,7 +510,7 @@ function renderPresetSp(id: number, shape: PresetShape): XmlElement {
       el(
         "p:txBody",
         {},
-        el("a:bodyPr", bodyPrAttrs),
+        renderBodyPr(bodyPrAttrs, shape.inset, shape.fit),
         el("a:lstStyle", {}),
         ...paragraphs.map(renderParagraph),
       ),
@@ -382,12 +520,12 @@ function renderPresetSp(id: number, shape: PresetShape): XmlElement {
   return el("p:sp", {}, ...children);
 }
 
-/**
- * Render a picture shape. ECMA-376 §19.3.1.37 (p:pic).
- * Uses a:blipFill to reference the embedded image via relationship ID.
- */
 function renderPicture(id: number, shape: PictureShape): XmlElement {
   const desc = shape.description ?? "";
+  const blipChildren: XmlElement[] = [];
+  if (shape.alpha !== undefined) {
+    blipChildren.push(el("a:alphaModFix", { amt: String(shape.alpha) }));
+  }
   return el(
     "p:pic",
     {},
@@ -401,7 +539,8 @@ function renderPicture(id: number, shape: PictureShape): XmlElement {
     el(
       "p:blipFill",
       {},
-      el("a:blip", { "r:embed": shape.rId }),
+      el("a:blip", { "r:embed": shape.rId }, ...blipChildren),
+      renderCropRect(shape.crop),
       el("a:stretch", {}, el("a:fillRect", {})),
     ),
     el(
@@ -418,13 +557,8 @@ function renderPicture(id: number, shape: PictureShape): XmlElement {
   );
 }
 
-/** Table graphic data URI. ECMA-376 §21.1.3. */
 const TABLE_URI = "http://schemas.openxmlformats.org/drawingml/2006/table";
 
-/**
- * Render a table as a graphicFrame. ECMA-376 §19.3.1.22.
- * Tables live inside a:graphic > a:graphicData with the table URI.
- */
 function renderTable(id: number, shape: TableShape): XmlElement {
   const gridCols = shape.columns.map((w) => el("a:gridCol", { w: String(w) }));
 
@@ -441,13 +575,34 @@ function renderTable(id: number, shape: TableShape): XmlElement {
             : [el("a:p", {})]),
         ),
       ];
+      const tcPrAttrs: Record<string, string | undefined> = {};
+      if (cell.padding?.left !== undefined) {
+        tcPrAttrs["marL"] = String(cell.padding.left);
+      }
+      if (cell.padding?.right !== undefined) {
+        tcPrAttrs["marR"] = String(cell.padding.right);
+      }
+      if (cell.padding?.top !== undefined) {
+        tcPrAttrs["marT"] = String(cell.padding.top);
+      }
+      if (cell.padding?.bottom !== undefined) {
+        tcPrAttrs["marB"] = String(cell.padding.bottom);
+      }
+      if (cell.verticalAlignment) tcPrAttrs["anchor"] = cell.verticalAlignment;
       const tcPrChildren: XmlElement[] = [];
       if (cell.fill) {
         const fillEl = renderFill(cell.fill);
         if (fillEl) tcPrChildren.push(fillEl);
       }
-      if (tcPrChildren.length > 0) {
-        tcChildren.push(el("a:tcPr", {}, ...tcPrChildren));
+      if (cell.line) {
+        const tags = ["a:lnL", "a:lnR", "a:lnT", "a:lnB"] as const;
+        for (const tag of tags) {
+          const lineEl = renderLine(cell.line, tag);
+          if (lineEl) tcPrChildren.push(lineEl);
+        }
+      }
+      if (Object.keys(tcPrAttrs).length > 0 || tcPrChildren.length > 0) {
+        tcChildren.push(el("a:tcPr", tcPrAttrs, ...tcPrChildren));
       }
       return el("a:tc", {}, ...tcChildren);
     });
@@ -488,11 +643,6 @@ function renderTable(id: number, shape: TableShape): XmlElement {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Text rendering.
-// ---------------------------------------------------------------------------
-
-/** Render a text paragraph. ECMA-376 §21.1.2.2.6 (a:p). */
 function renderParagraph(para: TextParagraph): XmlElement {
   const children: XmlElement[] = [];
 
@@ -551,7 +701,6 @@ function renderParagraph(para: TextParagraph): XmlElement {
   return el("a:p", {}, ...children);
 }
 
-/** Render a text run. ECMA-376 §21.1.2.3.8 (a:r). */
 function renderTextRun(run: TextRun): XmlElement {
   const rPrAttrs: Record<string, string | undefined> = {};
   if (run.bold) rPrAttrs["b"] = "1";
@@ -562,7 +711,7 @@ function renderTextRun(run: TextRun): XmlElement {
   const rPrChildren: XmlElement[] = [];
   if (run.fontColor !== undefined) {
     rPrChildren.push(
-      el("a:solidFill", {}, el("a:srgbClr", { val: run.fontColor })),
+      el("a:solidFill", {}, renderColor(run.fontColor)),
     );
   }
   if (run.hyperlink) {
