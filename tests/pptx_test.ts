@@ -1779,3 +1779,116 @@ Deno.test("e2e: all features combined", async () => {
   assertEquals(result.slides[2]?.shapes[0]?.text, "Red box");
   assert(result.slides[2]?.shapes[1]?.text?.includes("First item"));
 });
+
+// ---------------------------------------------------------------------------
+// Coverage gap tests
+// ---------------------------------------------------------------------------
+
+/**
+ * Generate a JPEG image to exercise the JPEG content type path.
+ * Spec: ECMA-376 Part 2 §10.1.2.2 (Default content types).
+ */
+Deno.test("e2e: JPEG image content type", async () => {
+  // Minimal valid JPEG (SOI + APP0 + EOI)
+  const jpeg = new Uint8Array([
+    0xFF,
+    0xD8,
+    0xFF,
+    0xE0,
+    0x00,
+    0x10,
+    0x4A,
+    0x46,
+    0x49,
+    0x46,
+    0x00,
+    0x01,
+    0x01,
+    0x00,
+    0x00,
+    0x01,
+    0x00,
+    0x01,
+    0x00,
+    0x00,
+    0xFF,
+    0xD9,
+  ]);
+  const pptx = generate(presentation(
+    slide(
+      image(
+        bounds(inches(1), inches(1), inches(4), inches(3)),
+        jpeg,
+        "image/jpeg",
+      ),
+    ),
+  ));
+
+  const result = await validatePptx(pptx, 1);
+  assertEquals(result.slides[0]?.shape_count, 1);
+});
+
+/**
+ * Generate a shape with vertical alignment and text.
+ * Spec: ECMA-376 §21.1.2.1.1 (a:bodyPr anchor).
+ */
+Deno.test("e2e: preset shape with verticalAlignment", async () => {
+  const pptx = generate(presentation(
+    slide(
+      shape(
+        "rect",
+        bounds(inches(1), inches(1), inches(4), inches(3)),
+        [paragraph("Bottom aligned")],
+        { verticalAlignment: "bottom" },
+      ),
+    ),
+  ));
+
+  const result = await validatePptx(pptx, 1);
+  assertEquals(result.slides[0]?.shapes[0]?.text, "Bottom aligned");
+});
+
+/**
+ * Generate a table with an empty cell (no paragraphs).
+ * Spec: ECMA-376 §21.1.3.15 (a:tc requires a:txBody with at least one a:p).
+ */
+Deno.test("e2e: table with empty cell", async () => {
+  const pptx = generate(presentation(
+    slide(
+      table(
+        bounds(inches(1), inches(1), inches(4), inches(1)),
+        [inches(2), inches(2)],
+        [
+          row(inches(0.5), [
+            cell([paragraph("Data")]),
+            cell([]),
+          ]),
+        ],
+      ),
+    ),
+  ));
+
+  const result = await validatePptx(pptx, 1);
+  assert(result.slides[0]?.shapes[0]?.is_table);
+  assertEquals(result.slides[0]?.shapes[0]?.table_data?.[0]?.[0], "Data");
+  assertEquals(result.slides[0]?.shapes[0]?.table_data?.[0]?.[1], "");
+});
+
+/**
+ * Generate a textbox with line-only styling (no fill on line).
+ * Spec: ECMA-376 §20.1.2.2.24 (a:ln).
+ */
+Deno.test("e2e: textbox with line width only", async () => {
+  const pptx = generate(presentation(
+    slide(
+      textbox(
+        bounds(inches(1), inches(1), inches(6), inches(2)),
+        [paragraph("Line width only")],
+        { line: lineStyle({ width: pt(3) }) },
+      ),
+    ),
+  ));
+
+  const result = await validatePptx(pptx, 1);
+  assertEquals(result.slides[0]?.shapes[0]?.text, "Line width only");
+});
