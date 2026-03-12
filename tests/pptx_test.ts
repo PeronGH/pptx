@@ -20,14 +20,9 @@ import {
   bulletChar,
   bulletNone,
   cellStyle,
-  cm,
   col,
-  emu,
-  fontSize,
   generate,
-  hexColor,
   image,
-  inches,
   italic,
   item,
   lineStyle,
@@ -39,15 +34,14 @@ import {
   noFill,
   p,
   paragraphStyle,
-  percentage,
   presentation,
-  pt,
   resolveSlideChildren,
   row,
   scene,
   shape,
   slide,
   solidFill,
+  st,
   table,
   td,
   text,
@@ -56,6 +50,7 @@ import {
   tr,
   underline,
 } from "../mod.ts";
+import { cm, emu, font, hex, inch, pct, pt } from "../src/st.ts";
 
 /** Result from the Python validation script. */
 interface ValidationResult {
@@ -198,33 +193,47 @@ function createTestPng(): Uint8Array {
 }
 
 /**
- * Verify inches() converts to EMUs.
+ * Verify st.in() converts to EMUs.
  * Spec: ECMA-376 §20.1.10.16.
  */
-Deno.test("inches() converts to EMUs", () => {
-  assertEquals(inches(1) as number, 914400);
-  assertEquals(inches(0.5) as number, 457200);
+Deno.test("st.in() converts to EMUs", () => {
+  assertEquals(st.in(1) as number, 914400);
+  assertEquals(st.in(0.5) as number, 457200);
 });
 
 /**
- * Verify cm(), pt(), emu(), and percentage() helpers.
+ * Verify st.cm(), st.pt(), st.emu(), and st.pct() helpers.
  * Spec: ECMA-376 §20.1.10.16 and §20.1.10.40.
  */
 Deno.test("unit helpers convert correctly", () => {
-  assertEquals(cm(2.54) as number, 914400);
-  assertEquals(pt(72) as number, 914400);
-  assertEquals(emu(1234) as number, 1234);
-  assertEquals(percentage(50) as number, 50000);
+  assertEquals(st.cm(2.54) as number, 914400);
+  assertEquals(st.pt(72) as number, 914400);
+  assertEquals(st.emu(1234) as number, 1234);
+  assertEquals(st.pct(50) as number, 50000);
 });
 
 /**
- * Verify fontSize() and hexColor().
+ * Verify st.font() and st.hex().
  * Spec: ECMA-376 §21.1.2.3.10 and §20.1.2.3.19.
  */
 Deno.test("font and color helpers validate", () => {
-  assertEquals(fontSize(12) as number, 1200);
-  assertEquals(hexColor("ff0000") as string, "FF0000");
-  assertThrows(() => hexColor("#FF0000"), Error);
+  assertEquals(st.font(12) as number, 1200);
+  assertEquals(st.hex("ff0000") as string, "FF0000");
+  assertThrows(() => st.hex("#FF0000"), Error);
+});
+
+/**
+ * Verify direct helper imports share the same implementation as st.*.
+ * Spec: implementation-specific.
+ */
+Deno.test("direct st helpers share implementation with st namespace", () => {
+  assertEquals(st.in, inch);
+  assertEquals(st.cm, cm);
+  assertEquals(st.pt, pt);
+  assertEquals(st.emu, emu);
+  assertEquals(st.hex, hex);
+  assertEquals(st.font, font);
+  assertEquals(st.pct, pct);
 });
 
 /**
@@ -250,12 +259,12 @@ Deno.test("text run builders create styled runs", () => {
  */
 Deno.test("style fragments merge deterministically", () => {
   const box = mergeBoxStyles(
-    boxStyle({ fill: solidFill(hexColor("FF0000")) }),
-    boxStyle({ line: lineStyle({ width: emu(12700) }) }),
+    boxStyle({ fill: solidFill(st.hex("FF0000")) }),
+    boxStyle({ line: lineStyle({ width: st.emu(12700) }) }),
     boxStyle({ fill: noFill() }),
   );
   assertEquals(box.fill?.kind, "none");
-  assertEquals(box.line?.width, emu(12700));
+  assertEquals(box.line?.width, st.emu(12700));
 
   const paragraph = mergeParagraphStyles(
     paragraphStyle({ align: "center" }),
@@ -265,19 +274,19 @@ Deno.test("style fragments merge deterministically", () => {
   assertEquals(paragraph.bullet?.kind, "char");
 
   const textRun = mergeTextStyles(
-    textStyle({ fontFamily: "Aptos", fontColor: hexColor("112233") }),
+    textStyle({ fontFamily: "Aptos", fontColor: st.hex("112233") }),
     textStyle({ bold: true }),
   );
   assertEquals(textRun.fontFamily, "Aptos");
   assertEquals(textRun.bold, true);
 
   const cell = mergeCellStyles(
-    cellStyle({ fill: solidFill(hexColor("CCCCCC")) }),
-    cellStyle({ fill: solidFill(hexColor("000000")) }),
+    cellStyle({ fill: solidFill(st.hex("CCCCCC")) }),
+    cellStyle({ fill: solidFill(st.hex("000000")) }),
   );
   assertEquals(cell.fill?.kind, "solid");
   if (cell.fill?.kind === "solid") {
-    assertEquals(cell.fill.color, hexColor("000000"));
+    assertEquals(cell.fill.color, st.hex("000000"));
   }
 });
 
@@ -307,7 +316,7 @@ Deno.test("paragraph builder supports styles and runs", () => {
  */
 Deno.test("leaf builders are positionless", () => {
   const box = textbox(
-    mergeBoxStyles(boxStyle({ fill: solidFill(hexColor("FFEECC")) })),
+    mergeBoxStyles(boxStyle({ fill: solidFill(st.hex("FFEECC")) })),
     p("Hello"),
   );
   assertEquals(box.kind, "textbox");
@@ -326,8 +335,8 @@ Deno.test("leaf builders are positionless", () => {
   assertEquals("w" in img, false);
 
   const grid = table(
-    { cols: [inches(2), inches(2)] },
-    tr(inches(0.5), td("A"), td("B")),
+    { cols: [st.in(2), st.in(2)] },
+    tr(st.in(0.5), td("A"), td("B")),
   );
   assertEquals(grid.rows.length, 1);
 });
@@ -338,11 +347,11 @@ Deno.test("leaf builders are positionless", () => {
  */
 Deno.test("scene builders create absolute nodes", () => {
   const box = scene.textbox(
-    { x: inches(1), y: inches(2), w: inches(3), h: inches(1) },
+    { x: st.in(1), y: st.in(2), w: st.in(3), h: st.in(1) },
     p("Hello"),
   );
-  assertEquals(box.x, inches(1));
-  assertEquals(box.w, inches(3));
+  assertEquals(box.x, st.in(1));
+  assertEquals(box.w, st.in(3));
   assertEquals(box.paragraphs[0]?.runs[0]?.text, "Hello");
 });
 
@@ -358,14 +367,14 @@ Deno.test("row() resolves equal-width default items", () => {
         textbox(p("B")),
       ),
     ],
-    { x: emu(0), y: emu(0), w: inches(10), h: inches(2) },
+    { x: st.emu(0), y: st.emu(0), w: st.in(10), h: st.in(2) },
   );
 
   assertEquals(nodes.length, 2);
-  assertEquals(nodes[0]?.x, emu(0));
-  assertEquals(nodes[0]?.w, inches(5));
-  assertEquals(nodes[1]?.x, inches(5));
-  assertEquals(nodes[1]?.w, inches(5));
+  assertEquals(nodes[0]?.x, st.emu(0));
+  assertEquals(nodes[0]?.w, st.in(5));
+  assertEquals(nodes[1]?.x, st.in(5));
+  assertEquals(nodes[1]?.w, st.in(5));
 });
 
 /**
@@ -376,18 +385,18 @@ Deno.test("row() resolves basis, grow, and gap", () => {
   const nodes = resolveSlideChildren(
     [
       row(
-        { gap: inches(0.5) },
-        item({ basis: inches(2) }, textbox("Fixed")),
+        { gap: st.in(0.5) },
+        item({ basis: st.in(2) }, textbox("Fixed")),
         item({ grow: 1 }, textbox("Grow")),
       ),
     ],
-    { x: emu(0), y: emu(0), w: inches(10), h: inches(2) },
+    { x: st.emu(0), y: st.emu(0), w: st.in(10), h: st.in(2) },
   );
 
   assertEquals(nodes.length, 2);
-  assertEquals(nodes[0]?.w, inches(2));
-  assertEquals(nodes[1]?.x, inches(2.5));
-  assertEquals(nodes[1]?.w, inches(7.5));
+  assertEquals(nodes[0]?.w, st.in(2));
+  assertEquals(nodes[1]?.x, st.in(2.5));
+  assertEquals(nodes[1]?.w, st.in(7.5));
 });
 
 /**
@@ -398,19 +407,19 @@ Deno.test("col() resolves padding and gap", () => {
   const nodes = resolveSlideChildren(
     [
       col(
-        { padding: inches(1), gap: inches(0.25) },
+        { padding: st.in(1), gap: st.in(0.25) },
         textbox("Top"),
         textbox("Bottom"),
       ),
     ],
-    { x: emu(0), y: emu(0), w: inches(6), h: inches(6) },
+    { x: st.emu(0), y: st.emu(0), w: st.in(6), h: st.in(6) },
   );
 
   assertEquals(nodes.length, 2);
-  assertEquals(nodes[0]?.x, inches(1));
-  assertEquals(nodes[0]?.w, inches(4));
-  assertEquals(nodes[0]?.y, inches(1));
-  assertEquals(nodes[1]?.y, inches(3.125));
+  assertEquals(nodes[0]?.x, st.in(1));
+  assertEquals(nodes[0]?.w, st.in(4));
+  assertEquals(nodes[0]?.y, st.in(1));
+  assertEquals(nodes[1]?.y, st.in(3.125));
 });
 
 /**
@@ -422,15 +431,15 @@ Deno.test("row() respects cross-axis alignment", () => {
     [
       row(
         { align: "center" },
-        item({ basis: inches(3), h: inches(1) }, textbox("Centered")),
+        item({ basis: st.in(3), h: st.in(1) }, textbox("Centered")),
       ),
     ],
-    { x: emu(0), y: emu(0), w: inches(6), h: inches(4) },
+    { x: st.emu(0), y: st.emu(0), w: st.in(6), h: st.in(4) },
   );
 
   assertEquals(nodes.length, 1);
-  assertEquals(nodes[0]?.y, inches(1.5));
-  assertEquals(nodes[0]?.h, inches(1));
+  assertEquals(nodes[0]?.y, st.in(1.5));
+  assertEquals(nodes[0]?.h, st.in(1));
 });
 
 /**
@@ -442,7 +451,7 @@ Deno.test("row() derives cross size from aspect ratio", () => {
     [
       row(
         item(
-          { basis: inches(4), aspectRatio: 2 },
+          { basis: st.in(4), aspectRatio: 2 },
           image({
             data: createTestPng(),
             contentType: "image/png",
@@ -450,12 +459,12 @@ Deno.test("row() derives cross size from aspect ratio", () => {
         ),
       ),
     ],
-    { x: emu(0), y: emu(0), w: inches(10), h: inches(4) },
+    { x: st.emu(0), y: st.emu(0), w: st.in(10), h: st.in(4) },
   );
 
   assertEquals(nodes.length, 1);
-  assertEquals(nodes[0]?.w, inches(4));
-  assertEquals(nodes[0]?.h, inches(2));
+  assertEquals(nodes[0]?.w, st.in(4));
+  assertEquals(nodes[0]?.h, st.in(2));
 });
 
 /**
@@ -466,18 +475,18 @@ Deno.test("slide child resolution preserves scene overlays", () => {
   const nodes = resolveSlideChildren(
     [
       scene.shape("rect", {
-        x: emu(0),
-        y: emu(0),
-        w: inches(10),
-        h: inches(7.5),
-        fill: solidFill(hexColor("F5F5F5")),
+        x: st.emu(0),
+        y: st.emu(0),
+        w: st.in(10),
+        h: st.in(7.5),
+        fill: solidFill(st.hex("F5F5F5")),
       }),
       row(
-        { padding: inches(1) },
+        { padding: st.in(1) },
         textbox("Overlay text"),
       ),
     ],
-    { x: emu(0), y: emu(0), w: inches(10), h: inches(7.5) },
+    { x: st.emu(0), y: st.emu(0), w: st.in(10), h: st.in(7.5) },
   );
 
   assertEquals(nodes.length, 2);
@@ -494,7 +503,7 @@ Deno.test("e2e: minimal scene text box", async () => {
     { title: "Scene minimal" },
     slide(
       scene.textbox(
-        { x: inches(1), y: inches(1), w: inches(8), h: inches(1) },
+        { x: st.in(1), y: st.in(1), w: st.in(8), h: st.in(1) },
         p("Hello, World!"),
       ),
     ),
@@ -513,14 +522,14 @@ Deno.test("e2e: row layout DSL", async () => {
   const pptx = generate(presentation(
     slide(
       row(
-        { gap: inches(0.5), padding: inches(1) },
+        { gap: st.in(0.5), padding: st.in(1) },
         item(
-          { basis: inches(2.5) },
+          { basis: st.in(2.5) },
           shape(
             "rect",
             mergeBoxStyles(boxStyle({
-              fill: solidFill(hexColor("D9EAF7")),
-              line: lineStyle({ width: emu(12700) }),
+              fill: solidFill(st.hex("D9EAF7")),
+              line: lineStyle({ width: st.emu(12700) }),
             })),
             p(paragraphStyle({ align: "center" }), "Left"),
           ),
@@ -528,7 +537,7 @@ Deno.test("e2e: row layout DSL", async () => {
         item(
           { grow: 1 },
           textbox(
-            mergeBoxStyles(boxStyle({ fill: solidFill(hexColor("FFF2CC")) })),
+            mergeBoxStyles(boxStyle({ fill: solidFill(st.hex("FFF2CC")) })),
             p("Right panel"),
           ),
         ),
@@ -554,16 +563,16 @@ Deno.test("e2e: rich text and bullets", async () => {
     slide(
       scene.textbox(
         {
-          x: inches(1),
-          y: inches(1),
-          w: inches(8),
-          h: inches(3),
+          x: st.in(1),
+          y: st.in(1),
+          w: st.in(8),
+          h: st.in(3),
           ...mergeBoxStyles(boxStyle({ fill: noFill() })),
         },
         p(
           mergeParagraphStyles(
             paragraphStyle({ bullet: bulletChar("•") }),
-            paragraphStyle({ spacing: { after: pt(6) } }),
+            paragraphStyle({ spacing: { after: st.pt(6) } }),
           ),
           bold("Bold"),
           " and ",
@@ -579,8 +588,8 @@ Deno.test("e2e: rich text and bullets", async () => {
             "No bullet",
             mergeTextStyles(textStyle({
               fontFamily: "Aptos",
-              fontColor: hexColor("FF0000"),
-              fontSize: fontSize(18),
+              fontColor: st.hex("FF0000"),
+              fontSize: st.font(18),
             })),
           ),
         ),
@@ -603,10 +612,10 @@ Deno.test("e2e: image via scene node", async () => {
   const pptx = generate(presentation(
     slide(
       scene.image({
-        x: inches(2),
-        y: inches(1),
-        w: inches(3),
-        h: inches(3),
+        x: st.in(2),
+        y: st.in(1),
+        w: st.in(3),
+        h: st.in(3),
         data: createTestPng(),
         contentType: "image/png",
         description: "pixel",
@@ -629,24 +638,24 @@ Deno.test("e2e: table via scene node", async () => {
     slide(
       scene.table(
         {
-          x: inches(1),
-          y: inches(1),
-          w: inches(6),
-          h: inches(2),
-          cols: [inches(3), inches(3)],
+          x: st.in(1),
+          y: st.in(1),
+          w: st.in(6),
+          h: st.in(2),
+          cols: [st.in(3), st.in(3)],
         },
         tr(
-          inches(0.5),
+          st.in(0.5),
           td(
-            mergeCellStyles(cellStyle({ fill: solidFill(hexColor("4472C4")) })),
+            mergeCellStyles(cellStyle({ fill: solidFill(st.hex("4472C4")) })),
             p(bold("A")),
           ),
           td(
-            mergeCellStyles(cellStyle({ fill: solidFill(hexColor("4472C4")) })),
+            mergeCellStyles(cellStyle({ fill: solidFill(st.hex("4472C4")) })),
             p(bold("B")),
           ),
         ),
-        tr(inches(0.5), td("1"), td("2")),
+        tr(st.in(0.5), td("1"), td("2")),
       ),
     ),
   ));
@@ -669,28 +678,28 @@ Deno.test("e2e: hyperlinks and mixed content", async () => {
       scene.shape(
         "rect",
         {
-          x: inches(0.75),
-          y: inches(0.75),
-          w: inches(8.5),
-          h: inches(4.5),
-          fill: solidFill(hexColor("F2F2F2")),
+          x: st.in(0.75),
+          y: st.in(0.75),
+          w: st.in(8.5),
+          h: st.in(4.5),
+          fill: solidFill(st.hex("F2F2F2")),
         },
       ),
       scene.textbox(
-        { x: inches(1), y: inches(1), w: inches(8), h: inches(1) },
+        { x: st.in(1), y: st.in(1), w: st.in(8), h: st.in(1) },
         p("Visit ", link("example.com", "https://example.com")),
       ),
       scene.textbox(
         {
-          x: inches(1),
-          y: inches(2),
-          w: inches(8),
-          h: inches(1),
+          x: st.in(1),
+          y: st.in(2),
+          w: st.in(8),
+          h: st.in(1),
           ...mergeBoxStyles(boxStyle({
-            fill: solidFill(hexColor("FFFFFF")),
+            fill: solidFill(st.hex("FFFFFF")),
             line: lineStyle({
-              width: emu(12700),
-              fill: solidFill(hexColor("000000")),
+              width: st.emu(12700),
+              fill: solidFill(st.hex("000000")),
             }),
             verticalAlign: "middle",
           })),
@@ -721,14 +730,14 @@ Deno.test("e2e: multiple slides with scene and layout", async () => {
     { title: "Deck", creator: "Codex" },
     slide(
       scene.textbox(
-        { x: inches(1), y: inches(1), w: inches(8), h: inches(1.5) },
+        { x: st.in(1), y: st.in(1), w: st.in(8), h: st.in(1.5) },
         p(paragraphStyle({ align: "center" }), bold("Title Slide")),
       ),
     ),
     slide(
       col(
-        { padding: inches(1), gap: inches(0.25) },
-        item({ basis: inches(1) }, textbox(p("Slide 2"))),
+        { padding: st.in(1), gap: st.in(0.25) },
+        item({ basis: st.in(1) }, textbox(p("Slide 2"))),
         item({ grow: 1 }, textbox(p("Body"))),
       ),
     ),

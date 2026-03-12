@@ -2,7 +2,10 @@
   "name": "@pixel/pptx",
   "version": "0.4.0",
   "license": "MIT",
-  "exports": "./mod.ts",
+  "exports": {
+    ".": "./mod.ts",
+    "./st": "./src/st.ts"
+  },
   "compilerOptions": {
     "strict": true,
     "strictNullChecks": true,

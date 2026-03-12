@@ -9,15 +9,15 @@
  *
  * @example
  * ```ts
- * import { generate, presentation, slide, scene, p, bold, inches } from "@pixel/pptx";
+ * import { generate, presentation, slide, scene, p, bold, st } from "@pixel/pptx";
  *
  * const pptx = generate(presentation(
  *   { title: "My Presentation" },
  *   slide(
- *     scene.textbox({ x: inches(1), y: inches(1), w: inches(8), h: inches(1) },
+ *     scene.textbox({ x: st.in(1), y: st.in(1), w: st.in(8), h: st.in(1) },
  *       p(bold("Hello"), ", World!"),
  *     ),
- *     scene.shape("rect", { x: inches(2), y: inches(3), w: inches(4), h: inches(2) }),
+ *     scene.shape("rect", { x: st.in(2), y: st.in(3), w: st.in(4), h: st.in(2) }),
  *   ),
  * ));
  *
@@ -68,6 +68,9 @@ export {
   underline,
 } from "./src/api.ts";
 
+// Typed value constructors
+export { st } from "./src/st.ts";
+
 // Types
 export type {
   Alignment,
@@ -116,18 +119,7 @@ export type {
   VerticalAlignment,
 } from "./src/api.ts";
 
-// Unit helpers
-export {
-  cm,
-  emu,
-  fontSize,
-  hexColor,
-  inches,
-  percentage,
-  pt,
-} from "./src/types.ts";
-
-// Unit types
+// Branded value types
 export type {
   Emu,
   HexColor,

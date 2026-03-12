@@ -13,6 +13,10 @@ The public surface is split into:
 
 ## Install
 
+```bash
+deno add @pixel/pptx
+```
+
 ```ts
 import {
   generate,
@@ -21,8 +25,9 @@ import {
   presentation,
   row,
   slide,
+  st,
   textbox,
-} from "jsr:@pixel/pptx";
+} from "@pixel/pptx";
 ```
 
 ## Example
@@ -32,9 +37,7 @@ import {
   bold,
   boxStyle,
   generate,
-  hexColor,
   image,
-  inches,
   item,
   p,
   presentation,
@@ -42,11 +45,12 @@ import {
   scene,
   slide,
   solidFill,
+  st,
   table,
   td,
   textbox,
   tr,
-} from "jsr:@pixel/pptx";
+} from "@pixel/pptx";
 
 const deck = presentation(
   { title: "Quarterly Review" },
@@ -54,18 +58,18 @@ const deck = presentation(
     scene.shape(
       "rect",
       {
-        x: inches(0.5),
-        y: inches(0.5),
-        w: inches(9),
-        h: inches(1.1),
-        fill: solidFill(hexColor("1F4E79")),
+        x: st.in(0.5),
+        y: st.in(0.5),
+        w: st.in(9),
+        h: st.in(1.1),
+        fill: solidFill(st.hex("1F4E79")),
       },
       p({ align: "center" }, bold("Quarterly Review")),
     ),
     row(
-      { gap: inches(0.25), padding: inches(1) },
+      { gap: st.in(0.25), padding: st.in(1) },
       item(
-        { basis: inches(2.5) },
+        { basis: st.in(2.5) },
         image({
           data: Deno.readFileSync("chart.png"),
           contentType: "image/png",
@@ -75,15 +79,15 @@ const deck = presentation(
       item(
         { grow: 1 },
         table(
-          { cols: [inches(2.5), inches(2.5)] },
-          tr(inches(0.5), td("Revenue"), td("$1.2M")),
-          tr(inches(0.5), td("Growth"), td("15%")),
+          { cols: [st.in(2.5), st.in(2.5)] },
+          tr(st.in(0.5), td("Revenue"), td("$1.2M")),
+          tr(st.in(0.5), td("Growth"), td("15%")),
         ),
       ),
       item(
-        { basis: inches(2.5) },
+        { basis: st.in(2.5) },
         textbox(
-          boxStyle({ fill: solidFill(hexColor("F3F6FA")) }),
+          boxStyle({ fill: solidFill(st.hex("F3F6FA")) }),
           p(bold("Notes")),
           p("Highlights and next steps"),
         ),
@@ -188,15 +192,25 @@ Supporting style/value helpers:
 
 ### Units
 
-| Function        | Description                        |
-| --------------- | ---------------------------------- |
-| `inches(n)`     | Convert inches to EMUs             |
-| `cm(n)`         | Convert centimeters to EMUs        |
-| `pt(n)`         | Convert points to EMUs             |
-| `emu(n)`        | Raw EMU value                      |
-| `fontSize(pts)` | Font size in hundredths of a point |
-| `hexColor(hex)` | 6-digit hex color                  |
-| `percentage(n)` | Percentage in thousandths          |
+Canonical form:
+
+| Function       | Description                        |
+| -------------- | ---------------------------------- |
+| `st.in(n)`     | Convert inches to EMUs             |
+| `st.cm(n)`     | Convert centimeters to EMUs        |
+| `st.pt(n)`     | Convert points to EMUs             |
+| `st.emu(n)`    | Raw EMU value                      |
+| `st.font(pts)` | Font size in hundredths of a point |
+| `st.hex(hex)`  | 6-digit hex color                  |
+| `st.pct(n)`    | Percentage in thousandths          |
+
+Optional helper-only import:
+
+```ts
+import { font, hex, inch } from "@pixel/pptx/st";
+```
+
+These are the same function implementations used by `st.*`, not a second API.
 
 ## Feature support
 
