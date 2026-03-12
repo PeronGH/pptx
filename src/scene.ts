@@ -3,7 +3,8 @@
  */
 
 import type { Emu } from "./types.ts";
-import type { BoxStyle } from "./style.ts";
+import type { BoxStyle, BoxStyleInput } from "./style.ts";
+import { resolveBoxStyle } from "./style.ts";
 import type { ParagraphContent } from "./text.ts";
 import { toParagraph } from "./text.ts";
 import type {
@@ -25,16 +26,28 @@ export interface Frame {
   readonly h: Emu;
 }
 
+/** Props for a positioned text box scene node. */
+export interface SceneTextBoxProps extends Frame {
+  readonly style?: BoxStyleInput;
+}
+
 /** A positioned text box scene node. */
-export interface SceneTextBox extends Frame, BoxStyle {
+export interface SceneTextBox extends Frame {
   readonly kind: "textbox";
+  readonly style?: BoxStyle;
   readonly paragraphs: ReadonlyArray<ReturnType<typeof toParagraph>>;
 }
 
+/** Props for a positioned shape scene node. */
+export interface SceneShapeProps extends Frame {
+  readonly style?: BoxStyleInput;
+}
+
 /** A positioned shape scene node. */
-export interface SceneShape extends Frame, BoxStyle {
+export interface SceneShape extends Frame {
   readonly kind: "shape";
   readonly preset: string;
+  readonly style?: BoxStyle;
   readonly paragraphs: ReadonlyArray<ReturnType<typeof toParagraph>>;
 }
 
@@ -63,7 +76,7 @@ export type SceneNode =
 
 /** Create a positioned text box scene node. */
 export function sceneTextbox(
-  props: Frame & BoxStyle,
+  props: SceneTextBoxProps,
   ...children: ReadonlyArray<ParagraphContent>
 ): SceneTextBox {
   return {
@@ -72,20 +85,15 @@ export function sceneTextbox(
     y: props.y,
     w: props.w,
     h: props.h,
+    style: resolveBoxStyle(props.style),
     paragraphs: children.map(toParagraph),
-    fill: props.fill,
-    line: props.line,
-    verticalAlign: props.verticalAlign,
-    inset: props.inset,
-    fit: props.fit,
-    shadow: props.shadow,
   };
 }
 
 /** Create a positioned shape scene node. */
 export function sceneShape(
   preset: string,
-  props: Frame & BoxStyle,
+  props: SceneShapeProps,
   ...children: ReadonlyArray<ParagraphContent>
 ): SceneShape {
   return {
@@ -95,13 +103,8 @@ export function sceneShape(
     y: props.y,
     w: props.w,
     h: props.h,
+    style: resolveBoxStyle(props.style),
     paragraphs: children.map(toParagraph),
-    fill: props.fill,
-    line: props.line,
-    verticalAlign: props.verticalAlign,
-    inset: props.inset,
-    fit: props.fit,
-    shadow: props.shadow,
   };
 }
 
@@ -162,13 +165,8 @@ export function placeLeaf(
         y: frame.y,
         w: frame.w,
         h: frame.h,
+        style: leaf.style,
         paragraphs: leaf.paragraphs,
-        fill: leaf.fill,
-        line: leaf.line,
-        verticalAlign: leaf.verticalAlign,
-        inset: leaf.inset,
-        fit: leaf.fit,
-        shadow: leaf.shadow,
       };
     case "shape":
       return {
@@ -178,13 +176,8 @@ export function placeLeaf(
         w: frame.w,
         h: frame.h,
         preset: leaf.preset,
+        style: leaf.style,
         paragraphs: leaf.paragraphs,
-        fill: leaf.fill,
-        line: leaf.line,
-        verticalAlign: leaf.verticalAlign,
-        inset: leaf.inset,
-        fit: leaf.fit,
-        shadow: leaf.shadow,
       };
     case "image":
       return {
@@ -196,6 +189,9 @@ export function placeLeaf(
         data: leaf.data,
         contentType: leaf.contentType,
         description: leaf.description,
+        fit: leaf.fit,
+        crop: leaf.crop,
+        alpha: leaf.alpha,
       };
     case "table":
       return {

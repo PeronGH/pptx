@@ -3,32 +3,41 @@
  */
 
 import type { Emu } from "./types.ts";
-import type { BoxStyle, CellStyle, CropRect, ImageFit } from "./style.ts";
+import type {
+  BoxStyle,
+  BoxStyleInput,
+  CellStyle,
+  CellStyleInput,
+  CropRect,
+  ImageFit,
+} from "./style.ts";
+import { resolveBoxStyle, resolveCellStyle } from "./style.ts";
 import type { Paragraph, ParagraphContent } from "./text.ts";
 import { toParagraph } from "./text.ts";
 
-function isBoxStyle(
-  value: BoxStyle | ParagraphContent,
-): value is BoxStyle {
-  return typeof value !== "string" && !("runs" in value);
+/** Options for a positionless text box. */
+export interface TextBoxOptions {
+  readonly style?: BoxStyleInput;
 }
 
-function isCellStyle(
-  value: CellStyle | ParagraphContent,
-): value is CellStyle {
+function isTextBoxOptions(
+  value: TextBoxOptions | ParagraphContent,
+): value is TextBoxOptions {
   return typeof value !== "string" && !("runs" in value);
 }
 
 /** A positionless text box leaf. */
-export interface TextBox extends BoxStyle {
+export interface TextBox {
   readonly kind: "textbox";
+  readonly style?: BoxStyle;
   readonly paragraphs: ReadonlyArray<Paragraph>;
 }
 
 /** A positionless preset shape leaf. */
-export interface Shape extends BoxStyle {
+export interface Shape {
   readonly kind: "shape";
   readonly preset: string;
+  readonly style?: BoxStyle;
   readonly paragraphs: ReadonlyArray<Paragraph>;
 }
 
@@ -47,8 +56,20 @@ export interface Image extends ImageProps {
   readonly kind: "image";
 }
 
+/** Options for a table cell. */
+export interface TableCellOptions {
+  readonly style?: CellStyleInput;
+}
+
+function isTableCellOptions(
+  value: TableCellOptions | ParagraphContent,
+): value is TableCellOptions {
+  return typeof value !== "string" && !("runs" in value);
+}
+
 /** A table cell. */
-export interface TableCell extends CellStyle {
+export interface TableCell {
+  readonly style?: CellStyle;
   readonly paragraphs: ReadonlyArray<Paragraph>;
 }
 
@@ -64,8 +85,9 @@ export interface TableProps {
 }
 
 /** A positionless table leaf. */
-export interface Table extends TableProps {
+export interface Table {
   readonly kind: "table";
+  readonly cols: ReadonlyArray<Emu>;
   readonly rows: ReadonlyArray<TableRow>;
 }
 
@@ -74,15 +96,15 @@ export type LeafNode = TextBox | Shape | Image | Table;
 
 /** Create a positionless text box. */
 export function textbox(
-  first?: BoxStyle | ParagraphContent,
+  first?: TextBoxOptions | ParagraphContent,
   ...rest: ReadonlyArray<ParagraphContent>
 ): TextBox {
   if (first === undefined) return { kind: "textbox", paragraphs: [] };
-  if (isBoxStyle(first)) {
+  if (isTextBoxOptions(first)) {
     return {
       kind: "textbox",
+      style: resolveBoxStyle(first.style),
       paragraphs: rest.map(toParagraph),
-      ...first,
     };
   }
   return {
@@ -94,16 +116,16 @@ export function textbox(
 /** Create a positionless preset shape. */
 export function shape(
   preset: string,
-  first?: BoxStyle | ParagraphContent,
+  first?: TextBoxOptions | ParagraphContent,
   ...rest: ReadonlyArray<ParagraphContent>
 ): Shape {
   if (first === undefined) return { kind: "shape", preset, paragraphs: [] };
-  if (isBoxStyle(first)) {
+  if (isTextBoxOptions(first)) {
     return {
       kind: "shape",
       preset,
+      style: resolveBoxStyle(first.style),
       paragraphs: rest.map(toParagraph),
-      ...first,
     };
   }
   return {
@@ -120,14 +142,14 @@ export function image(props: ImageProps): Image {
 
 /** Create a table cell. */
 export function td(
-  first?: CellStyle | ParagraphContent,
+  first?: TableCellOptions | ParagraphContent,
   ...rest: ReadonlyArray<ParagraphContent>
 ): TableCell {
   if (first === undefined) return { paragraphs: [{ runs: [] }] };
-  if (isCellStyle(first)) {
+  if (isTableCellOptions(first)) {
     return {
+      style: resolveCellStyle(first.style),
       paragraphs: rest.length === 0 ? [{ runs: [] }] : rest.map(toParagraph),
-      ...first,
     };
   }
   return {

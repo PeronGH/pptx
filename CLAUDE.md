@@ -54,6 +54,11 @@ narrow escape hatch. Do not expose raw OOXML or raw XML injection publicly.
   `u.*`, and `clr.*` over many top-level helper exports.
 - Keep one canonical way to access helper constructors; do not add duplicate
   helper-only subpaths.
+- Prefer first-class reusable style values created under `sty.create(...)`
+  instead of mixing raw style props directly into nodes and text.
+- Invalid style application should fail at type-check time. Keep style
+  categories distinct so box, text, paragraph, and cell styles cannot be
+  applied to the wrong targets.
 - Make breaking changes freely when the abstraction is wrong. There are no users
   yet, so design quality wins over compatibility.
 - Keep the public surface minimal; add escape hatches only when the DSL cannot

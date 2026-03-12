@@ -2,15 +2,34 @@
  * Text runs and paragraphs for the public DSL.
  */
 
-import type { ParagraphStyle, TextStyle } from "./style.ts";
+import type {
+  ParagraphStyle,
+  ParagraphStyleInput,
+  TextStyle,
+  TextStyleInput,
+} from "./style.ts";
+import { resolveParagraphStyle, resolveTextStyle } from "./style.ts";
+
+/** Options for creating a text run. */
+export interface TextRunOptions {
+  readonly style?: TextStyleInput;
+}
 
 /** A styled text run. */
-export interface TextRun extends TextStyle {
+export interface TextRun {
   readonly text: string;
+  readonly style?: TextStyle;
+  readonly hyperlink?: string;
+}
+
+/** Options for creating a paragraph. */
+export interface ParagraphOptions {
+  readonly style?: ParagraphStyleInput;
 }
 
 /** A text paragraph. */
-export interface Paragraph extends ParagraphStyle {
+export interface Paragraph {
+  readonly style?: ParagraphStyle;
   readonly runs: ReadonlyArray<TextRun>;
 }
 
@@ -21,42 +40,58 @@ export type TextContent = string | TextRun;
 export type ParagraphContent = string | Paragraph;
 
 /** Create a plain text run. */
-export function text(content: string, style?: TextStyle): TextRun {
-  return { text: content, ...style };
+export function text(content: string, options?: TextRunOptions): TextRun {
+  return { text: content, style: resolveTextStyle(options?.style) };
 }
 
 /** Create a bold text run. */
-export function bold(content: string, style?: TextStyle): TextRun {
-  return { text: content, ...style, bold: true };
+export function bold(content: string, options?: TextRunOptions): TextRun {
+  return {
+    text: content,
+    style: { ...resolveTextStyle(options?.style), bold: true },
+  };
 }
 
 /** Create an italic text run. */
-export function italic(content: string, style?: TextStyle): TextRun {
-  return { text: content, ...style, italic: true };
+export function italic(content: string, options?: TextRunOptions): TextRun {
+  return {
+    text: content,
+    style: { ...resolveTextStyle(options?.style), italic: true },
+  };
 }
 
 /** Create a bold-italic text run. */
-export function boldItalic(content: string, style?: TextStyle): TextRun {
-  return { text: content, ...style, bold: true, italic: true };
+export function boldItalic(content: string, options?: TextRunOptions): TextRun {
+  return {
+    text: content,
+    style: { ...resolveTextStyle(options?.style), bold: true, italic: true },
+  };
 }
 
 /** Create an underlined text run. */
-export function underline(content: string, style?: TextStyle): TextRun {
-  return { text: content, ...style, underline: true };
+export function underline(content: string, options?: TextRunOptions): TextRun {
+  return {
+    text: content,
+    style: { ...resolveTextStyle(options?.style), underline: true },
+  };
 }
 
 /** Create a hyperlinked text run. */
 export function link(
   content: string,
   url: string,
-  style?: TextStyle,
+  options?: TextRunOptions,
 ): TextRun {
-  return { text: content, ...style, hyperlink: url };
+  return {
+    text: content,
+    style: resolveTextStyle(options?.style),
+    hyperlink: url,
+  };
 }
 
-function isParagraphStyle(
-  value: ParagraphStyle | TextContent,
-): value is ParagraphStyle {
+function isParagraphOptions(
+  value: ParagraphOptions | TextContent,
+): value is ParagraphOptions {
   return typeof value !== "string" && !("text" in value);
 }
 
@@ -66,12 +101,15 @@ function toRun(content: TextContent): TextRun {
 
 /** Create a paragraph from text runs or strings. */
 export function p(
-  first?: ParagraphStyle | TextContent,
+  first?: ParagraphOptions | TextContent,
   ...rest: ReadonlyArray<TextContent>
 ): Paragraph {
   if (first === undefined) return { runs: [] };
-  if (isParagraphStyle(first)) {
-    return { runs: rest.map(toRun), ...first };
+  if (isParagraphOptions(first)) {
+    return {
+      style: resolveParagraphStyle(first.style),
+      runs: rest.map(toRun),
+    };
   }
   return { runs: [toRun(first), ...rest.map(toRun)] };
 }

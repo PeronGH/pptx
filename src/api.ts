@@ -6,8 +6,10 @@ import { bold, boldItalic, italic, link, p, text, underline } from "./text.ts";
 export type {
   Paragraph,
   ParagraphContent,
+  ParagraphOptions,
   TextContent,
   TextRun,
+  TextRunOptions,
 } from "./text.ts";
 
 import {
@@ -16,13 +18,10 @@ import {
   bulletChar,
   bulletNone,
   cellStyle,
+  create,
   gradientStop,
   linearGradient,
   lineStyle,
-  mergeBoxStyles,
-  mergeCellStyles,
-  mergeParagraphStyles,
-  mergeTextStyles,
   noFill,
   paragraphStyle,
   shadow,
@@ -32,8 +31,16 @@ import {
 export type {
   Alignment,
   BoxStyle,
+  BoxStyleFragment,
+  BoxStyleInput,
+  BoxStyleSource,
+  BoxStyleValue,
   Bullet,
   CellStyle,
+  CellStyleFragment,
+  CellStyleInput,
+  CellStyleSource,
+  CellStyleValue,
   CropRect,
   CrossAlignment,
   Fill,
@@ -44,10 +51,18 @@ export type {
   LineStyle,
   MainAlignment,
   ParagraphStyle,
+  ParagraphStyleFragment,
+  ParagraphStyleInput,
+  ParagraphStyleSource,
+  ParagraphStyleValue,
   Shadow,
   Spacing,
   TextFit,
   TextStyle,
+  TextStyleFragment,
+  TextStyleInput,
+  TextStyleSource,
+  TextStyleValue,
   VerticalAlignment,
 } from "./style.ts";
 
@@ -59,9 +74,11 @@ export type {
   Shape,
   Table,
   TableCell,
+  TableCellOptions,
   TableProps,
   TableRow,
   TextBox,
+  TextBoxOptions,
 } from "./nodes.ts";
 
 export { align, col, item, row, stack } from "./layout.ts";
@@ -86,9 +103,11 @@ export type {
   SceneImageProps,
   SceneNode,
   SceneShape,
+  SceneShapeProps,
   SceneTable,
   SceneTableProps,
   SceneTextBox,
+  SceneTextBoxProps,
 } from "./scene.ts";
 
 import {
@@ -140,6 +159,7 @@ export const tx = {
 
 /** Style fragment helpers. */
 export const sty = {
+  create,
   box: boxStyle,
   text: textStyle,
   para: paragraphStyle,
@@ -150,11 +170,5 @@ export const sty = {
     char: bulletChar,
     num: bulletAutoNum,
     none: bulletNone,
-  },
-  merge: {
-    box: mergeBoxStyles,
-    text: mergeTextStyles,
-    para: mergeParagraphStyles,
-    cell: mergeCellStyles,
   },
 } as const;

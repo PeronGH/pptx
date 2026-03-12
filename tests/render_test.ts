@@ -28,6 +28,42 @@ import {
 } from "../mod.ts";
 import { createTestBmp, validatePptx } from "./helpers.ts";
 
+const styles = sty.create({
+  heroBar: sty.box({
+    fill: fill.solid(clr.hex("17324D")),
+  }),
+  heroTitle: sty.text({
+    fontSize: u.font(22),
+    fontColor: clr.hex("FFFFFF"),
+    bold: true,
+  }),
+  noteCard: sty.box({
+    fill: fill.solid(clr.hex("FFFFFF")),
+    line: sty.line({ width: u.emu(6350), dash: "dash" }),
+    shadow: sty.shadow({
+      color: clr.hex("000000"),
+      blur: u.emu(15000),
+      distance: u.emu(5000),
+      angle: 50,
+      alpha: u.pct(20),
+    }),
+    inset: u.in(0.1),
+  }),
+  bullets: sty.para({
+    bullet: sty.bullet.char("•"),
+  }),
+  metricCell: sty.cell({
+    fill: fill.solid(clr.hex("17324D")),
+    line: sty.line({ width: u.emu(6350) }),
+    padding: u.in(0.05),
+    verticalAlign: "middle",
+  }),
+  metricText: sty.text({
+    fontColor: clr.hex("FFFFFF"),
+    bold: true,
+  }),
+});
+
 /**
  * Generate a slide with a solid background and overlay content.
  * Spec: ECMA-376 §13.3.8 and §19.3.1.1.
@@ -44,22 +80,16 @@ Deno.test("e2e: slide background and stack overlay", async () => {
             y: u.in(0.6),
             w: u.in(8.8),
             h: u.in(1),
-            fill: fill.solid(clr.hex("17324D")),
+            style: styles.heroBar,
           },
         ),
         align(
           { x: "center", y: "start", w: u.in(6), h: u.in(1) },
           textbox(
-            sty.box({ verticalAlign: "middle" }),
+            { style: sty.box({ verticalAlign: "middle" }) },
             p(
-              sty.para({ align: "center" }),
-              tx.bold(
-                "Hero Title",
-                sty.text({
-                  fontSize: u.font(22),
-                  fontColor: clr.hex("FFFFFF"),
-                }),
-              ),
+              { style: sty.para({ align: "center" }) },
+              tx.bold("Hero Title", { style: styles.heroTitle }),
             ),
           ),
         ),
@@ -92,7 +122,9 @@ Deno.test("e2e: slide background image", async () => {
           y: u.in(1),
           w: u.in(5),
           h: u.in(1),
-          fill: fill.solid(clr.hex("FFFFFF"), u.pct(80)),
+          style: sty.box({
+            fill: fill.solid(clr.hex("FFFFFF"), u.pct(80)),
+          }),
         },
         p("On top of background"),
       ),
@@ -105,10 +137,10 @@ Deno.test("e2e: slide background image", async () => {
 });
 
 /**
- * Generate a contain-fit image card.
- * Spec: ECMA-376 §19.3.1.37 and §20.1.8.14.
+ * Generate image cards with contain and cover fits.
+ * Spec: ECMA-376 §19.3.1.37, §20.1.8.14, and §20.1.8.55.
  */
-Deno.test("e2e: image contain fit", async () => {
+Deno.test("e2e: image fits", async () => {
   const pptx = generate(presentation(
     slide(
       scene.image({
@@ -120,23 +152,8 @@ Deno.test("e2e: image contain fit", async () => {
         contentType: "image/bmp",
         fit: "contain",
       }),
-    ),
-  ));
-
-  const result = await validatePptx(pptx, 1);
-  assertEquals(result.slides[0]?.shape_count, 1);
-  assertEquals(result.slides[0]?.shapes[0]?.is_picture, true);
-});
-
-/**
- * Generate a cropped cover image.
- * Spec: ECMA-376 §19.3.1.37, §20.1.8.14, and §20.1.8.55.
- */
-Deno.test("e2e: image cover crop", async () => {
-  const pptx = generate(presentation(
-    slide(
       scene.image({
-        x: u.in(1),
+        x: u.in(5.5),
         y: u.in(1),
         w: u.in(2),
         h: u.in(2),
@@ -148,14 +165,16 @@ Deno.test("e2e: image cover crop", async () => {
   ));
 
   const result = await validatePptx(pptx, 1);
+  assertEquals(result.slides[0]?.shape_count, 2);
   assertEquals(result.slides[0]?.shapes[0]?.is_picture, true);
+  assertEquals(result.slides[0]?.shapes[1]?.is_picture, true);
 });
 
 /**
- * Generate a text box with insets and shrink-text fit.
- * Spec: ECMA-376 §21.1.2.1.1 and §21.1.2.1.3.
+ * Generate a text box with inset and shrink-text fit plus a gradient card.
+ * Spec: ECMA-376 §21.1.2.1.1, §21.1.2.1.3, §20.1.8.33, and §20.1.8.45.
  */
-Deno.test("e2e: textbox with insets and shrink-text", async () => {
+Deno.test("e2e: textbox fit and gradient card", async () => {
   const pptx = generate(presentation(
     slide(
       scene.textbox(
@@ -164,16 +183,47 @@ Deno.test("e2e: textbox with insets and shrink-text", async () => {
           y: u.in(1),
           w: u.in(5),
           h: u.in(1.2),
-          inset: u.in(0.1),
-          fit: "shrink-text",
-          fill: fill.solid(clr.hex("FFF7E6")),
-          line: sty.line({ width: u.emu(12700) }),
+          style: sty.box({
+            inset: u.in(0.1),
+            fit: "shrink-text",
+            fill: fill.solid(clr.hex("FFF7E6")),
+            line: sty.line({ width: u.emu(12700) }),
+          }),
         },
         p(
           tx.run(
             "Dense label that should still render cleanly",
-            sty.text({ fontSize: u.font(18) }),
+            { style: sty.text({ fontSize: u.font(18) }) },
           ),
+        ),
+      ),
+      scene.shape(
+        "roundRect",
+        {
+          x: u.in(1),
+          y: u.in(2.6),
+          w: u.in(4),
+          h: u.in(2),
+          style: sty.box({
+            fill: fill.grad(
+              35,
+              fill.stop(u.pct(0), clr.hex("4F81BD")),
+              fill.stop(u.pct(100), clr.hex("1F497D")),
+            ),
+            shadow: sty.shadow({
+              color: clr.hex("000000"),
+              blur: u.emu(30000),
+              distance: u.emu(15000),
+              angle: 45,
+              alpha: u.pct(30),
+            }),
+          }),
+        },
+        p(
+          { style: sty.para({ align: "center" }) },
+          tx.bold("Gradient card", {
+            style: sty.text({ fontColor: clr.hex("FFFFFF") }),
+          }),
         ),
       ),
     ),
@@ -181,45 +231,7 @@ Deno.test("e2e: textbox with insets and shrink-text", async () => {
 
   const result = await validatePptx(pptx, 1);
   assert(result.slides[0]?.shapes[0]?.text?.includes("Dense label"));
-});
-
-/**
- * Generate a gradient and shadow card.
- * Spec: ECMA-376 §20.1.8.33 and §20.1.8.45.
- */
-Deno.test("e2e: gradient fill and shadow", async () => {
-  const pptx = generate(presentation(
-    slide(
-      scene.shape(
-        "roundRect",
-        {
-          x: u.in(1),
-          y: u.in(1),
-          w: u.in(4),
-          h: u.in(2),
-          fill: fill.grad(
-            35,
-            fill.stop(u.pct(0), clr.hex("4F81BD")),
-            fill.stop(u.pct(100), clr.hex("1F497D")),
-          ),
-          shadow: sty.shadow({
-            color: clr.hex("000000"),
-            blur: u.emu(30000),
-            distance: u.emu(15000),
-            angle: 45,
-            alpha: u.pct(30),
-          }),
-        },
-        p(
-          sty.para({ align: "center" }),
-          tx.bold("Gradient card", sty.text({ fontColor: clr.hex("FFFFFF") })),
-        ),
-      ),
-    ),
-  ));
-
-  const result = await validatePptx(pptx, 1);
-  assert(result.slides[0]?.shapes[0]?.text?.includes("Gradient card"));
+  assert(result.slides[0]?.shapes[1]?.text?.includes("Gradient card"));
 });
 
 /**
@@ -237,7 +249,7 @@ Deno.test("e2e: stack and align with flex layout", async () => {
             y: u.emu(0),
             w: u.in(10),
             h: u.in(7.5),
-            fill: fill.solid(clr.hex("F5F5F5")),
+            style: sty.box({ fill: fill.solid(clr.hex("F5F5F5")) }),
           },
         ),
         align(
@@ -268,7 +280,7 @@ Deno.test("e2e: stack and align with flex layout", async () => {
 });
 
 /**
- * Generate a styled table with padding, borders, and alignment.
+ * Generate a styled table with reusable cell and text styles.
  * Spec: ECMA-376 §21.1.3.15 and §21.1.3.17.
  */
 Deno.test("e2e: styled table polish", async () => {
@@ -285,33 +297,16 @@ Deno.test("e2e: styled table polish", async () => {
         tr(
           u.in(0.5),
           td(
-            sty.cell({
-              fill: fill.solid(clr.hex("17324D")),
-              line: sty.line({ width: u.emu(6350) }),
-              padding: u.in(0.05),
-              verticalAlign: "middle",
-            }),
-            p(
-              tx.bold("Metric", sty.text({ fontColor: clr.hex("FFFFFF") })),
-            ),
+            { style: styles.metricCell },
+            p(tx.bold("Metric", { style: styles.metricText })),
           ),
           td(
-            sty.cell({
-              fill: fill.solid(clr.hex("17324D")),
-              line: sty.line({ width: u.emu(6350) }),
-              padding: u.in(0.05),
-              verticalAlign: "middle",
-            }),
-            p(tx.bold("Owner", sty.text({ fontColor: clr.hex("FFFFFF") }))),
+            { style: styles.metricCell },
+            p(tx.bold("Owner", { style: styles.metricText })),
           ),
           td(
-            sty.cell({
-              fill: fill.solid(clr.hex("17324D")),
-              line: sty.line({ width: u.emu(6350) }),
-              padding: u.in(0.05),
-              verticalAlign: "middle",
-            }),
-            p(tx.bold("Status", sty.text({ fontColor: clr.hex("FFFFFF") }))),
+            { style: styles.metricCell },
+            p(tx.bold("Status", { style: styles.metricText })),
           ),
         ),
         tr(u.in(0.5), td("Activation"), td("Mia"), td("Ready")),
@@ -328,7 +323,7 @@ Deno.test("e2e: styled table polish", async () => {
 });
 
 /**
- * Generate a dense, visually mixed slide.
+ * Generate a dense, visually mixed slide using reusable styles.
  * Spec: implementation-specific.
  */
 Deno.test("e2e: design stress test", async () => {
@@ -350,17 +345,12 @@ Deno.test("e2e: design stress test", async () => {
           y: u.in(0.6),
           w: u.in(8.6),
           h: u.in(0.9),
-          fill: fill.solid(clr.hex("17324D")),
+          style: styles.heroBar,
         },
       ),
       scene.textbox(
         { x: u.in(1), y: u.in(0.75), w: u.in(5), h: u.in(0.4) },
-        p(
-          tx.bold(
-            "Q2 Strategy",
-            sty.text({ fontSize: u.font(22), fontColor: clr.hex("FFFFFF") }),
-          ),
-        ),
+        p(tx.bold("Q2 Strategy", { style: styles.heroTitle })),
       ),
       row(
         {
@@ -375,24 +365,13 @@ Deno.test("e2e: design stress test", async () => {
         item(
           { grow: 2 },
           textbox(
-            sty.box({
-              fill: fill.solid(clr.hex("FFFFFF")),
-              line: sty.line({ width: u.emu(6350), dash: "dash" }),
-              shadow: sty.shadow({
-                color: clr.hex("000000"),
-                blur: u.emu(15000),
-                distance: u.emu(5000),
-                angle: 50,
-                alpha: u.pct(20),
-              }),
-              inset: u.in(0.1),
-            }),
+            { style: styles.noteCard },
             p(
-              sty.para({ bullet: sty.bullet.char("•") }),
+              { style: styles.bullets },
               "One clear hero, one comparison region, one action region.",
             ),
             p(
-              sty.para({ bullet: sty.bullet.char("•") }),
+              { style: styles.bullets },
               "Styling and layout should cooperate without theme support.",
             ),
             p("Memo: ", tx.link("example.com", "https://example.com")),

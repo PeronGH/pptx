@@ -135,12 +135,12 @@ function toInternalRun(run: TextRun, ctx: SlideContext): InternalRun {
 
   return {
     text: run.text,
-    bold: run.bold,
-    italic: run.italic,
-    underline: run.underline,
-    fontSize: run.fontSize,
-    fontColor: run.fontColor,
-    fontFamily: run.fontFamily,
+    bold: run.style?.bold,
+    italic: run.style?.italic,
+    underline: run.style?.underline,
+    fontSize: run.style?.fontSize,
+    fontColor: run.style?.fontColor,
+    fontFamily: run.style?.fontFamily,
     hyperlink: hyperlinkInfo,
   };
 }
@@ -151,10 +151,12 @@ function toInternalParagraph(
 ): InternalParagraph {
   return {
     runs: paragraph.runs.map((run) => toInternalRun(run, ctx)),
-    level: paragraph.level,
-    alignment: paragraph.align ? ALIGNMENT_MAP[paragraph.align] : undefined,
-    bullet: paragraph.bullet,
-    spacing: paragraph.spacing,
+    level: paragraph.style?.level,
+    alignment: paragraph.style?.align
+      ? ALIGNMENT_MAP[paragraph.style.align]
+      : undefined,
+    bullet: paragraph.style?.bullet,
+    spacing: paragraph.style?.spacing,
   };
 }
 
@@ -166,11 +168,11 @@ function toInternalCell(
     paragraphs: cell.paragraphs.map((paragraph) =>
       toInternalParagraph(paragraph, ctx)
     ),
-    fill: cell.fill ? toInternalFill(cell.fill) : undefined,
-    line: cell.line ? toInternalLine(cell.line) : undefined,
-    padding: toInternalInsets(cell.padding),
-    verticalAlignment: cell.verticalAlign
-      ? VALIGN_MAP[cell.verticalAlign]
+    fill: cell.style?.fill ? toInternalFill(cell.style.fill) : undefined,
+    line: cell.style?.line ? toInternalLine(cell.style.line) : undefined,
+    padding: toInternalInsets(cell.style?.padding),
+    verticalAlignment: cell.style?.verticalAlign
+      ? VALIGN_MAP[cell.style.verticalAlign]
       : undefined,
   };
 }
@@ -200,14 +202,14 @@ function toInternalShape(
         paragraphs: node.paragraphs.map((paragraph) =>
           toInternalParagraph(paragraph, ctx)
         ),
-        fill: node.fill ? toInternalFill(node.fill) : undefined,
-        line: node.line ? toInternalLine(node.line) : undefined,
-        verticalAlignment: node.verticalAlign
-          ? VALIGN_MAP[node.verticalAlign]
+        fill: node.style?.fill ? toInternalFill(node.style.fill) : undefined,
+        line: node.style?.line ? toInternalLine(node.style.line) : undefined,
+        verticalAlignment: node.style?.verticalAlign
+          ? VALIGN_MAP[node.style.verticalAlign]
           : undefined,
-        inset: toInternalInsets(node.inset),
-        fit: toInternalTextFit(node.fit),
-        shadow: toInternalShadow(node.shadow),
+        inset: toInternalInsets(node.style?.inset),
+        fit: toInternalTextFit(node.style?.fit),
+        shadow: toInternalShadow(node.style?.shadow),
       };
     case "shape":
       return {
@@ -220,14 +222,14 @@ function toInternalShape(
         paragraphs: node.paragraphs.map((paragraph) =>
           toInternalParagraph(paragraph, ctx)
         ),
-        fill: node.fill ? toInternalFill(node.fill) : undefined,
-        line: node.line ? toInternalLine(node.line) : undefined,
-        verticalAlignment: node.verticalAlign
-          ? VALIGN_MAP[node.verticalAlign]
+        fill: node.style?.fill ? toInternalFill(node.style.fill) : undefined,
+        line: node.style?.line ? toInternalLine(node.style.line) : undefined,
+        verticalAlignment: node.style?.verticalAlign
+          ? VALIGN_MAP[node.style.verticalAlign]
           : undefined,
-        inset: toInternalInsets(node.inset),
-        fit: toInternalTextFit(node.fit),
-        shadow: toInternalShadow(node.shadow),
+        inset: toInternalInsets(node.style?.inset),
+        fit: toInternalTextFit(node.style?.fit),
+        shadow: toInternalShadow(node.style?.shadow),
       };
     case "image": {
       const rId = ctx.relGen.next();

@@ -1,5 +1,5 @@
 /**
- * Public style types and helpers for the DSL.
+ * Public style types and constructors for the DSL.
  */
 
 import type { Emu, HexColor, HundredthPoint, Percentage } from "./types.ts";
@@ -82,7 +82,15 @@ export interface CropRect {
 /** Image fit behavior within an allocated frame. */
 export type ImageFit = "contain" | "cover" | "stretch";
 
-/** Composable text styling fragment. */
+/** Padding or inset values in EMUs. */
+export interface Insets {
+  readonly top?: Emu;
+  readonly right?: Emu;
+  readonly bottom?: Emu;
+  readonly left?: Emu;
+}
+
+/** Reusable text styling. */
 export interface TextStyle {
   readonly bold?: boolean;
   readonly italic?: boolean;
@@ -90,10 +98,9 @@ export interface TextStyle {
   readonly fontSize?: HundredthPoint;
   readonly fontColor?: HexColor;
   readonly fontFamily?: string;
-  readonly hyperlink?: string;
 }
 
-/** Composable paragraph styling fragment. */
+/** Reusable paragraph styling. */
 export interface ParagraphStyle {
   readonly level?: number;
   readonly align?: Alignment;
@@ -101,7 +108,7 @@ export interface ParagraphStyle {
   readonly spacing?: Spacing;
 }
 
-/** Composable box styling fragment. */
+/** Reusable box styling. */
 export interface BoxStyle {
   readonly fill?: Fill;
   readonly line?: LineStyle;
@@ -111,7 +118,7 @@ export interface BoxStyle {
   readonly shadow?: Shadow;
 }
 
-/** Composable cell styling fragment. */
+/** Reusable cell styling. */
 export interface CellStyle {
   readonly fill?: Fill;
   readonly line?: LineStyle;
@@ -119,12 +126,259 @@ export interface CellStyle {
   readonly verticalAlign?: VerticalAlignment;
 }
 
-/** Padding or inset values in EMUs. */
-export interface Insets {
-  readonly top?: Emu;
-  readonly right?: Emu;
-  readonly bottom?: Emu;
-  readonly left?: Emu;
+type StyleCategory = "box" | "text" | "para" | "cell";
+
+const STYLE_CATEGORY = Symbol("pptx.style.category");
+const STYLE_DEFINITIONS = Symbol("pptx.style.definitions");
+const STYLE_FRAGMENT = Symbol("pptx.style.fragment");
+const STYLE_VALUE = Symbol("pptx.style.value");
+
+interface StyleToken<K extends StyleCategory, T> {
+  readonly [STYLE_CATEGORY]: K;
+  readonly [STYLE_DEFINITIONS]: readonly T[];
+}
+
+export type StyleFragment<K extends StyleCategory, T> =
+  & StyleToken<K, T>
+  & { readonly [STYLE_FRAGMENT]: true };
+
+export type StyleValue<K extends StyleCategory, T> =
+  & StyleToken<K, T>
+  & { readonly [STYLE_VALUE]: true };
+
+export type BoxStyleFragment = StyleFragment<"box", BoxStyle>;
+export type TextStyleFragment = StyleFragment<"text", TextStyle>;
+export type ParagraphStyleFragment = StyleFragment<"para", ParagraphStyle>;
+export type CellStyleFragment = StyleFragment<"cell", CellStyle>;
+
+export type BoxStyleValue = StyleValue<"box", BoxStyle>;
+export type TextStyleValue = StyleValue<"text", TextStyle>;
+export type ParagraphStyleValue = StyleValue<"para", ParagraphStyle>;
+export type CellStyleValue = StyleValue<"cell", CellStyle>;
+
+export type BoxStyleSource = BoxStyleFragment | BoxStyleValue;
+export type TextStyleSource = TextStyleFragment | TextStyleValue;
+export type ParagraphStyleSource =
+  | ParagraphStyleFragment
+  | ParagraphStyleValue;
+export type CellStyleSource = CellStyleFragment | CellStyleValue;
+
+type StyleList<T> = readonly [T, ...T[]];
+
+export type BoxStyleInput = BoxStyleSource | StyleList<BoxStyleSource>;
+export type TextStyleInput = TextStyleSource | StyleList<TextStyleSource>;
+export type ParagraphStyleInput =
+  | ParagraphStyleSource
+  | StyleList<ParagraphStyleSource>;
+export type CellStyleInput = CellStyleSource | StyleList<CellStyleSource>;
+
+type AnyStyleInput =
+  | BoxStyleInput
+  | TextStyleInput
+  | ParagraphStyleInput
+  | CellStyleInput;
+
+type CreatedStyle<T extends AnyStyleInput> = T extends BoxStyleInput
+  ? BoxStyleValue
+  : T extends TextStyleInput ? TextStyleValue
+  : T extends ParagraphStyleInput ? ParagraphStyleValue
+  : T extends CellStyleInput ? CellStyleValue
+  : never;
+
+function styleFragment<K extends StyleCategory, T>(
+  category: K,
+  definition: T,
+): StyleFragment<K, T> {
+  return {
+    [STYLE_CATEGORY]: category,
+    [STYLE_DEFINITIONS]: [definition],
+    [STYLE_FRAGMENT]: true,
+  };
+}
+
+function styleValue<K extends StyleCategory, T>(
+  category: K,
+  definitions: ReadonlyArray<T>,
+): StyleValue<K, T> {
+  return {
+    [STYLE_CATEGORY]: category,
+    [STYLE_DEFINITIONS]: definitions,
+    [STYLE_VALUE]: true,
+  };
+}
+
+function styleDefinitions<K extends StyleCategory, T>(
+  input: StyleInput<K, T>,
+): readonly T[] {
+  const sources = Array.isArray(input) ? input : [input];
+  return sources.flatMap((source) => source[STYLE_DEFINITIONS]);
+}
+
+type StyleInput<K extends StyleCategory, T> =
+  | StyleFragment<K, T>
+  | StyleValue<K, T>
+  | ReadonlyArray<StyleFragment<K, T> | StyleValue<K, T>>;
+
+function cloneFill(fill: Fill | undefined): Fill | undefined {
+  if (!fill) return undefined;
+  if (fill.kind !== "linear-gradient") return { ...fill };
+  return {
+    kind: "linear-gradient",
+    angle: fill.angle,
+    stops: fill.stops.map((stop) => ({ ...stop })),
+  };
+}
+
+function mergeFill(
+  base: Fill | undefined,
+  next: Fill | undefined,
+): Fill | undefined {
+  return next === undefined ? cloneFill(base) : cloneFill(next);
+}
+
+function mergeLineStyle(
+  base: LineStyle | undefined,
+  next: LineStyle | undefined,
+): LineStyle | undefined {
+  if (!base && !next) return undefined;
+  if (!base) {
+    return {
+      width: next?.width,
+      fill: cloneFill(next?.fill),
+      dash: next?.dash,
+    };
+  }
+  if (!next) {
+    return {
+      width: base.width,
+      fill: cloneFill(base.fill),
+      dash: base.dash,
+    };
+  }
+  return {
+    width: next.width ?? base.width,
+    fill: mergeFill(base.fill, next.fill),
+    dash: next.dash ?? base.dash,
+  };
+}
+
+function mergeShadow(
+  base: Shadow | undefined,
+  next: Shadow | undefined,
+): Shadow | undefined {
+  if (!base && !next) return undefined;
+  if (!base) return next ? { ...next } : undefined;
+  if (!next) return { ...base };
+  return {
+    color: next.color ?? base.color,
+    blur: next.blur ?? base.blur,
+    distance: next.distance ?? base.distance,
+    angle: next.angle ?? base.angle,
+    alpha: next.alpha ?? base.alpha,
+  };
+}
+
+function mergeSpacing(
+  base: Spacing | undefined,
+  next: Spacing | undefined,
+): Spacing | undefined {
+  if (!base && !next) return undefined;
+  if (!base) return next ? { ...next } : undefined;
+  if (!next) return { ...base };
+  return {
+    before: next.before ?? base.before,
+    after: next.after ?? base.after,
+  };
+}
+
+function mergeInsets(
+  base: Emu | Insets | undefined,
+  next: Emu | Insets | undefined,
+): Emu | Insets | undefined {
+  if (next === undefined) {
+    if (typeof base === "number" || base === undefined) return base;
+    return { ...base };
+  }
+  if (
+    typeof next === "number" || typeof base === "number" || base === undefined
+  ) {
+    if (typeof next === "number") return next;
+    return { ...next };
+  }
+  return {
+    top: next.top ?? base.top,
+    right: next.right ?? base.right,
+    bottom: next.bottom ?? base.bottom,
+    left: next.left ?? base.left,
+  };
+}
+
+function mergeBoxDefinitions(
+  definitions: ReadonlyArray<BoxStyle>,
+): BoxStyle | undefined {
+  if (definitions.length === 0) return undefined;
+  let merged: BoxStyle = {};
+  for (const definition of definitions) {
+    merged = {
+      fill: mergeFill(merged.fill, definition.fill),
+      line: mergeLineStyle(merged.line, definition.line),
+      verticalAlign: definition.verticalAlign ?? merged.verticalAlign,
+      inset: mergeInsets(merged.inset, definition.inset),
+      fit: definition.fit ?? merged.fit,
+      shadow: mergeShadow(merged.shadow, definition.shadow),
+    };
+  }
+  return merged;
+}
+
+function mergeTextDefinitions(
+  definitions: ReadonlyArray<TextStyle>,
+): TextStyle | undefined {
+  if (definitions.length === 0) return undefined;
+  let merged: TextStyle = {};
+  for (const definition of definitions) {
+    merged = {
+      bold: definition.bold ?? merged.bold,
+      italic: definition.italic ?? merged.italic,
+      underline: definition.underline ?? merged.underline,
+      fontSize: definition.fontSize ?? merged.fontSize,
+      fontColor: definition.fontColor ?? merged.fontColor,
+      fontFamily: definition.fontFamily ?? merged.fontFamily,
+    };
+  }
+  return merged;
+}
+
+function mergeParagraphDefinitions(
+  definitions: ReadonlyArray<ParagraphStyle>,
+): ParagraphStyle | undefined {
+  if (definitions.length === 0) return undefined;
+  let merged: ParagraphStyle = {};
+  for (const definition of definitions) {
+    merged = {
+      level: definition.level ?? merged.level,
+      align: definition.align ?? merged.align,
+      bullet: definition.bullet ?? merged.bullet,
+      spacing: mergeSpacing(merged.spacing, definition.spacing),
+    };
+  }
+  return merged;
+}
+
+function mergeCellDefinitions(
+  definitions: ReadonlyArray<CellStyle>,
+): CellStyle | undefined {
+  if (definitions.length === 0) return undefined;
+  let merged: CellStyle = {};
+  for (const definition of definitions) {
+    merged = {
+      fill: mergeFill(merged.fill, definition.fill),
+      line: mergeLineStyle(merged.line, definition.line),
+      padding: mergeInsets(merged.padding, definition.padding),
+      verticalAlign: definition.verticalAlign ?? merged.verticalAlign,
+    };
+  }
+  return merged;
 }
 
 /** Create a solid color fill. */
@@ -164,27 +418,7 @@ export function shadow(options: Shadow): Shadow {
   return options;
 }
 
-/** Create a text style fragment. */
-export function textStyle(options: TextStyle): TextStyle {
-  return options;
-}
-
-/** Create a paragraph style fragment. */
-export function paragraphStyle(options: ParagraphStyle): ParagraphStyle {
-  return options;
-}
-
-/** Create a box style fragment. */
-export function boxStyle(options: BoxStyle): BoxStyle {
-  return options;
-}
-
-/** Create a cell style fragment. */
-export function cellStyle(options: CellStyle): CellStyle {
-  return options;
-}
-
-/** Create a bullet character specification. */
+/** Create a paragraph bullet character. */
 export function bulletChar(char: string): Bullet {
   return { kind: "char", char };
 }
@@ -199,40 +433,76 @@ export function bulletNone(): Bullet {
   return { kind: "none" };
 }
 
-function mergeStyle<T extends object>(
-  styles: ReadonlyArray<T | undefined>,
-): T {
-  const merged: Record<string, unknown> = {};
-  for (const style of styles) {
-    if (style) Object.assign(merged, style);
-  }
-  return merged as T;
+/** Create an inline box style fragment. */
+export function boxStyle(options: BoxStyle): BoxStyleFragment {
+  return styleFragment("box", options);
 }
 
-/** Merge box style fragments using last-wins semantics. */
-export function mergeBoxStyles(
-  ...styles: ReadonlyArray<BoxStyle | undefined>
-): BoxStyle {
-  return mergeStyle<BoxStyle>(styles);
+/** Create an inline text style fragment. */
+export function textStyle(options: TextStyle): TextStyleFragment {
+  return styleFragment("text", options);
 }
 
-/** Merge text style fragments using last-wins semantics. */
-export function mergeTextStyles(
-  ...styles: ReadonlyArray<TextStyle | undefined>
-): TextStyle {
-  return mergeStyle<TextStyle>(styles);
+/** Create an inline paragraph style fragment. */
+export function paragraphStyle(
+  options: ParagraphStyle,
+): ParagraphStyleFragment {
+  return styleFragment("para", options);
 }
 
-/** Merge paragraph style fragments using last-wins semantics. */
-export function mergeParagraphStyles(
-  ...styles: ReadonlyArray<ParagraphStyle | undefined>
-): ParagraphStyle {
-  return mergeStyle<ParagraphStyle>(styles);
+/** Create an inline cell style fragment. */
+export function cellStyle(options: CellStyle): CellStyleFragment {
+  return styleFragment("cell", options);
 }
 
-/** Merge cell style fragments using last-wins semantics. */
-export function mergeCellStyles(
-  ...styles: ReadonlyArray<CellStyle | undefined>
-): CellStyle {
-  return mergeStyle<CellStyle>(styles);
+/** Resolve a box style input into a concrete style object. */
+export function resolveBoxStyle(style?: BoxStyleInput): BoxStyle | undefined {
+  if (!style) return undefined;
+  return mergeBoxDefinitions(styleDefinitions(style));
+}
+
+/** Resolve a text style input into a concrete style object. */
+export function resolveTextStyle(
+  style?: TextStyleInput,
+): TextStyle | undefined {
+  if (!style) return undefined;
+  return mergeTextDefinitions(styleDefinitions(style));
+}
+
+/** Resolve a paragraph style input into a concrete style object. */
+export function resolveParagraphStyle(
+  style?: ParagraphStyleInput,
+): ParagraphStyle | undefined {
+  if (!style) return undefined;
+  return mergeParagraphDefinitions(styleDefinitions(style));
+}
+
+/** Resolve a cell style input into a concrete style object. */
+export function resolveCellStyle(
+  style?: CellStyleInput,
+): CellStyle | undefined {
+  if (!style) return undefined;
+  return mergeCellDefinitions(styleDefinitions(style));
+}
+
+/** Create named reusable style values. */
+export function create<T extends Record<string, AnyStyleInput>>(
+  styles: T,
+): {
+  readonly [K in keyof T]: CreatedStyle<T[K]>;
+} {
+  const entries = Object.entries(styles).map(([key, input]) => {
+    const sources = Array.isArray(input) ? input : [input];
+    const category = sources[0][STYLE_CATEGORY] as StyleCategory;
+    return [
+      key,
+      styleValue(
+        category,
+        styleDefinitions(input as StyleInput<StyleCategory, unknown>),
+      ),
+    ];
+  });
+  return Object.fromEntries(entries) as {
+    readonly [K in keyof T]: CreatedStyle<T[K]>;
+  };
 }
