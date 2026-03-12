@@ -1,9 +1,19 @@
 /**
- * Composable, function-based public API for generating PPTX presentations.
+ * VanJS-inspired declarative API for generating PPTX presentations.
  *
- * Every concept is a typed function that returns an immutable value.
- * Functions compose naturally: `presentation(slide(textbox(...)))`.
- * No imperative mutation — the presentation is data built from functions.
+ * Every concept is a typed function. Props-first, children as varargs.
+ * Strings auto-coerce to text runs or paragraphs where appropriate.
+ *
+ * @example
+ * ```ts
+ * presentation(
+ *   slide(
+ *     textbox({ x: inches(1), y: inches(1), w: inches(8), h: inches(1) },
+ *       p({ align: "center" }, bold("Hello"), ", World!"),
+ *     ),
+ *   ),
+ * )
+ * ```
  */
 
 import type { Emu, HexColor, HundredthPoint } from "./types.ts";
@@ -86,6 +96,36 @@ export function link(
 }
 
 // ---------------------------------------------------------------------------
+// Coercion helpers (internal).
+// ---------------------------------------------------------------------------
+
+/** Content that auto-coerces to a TextRun. */
+type TextContent = string | TextRun;
+
+/** Content that auto-coerces to a Paragraph. */
+type ParagraphContent = string | Paragraph;
+
+function toRun(c: TextContent): TextRun {
+  return typeof c === "string" ? { text: c } : c;
+}
+
+function toParagraph(c: ParagraphContent): Paragraph {
+  return typeof c === "string" ? { runs: [{ text: c }] } : c;
+}
+
+function isParagraphProps(
+  v: TextContent | ParagraphProps,
+): v is ParagraphProps {
+  return typeof v !== "string" && !("text" in v);
+}
+
+function isCellProps(
+  v: ParagraphContent | CellProps,
+): v is CellProps {
+  return typeof v !== "string" && !("runs" in v);
+}
+
+// ---------------------------------------------------------------------------
 // Paragraphs. ECMA-376 §21.1.2.2.6 (a:p).
 // ---------------------------------------------------------------------------
 
@@ -105,9 +145,9 @@ export interface Spacing {
 }
 
 /** Options for paragraph formatting. */
-export interface ParagraphOptions {
+export interface ParagraphProps {
   readonly level?: number;
-  readonly alignment?: Alignment;
+  readonly align?: Alignment;
   readonly bullet?: Bullet;
   readonly spacing?: Spacing;
 }
@@ -116,32 +156,32 @@ export interface ParagraphOptions {
 export interface Paragraph {
   readonly runs: ReadonlyArray<TextRun>;
   readonly level?: number;
-  readonly alignment?: Alignment;
+  readonly align?: Alignment;
   readonly bullet?: Bullet;
   readonly spacing?: Spacing;
 }
 
 /**
- * Create a paragraph from a string, a single run, or an array of runs.
+ * Create a paragraph. VanJS-style: first arg is optionally props, rest are runs.
+ * Strings auto-coerce to plain text runs.
  *
  * @example
  * ```ts
- * paragraph("Simple text")
- * paragraph("Centered", { alignment: "center" })
- * paragraph([bold("Hello"), text(" world")])
- * paragraph([bold("Title")], { alignment: "center", level: 0 })
+ * p("Simple text")
+ * p({ align: "center" }, "Centered")
+ * p(bold("Hello"), ", World!")
+ * p({ align: "right", level: 1 }, bold("Title"))
  * ```
  */
-export function paragraph(
-  content: string | TextRun | ReadonlyArray<TextRun>,
-  options?: ParagraphOptions,
+export function p(
+  first?: ParagraphProps | TextContent,
+  ...rest: ReadonlyArray<TextContent>
 ): Paragraph {
-  const runs = typeof content === "string"
-    ? [{ text: content }]
-    : Array.isArray(content)
-    ? content
-    : [content];
-  return { runs, ...options };
+  if (first === undefined) return { runs: [] };
+  if (isParagraphProps(first)) {
+    return { runs: rest.map(toRun), ...first };
+  }
+  return { runs: [toRun(first), ...rest.map(toRun)] };
 }
 
 /**
@@ -149,7 +189,7 @@ export function paragraph(
  *
  * @example
  * ```ts
- * paragraph("Item", { bullet: bulletChar("•") })
+ * p({ bullet: bulletChar("•") }, "Item")
  * ```
  */
 export function bulletChar(char: string): Bullet {
@@ -161,7 +201,7 @@ export function bulletChar(char: string): Bullet {
  *
  * @example
  * ```ts
- * paragraph("Step 1", { bullet: bulletAutoNum("arabicPeriod") })
+ * p({ bullet: bulletAutoNum("arabicPeriod") }, "Step 1")
  * ```
  */
 export function bulletAutoNum(type: string): Bullet {
@@ -173,7 +213,7 @@ export function bulletAutoNum(type: string): Bullet {
  *
  * @example
  * ```ts
- * paragraph("No bullet", { bullet: bulletNone() })
+ * p({ bullet: bulletNone() }, "No bullet")
  * ```
  */
 export function bulletNone(): Bullet {
@@ -217,30 +257,6 @@ export function lineStyle(options: LineStyle): LineStyle {
 }
 
 // ---------------------------------------------------------------------------
-// Geometry bounds. ECMA-376 §20.1.7.5 (a:xfrm).
-// ---------------------------------------------------------------------------
-
-/** Position and size for a shape on a slide. All values in EMUs. */
-export interface Bounds {
-  readonly x: Emu;
-  readonly y: Emu;
-  readonly cx: Emu;
-  readonly cy: Emu;
-}
-
-/**
- * Create shape bounds (position + size) in EMUs.
- *
- * @example
- * ```ts
- * bounds(inches(1), inches(2), inches(8), inches(1))
- * ```
- */
-export function bounds(x: Emu, y: Emu, cx: Emu, cy: Emu): Bounds {
-  return { x, y, cx, cy };
-}
-
-// ---------------------------------------------------------------------------
 // Vertical alignment. ECMA-376 §21.1.2.1.1 (a:bodyPr anchor).
 // ---------------------------------------------------------------------------
 
@@ -248,51 +264,84 @@ export function bounds(x: Emu, y: Emu, cx: Emu, cy: Emu): Bounds {
 export type VerticalAlignment = "top" | "middle" | "bottom";
 
 // ---------------------------------------------------------------------------
+// Positioned props (shared by all slide elements).
+// ---------------------------------------------------------------------------
+
+/** Position and size properties. All values in EMUs. */
+interface Positioned {
+  readonly x: Emu;
+  readonly y: Emu;
+  readonly w: Emu;
+  readonly h: Emu;
+}
+
+// ---------------------------------------------------------------------------
 // Shape elements.
 // ---------------------------------------------------------------------------
 
-/** Styling options for a text box. */
-export interface TextBoxOptions {
+/** Props for a text box. */
+export type TextBoxProps = Positioned & {
   readonly fill?: Fill;
   readonly line?: LineStyle;
-  readonly verticalAlignment?: VerticalAlignment;
-}
+  readonly verticalAlign?: VerticalAlignment;
+};
 
 /** A text box element. ECMA-376 §19.3.1.43 (sp, txBox). */
 export interface TextBox {
   readonly kind: "textbox";
-  readonly bounds: Bounds;
+  readonly x: Emu;
+  readonly y: Emu;
+  readonly w: Emu;
+  readonly h: Emu;
   readonly paragraphs: ReadonlyArray<Paragraph>;
   readonly fill?: Fill;
   readonly line?: LineStyle;
-  readonly verticalAlignment?: VerticalAlignment;
+  readonly verticalAlign?: VerticalAlignment;
 }
 
-/** Styling options for a preset shape. */
-export interface ShapeOptions {
+/** Props for a preset shape. */
+export type ShapeProps = Positioned & {
   readonly fill?: Fill;
   readonly line?: LineStyle;
-  readonly verticalAlignment?: VerticalAlignment;
-}
+  readonly verticalAlign?: VerticalAlignment;
+};
 
 /** A preset geometry shape. ECMA-376 §20.1.9.18 (a:prstGeom). */
 export interface Shape {
   readonly kind: "shape";
-  readonly bounds: Bounds;
+  readonly x: Emu;
+  readonly y: Emu;
+  readonly w: Emu;
+  readonly h: Emu;
   readonly preset: string;
   readonly paragraphs: ReadonlyArray<Paragraph>;
   readonly fill?: Fill;
   readonly line?: LineStyle;
-  readonly verticalAlignment?: VerticalAlignment;
+  readonly verticalAlign?: VerticalAlignment;
 }
+
+/** Props for an image element. */
+export type ImageProps = Positioned & {
+  readonly data: Uint8Array;
+  readonly contentType: string;
+  readonly description?: string;
+};
 
 /** An image element. ECMA-376 §19.3.1.37 (p:pic). */
 export interface Image {
   readonly kind: "image";
-  readonly bounds: Bounds;
+  readonly x: Emu;
+  readonly y: Emu;
+  readonly w: Emu;
+  readonly h: Emu;
   readonly data: Uint8Array;
   readonly contentType: string;
   readonly description?: string;
+}
+
+/** Props for a table cell. */
+export interface CellProps {
+  readonly fill?: Fill;
 }
 
 /** A table cell. ECMA-376 §21.1.3.15 (a:tc). */
@@ -307,11 +356,19 @@ export interface TableRow {
   readonly cells: ReadonlyArray<TableCell>;
 }
 
+/** Props for a table element. */
+export type TableProps = Positioned & {
+  readonly cols: ReadonlyArray<Emu>;
+};
+
 /** A table element. ECMA-376 §19.3.1.22 (p:graphicFrame). */
 export interface Table {
   readonly kind: "table";
-  readonly bounds: Bounds;
-  readonly columns: ReadonlyArray<Emu>;
+  readonly x: Emu;
+  readonly y: Emu;
+  readonly w: Emu;
+  readonly h: Emu;
+  readonly cols: ReadonlyArray<Emu>;
   readonly rows: ReadonlyArray<TableRow>;
 }
 
@@ -323,52 +380,66 @@ export type SlideElement = TextBox | Shape | Image | Table;
 // ---------------------------------------------------------------------------
 
 /**
- * Create a text box with paragraphs.
+ * Create a text box. Strings auto-coerce to paragraphs.
  *
  * @example
  * ```ts
- * textbox(bounds(inches(1), inches(1), inches(8), inches(1)), [
- *   paragraph("Hello, World!"),
- * ])
- * textbox(bounds(inches(1), inches(1), inches(8), inches(1)), [
- *   paragraph("Styled"),
- * ], { fill: solidFill(hexColor("FFFF00")) })
+ * textbox({ x: inches(1), y: inches(1), w: inches(8), h: inches(1) },
+ *   "Simple text",
+ * )
+ * textbox({ x: inches(1), y: inches(1), w: inches(8), h: inches(2), fill: solidFill(hexColor("FFFF00")) },
+ *   p({ align: "center" }, bold("Title")),
+ *   p("Body text"),
+ * )
  * ```
  */
 export function textbox(
-  b: Bounds,
-  paragraphs: ReadonlyArray<Paragraph>,
-  options?: TextBoxOptions,
+  props: TextBoxProps,
+  ...children: ReadonlyArray<ParagraphContent>
 ): TextBox {
-  return { kind: "textbox", bounds: b, paragraphs, ...options };
+  return {
+    kind: "textbox",
+    x: props.x,
+    y: props.y,
+    w: props.w,
+    h: props.h,
+    paragraphs: children.map(toParagraph),
+    fill: props.fill,
+    line: props.line,
+    verticalAlign: props.verticalAlign,
+  };
 }
 
 /**
- * Create a preset geometry shape with optional text.
+ * Create a preset geometry shape. Strings auto-coerce to paragraphs.
  *
  * Preset names follow ECMA-376 §20.1.10.56 (ST_ShapeType):
  * "rect", "ellipse", "roundRect", "triangle", "diamond", etc.
  *
  * @example
  * ```ts
- * shape("rect", bounds(inches(1), inches(1), inches(4), inches(2)))
- * shape("ellipse", bounds(inches(1), inches(1), inches(3), inches(3)), [
- *   paragraph("Circle text", { alignment: "center" }),
- * ], { fill: solidFill(hexColor("FF0000")) })
+ * shape("rect", { x: inches(1), y: inches(1), w: inches(4), h: inches(2) })
+ * shape("ellipse", { x: inches(1), y: inches(1), w: inches(3), h: inches(3), fill: solidFill(hexColor("FF0000")) },
+ *   p({ align: "center" }, "Circle text"),
+ * )
  * ```
  */
 export function shape(
   preset: string,
-  b: Bounds,
-  paragraphs?: ReadonlyArray<Paragraph>,
-  options?: ShapeOptions,
+  props: ShapeProps,
+  ...children: ReadonlyArray<ParagraphContent>
 ): Shape {
   return {
     kind: "shape",
-    bounds: b,
+    x: props.x,
+    y: props.y,
+    w: props.w,
+    h: props.h,
     preset,
-    paragraphs: paragraphs ?? [],
-    ...options,
+    paragraphs: children.map(toParagraph),
+    fill: props.fill,
+    line: props.line,
+    verticalAlign: props.verticalAlign,
   };
 }
 
@@ -378,31 +449,44 @@ export function shape(
  * @example
  * ```ts
  * const pngData = Deno.readFileSync("photo.png");
- * image(bounds(inches(1), inches(1), inches(4), inches(3)), pngData, "image/png")
+ * image({ x: inches(1), y: inches(1), w: inches(4), h: inches(3), data: pngData, contentType: "image/png" })
  * ```
  */
-export function image(
-  b: Bounds,
-  data: Uint8Array,
-  contentType: string,
-  description?: string,
-): Image {
-  return { kind: "image", bounds: b, data, contentType, description };
+export function image(props: ImageProps): Image {
+  return {
+    kind: "image",
+    x: props.x,
+    y: props.y,
+    w: props.w,
+    h: props.h,
+    data: props.data,
+    contentType: props.contentType,
+    description: props.description,
+  };
 }
 
 /**
- * Create a table cell with text content.
+ * Create a table cell. VanJS-style: first arg optionally props, rest are paragraphs.
+ * Strings auto-coerce to paragraphs.
  *
  * @example
  * ```ts
- * cell([paragraph("Header")], { fill: solidFill(hexColor("4472C4")) })
+ * td("Simple text")
+ * td({ fill: solidFill(hexColor("4472C4")) }, p(bold("Header")))
  * ```
  */
-export function cell(
-  paragraphs: ReadonlyArray<Paragraph>,
-  options?: { fill?: Fill },
+export function td(
+  first?: CellProps | ParagraphContent,
+  ...rest: ReadonlyArray<ParagraphContent>
 ): TableCell {
-  return { paragraphs, ...options };
+  if (first === undefined) return { paragraphs: [{ runs: [] }] };
+  if (isCellProps(first)) {
+    const paragraphs = rest.length === 0
+      ? [{ runs: [] } as Paragraph]
+      : rest.map(toParagraph);
+    return { paragraphs, ...first };
+  }
+  return { paragraphs: [toParagraph(first), ...rest.map(toParagraph)] };
 }
 
 /**
@@ -410,10 +494,13 @@ export function cell(
  *
  * @example
  * ```ts
- * row(inches(0.5), [cell([paragraph("A")]), cell([paragraph("B")])])
+ * tr(inches(0.5), td("A"), td("B"))
  * ```
  */
-export function row(height: Emu, cells: ReadonlyArray<TableCell>): TableRow {
+export function tr(
+  height: Emu,
+  ...cells: ReadonlyArray<TableCell>
+): TableRow {
   return { height, cells };
 }
 
@@ -422,22 +509,25 @@ export function row(height: Emu, cells: ReadonlyArray<TableCell>): TableRow {
  *
  * @example
  * ```ts
- * table(
- *   bounds(inches(1), inches(1), inches(6), inches(3)),
- *   [inches(3), inches(3)],
- *   [
- *     row(inches(0.5), [cell([paragraph("A")]), cell([paragraph("B")])]),
- *     row(inches(0.5), [cell([paragraph("1")]), cell([paragraph("2")])]),
- *   ],
+ * table({ x: inches(1), y: inches(1), w: inches(6), h: inches(3), cols: [inches(3), inches(3)] },
+ *   tr(inches(0.5), td("A"), td("B")),
+ *   tr(inches(0.5), td("1"), td("2")),
  * )
  * ```
  */
 export function table(
-  b: Bounds,
-  columns: ReadonlyArray<Emu>,
-  rows: ReadonlyArray<TableRow>,
+  props: TableProps,
+  ...rows: ReadonlyArray<TableRow>
 ): Table {
-  return { kind: "table", bounds: b, columns, rows };
+  return {
+    kind: "table",
+    x: props.x,
+    y: props.y,
+    w: props.w,
+    h: props.h,
+    cols: props.cols,
+    rows,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -455,10 +545,8 @@ export interface Slide {
  * @example
  * ```ts
  * slide(
- *   textbox(bounds(inches(1), inches(1), inches(8), inches(1)), [
- *     paragraph("Title"),
- *   ]),
- *   shape("rect", bounds(inches(2), inches(3), inches(4), inches(2))),
+ *   textbox({ x: inches(1), y: inches(1), w: inches(8), h: inches(1) }, "Title"),
+ *   shape("rect", { x: inches(2), y: inches(3), w: inches(4), h: inches(2) }),
  * )
  * ```
  */
@@ -490,16 +578,12 @@ export interface Presentation {
  * @example
  * ```ts
  * presentation(
- *   slide(textbox(bounds(inches(1), inches(1), inches(8), inches(1)), [
- *     paragraph("Hello"),
- *   ])),
+ *   slide(textbox({ x: inches(1), y: inches(1), w: inches(8), h: inches(1) }, "Hello")),
  * )
  *
  * presentation(
  *   { title: "My Deck", creator: "Author" },
- *   slide(textbox(bounds(inches(1), inches(1), inches(8), inches(1)), [
- *     paragraph("With options"),
- *   ])),
+ *   slide(textbox({ x: inches(1), y: inches(1), w: inches(8), h: inches(1) }, "With options")),
  * )
  * ```
  */
@@ -583,15 +667,15 @@ function toInternalRun(run: TextRun, ctx: SlideContext): InternalRun {
 }
 
 function toInternalParagraph(
-  p: Paragraph,
+  paragraph: Paragraph,
   ctx: SlideContext,
 ): InternalParagraph {
   return {
-    runs: p.runs.map((r) => toInternalRun(r, ctx)),
-    level: p.level,
-    alignment: p.alignment ? ALIGNMENT_MAP[p.alignment] : undefined,
-    bullet: p.bullet,
-    spacing: p.spacing,
+    runs: paragraph.runs.map((r) => toInternalRun(r, ctx)),
+    level: paragraph.level,
+    alignment: paragraph.align ? ALIGNMENT_MAP[paragraph.align] : undefined,
+    bullet: paragraph.bullet,
+    spacing: paragraph.spacing,
   };
 }
 
@@ -603,30 +687,34 @@ function toInternalShape(
     case "textbox":
       return {
         kind: "textbox",
-        x: element.bounds.x,
-        y: element.bounds.y,
-        cx: element.bounds.cx,
-        cy: element.bounds.cy,
-        paragraphs: element.paragraphs.map((p) => toInternalParagraph(p, ctx)),
+        x: element.x,
+        y: element.y,
+        cx: element.w,
+        cy: element.h,
+        paragraphs: element.paragraphs.map((pg) =>
+          toInternalParagraph(pg, ctx)
+        ),
         fill: element.fill ? toInternalFill(element.fill) : undefined,
         line: element.line ? toInternalLine(element.line) : undefined,
-        verticalAlignment: element.verticalAlignment
-          ? VALIGN_MAP[element.verticalAlignment]
+        verticalAlignment: element.verticalAlign
+          ? VALIGN_MAP[element.verticalAlign]
           : undefined,
       };
     case "shape":
       return {
         kind: "preset",
-        x: element.bounds.x,
-        y: element.bounds.y,
-        cx: element.bounds.cx,
-        cy: element.bounds.cy,
+        x: element.x,
+        y: element.y,
+        cx: element.w,
+        cy: element.h,
         preset: element.preset,
-        paragraphs: element.paragraphs.map((p) => toInternalParagraph(p, ctx)),
+        paragraphs: element.paragraphs.map((pg) =>
+          toInternalParagraph(pg, ctx)
+        ),
         fill: element.fill ? toInternalFill(element.fill) : undefined,
         line: element.line ? toInternalLine(element.line) : undefined,
-        verticalAlignment: element.verticalAlignment
-          ? VALIGN_MAP[element.verticalAlignment]
+        verticalAlignment: element.verticalAlign
+          ? VALIGN_MAP[element.verticalAlign]
           : undefined,
       };
     case "image": {
@@ -639,10 +727,10 @@ function toInternalShape(
       });
       return {
         kind: "picture",
-        x: element.bounds.x,
-        y: element.bounds.y,
-        cx: element.bounds.cx,
-        cy: element.bounds.cy,
+        x: element.x,
+        y: element.y,
+        cx: element.w,
+        cy: element.h,
         rId,
         description: element.description,
       } satisfies PictureShape;
@@ -650,11 +738,11 @@ function toInternalShape(
     case "table":
       return {
         kind: "table",
-        x: element.bounds.x,
-        y: element.bounds.y,
-        cx: element.bounds.cx,
-        cy: element.bounds.cy,
-        columns: element.columns,
+        x: element.x,
+        y: element.y,
+        cx: element.w,
+        cy: element.h,
+        columns: element.cols,
         rows: element.rows.map((r) => toInternalTableRow(r, ctx)),
       } satisfies InternalTableShape;
   }
@@ -675,7 +763,7 @@ function toInternalTableCell(
   ctx: SlideContext,
 ): InternalTableCell {
   return {
-    paragraphs: c.paragraphs.map((p) => toInternalParagraph(p, ctx)),
+    paragraphs: c.paragraphs.map((pg) => toInternalParagraph(pg, ctx)),
     fill: c.fill ? toInternalFill(c.fill) : undefined,
   };
 }
@@ -708,9 +796,9 @@ function mimeToExtension(mime: string): string {
  * @example
  * ```ts
  * const pptx = generate(presentation(
- *   slide(textbox(bounds(inches(1), inches(1), inches(8), inches(1)), [
- *     paragraph("Hello, World!"),
- *   ])),
+ *   slide(textbox({ x: inches(1), y: inches(1), w: inches(8), h: inches(1) },
+ *     "Hello, World!",
+ *   )),
  * ));
  * Deno.writeFileSync("output.pptx", pptx);
  * ```
