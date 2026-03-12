@@ -1,153 +1,342 @@
 /**
- * Public declarative API for generating PPTX presentations.
+ * Composable, function-based public API for generating PPTX presentations.
  *
- * Users describe presentations as data, then call `writePresentation()`.
- * No imperative mutation — the presentation is a value.
+ * Every concept is a typed function that returns an immutable value.
+ * Functions compose naturally: `presentation(slide(textbox(...)))`.
+ * No imperative mutation — the presentation is data built from functions.
  */
 
 import type { Emu, HexColor, HundredthPoint } from "./types.ts";
 import { inches } from "./types.ts";
 import { generatePptx } from "./packaging.ts";
-import type { SlideShape, TextParagraph } from "./ooxml/slide.ts";
+import type {
+  SlideShape,
+  TextParagraph as InternalParagraph,
+  TextRun as InternalRun,
+} from "./ooxml/slide.ts";
 
-/** A text run in the public API. */
-export interface PTextRun {
-  /** The text content. */
+// ---------------------------------------------------------------------------
+// Text runs
+// ---------------------------------------------------------------------------
+
+/** A styled text run. ECMA-376 §21.1.2.3.8 (a:r). */
+export interface TextRun {
   readonly text: string;
-  /** Whether the text is bold. */
   readonly bold?: boolean;
-  /** Whether the text is italic. */
   readonly italic?: boolean;
-  /** Font size in hundredths of a point (use `fontSize()` helper). */
   readonly fontSize?: HundredthPoint;
-  /** Font color as hex (use `hexColor()` helper). */
   readonly fontColor?: HexColor;
 }
 
-/** A text paragraph in the public API. */
-export interface PParagraph {
-  /** Text content. If a string, creates a single run. */
-  readonly text: string | ReadonlyArray<PTextRun>;
-  /** Indentation level (0-8). */
+/** Styling options applicable to a text run. */
+export interface TextRunStyle {
+  readonly bold?: boolean;
+  readonly italic?: boolean;
+  readonly fontSize?: HundredthPoint;
+  readonly fontColor?: HexColor;
+}
+
+/** Create a plain text run. */
+export function text(content: string, style?: TextRunStyle): TextRun {
+  return { text: content, ...style };
+}
+
+/** Create a bold text run. */
+export function bold(content: string, style?: TextRunStyle): TextRun {
+  return { text: content, bold: true, ...style };
+}
+
+/** Create an italic text run. */
+export function italic(content: string, style?: TextRunStyle): TextRun {
+  return { text: content, italic: true, ...style };
+}
+
+/** Create a bold-italic text run. */
+export function boldItalic(content: string, style?: TextRunStyle): TextRun {
+  return { text: content, bold: true, italic: true, ...style };
+}
+
+// ---------------------------------------------------------------------------
+// Paragraphs
+// ---------------------------------------------------------------------------
+
+/** Alignment options for paragraphs. */
+export type Alignment = "left" | "center" | "right" | "justify";
+
+/** Options for paragraph formatting. */
+export interface ParagraphOptions {
   readonly level?: number;
-  /** Paragraph alignment. */
-  readonly alignment?: "left" | "center" | "right" | "justify";
+  readonly alignment?: Alignment;
 }
 
-/** A text box element. */
-export interface PTextBox {
+/** A text paragraph. ECMA-376 §21.1.2.2.6 (a:p). */
+export interface Paragraph {
+  readonly runs: ReadonlyArray<TextRun>;
+  readonly level?: number;
+  readonly alignment?: Alignment;
+}
+
+/**
+ * Create a paragraph from a string, a single run, or an array of runs.
+ *
+ * @example
+ * ```ts
+ * paragraph("Simple text")
+ * paragraph("Centered", { alignment: "center" })
+ * paragraph([bold("Hello"), text(" world")])
+ * paragraph([bold("Title")], { alignment: "center", level: 0 })
+ * ```
+ */
+export function paragraph(
+  content: string | TextRun | ReadonlyArray<TextRun>,
+  options?: ParagraphOptions,
+): Paragraph {
+  const runs = typeof content === "string"
+    ? [{ text: content }]
+    : Array.isArray(content)
+    ? content
+    : [content];
+  return { runs, ...options };
+}
+
+// ---------------------------------------------------------------------------
+// Geometry bounds
+// ---------------------------------------------------------------------------
+
+/** Position and size for a shape on a slide. All values in EMUs. */
+export interface Bounds {
+  readonly x: Emu;
+  readonly y: Emu;
+  readonly cx: Emu;
+  readonly cy: Emu;
+}
+
+/**
+ * Create shape bounds (position + size) in EMUs.
+ *
+ * @example
+ * ```ts
+ * bounds(inches(1), inches(2), inches(8), inches(1))
+ * ```
+ */
+export function bounds(x: Emu, y: Emu, cx: Emu, cy: Emu): Bounds {
+  return { x, y, cx, cy };
+}
+
+// ---------------------------------------------------------------------------
+// Shapes
+// ---------------------------------------------------------------------------
+
+/** A text box element. ECMA-376 §19.3.1.43 (sp, txBox). */
+export interface TextBox {
   readonly kind: "textbox";
-  /** X position in EMUs. */
-  readonly x: Emu;
-  /** Y position in EMUs. */
-  readonly y: Emu;
-  /** Width in EMUs. */
-  readonly cx: Emu;
-  /** Height in EMUs. */
-  readonly cy: Emu;
-  /** Paragraphs of text. */
-  readonly paragraphs: ReadonlyArray<PParagraph>;
+  readonly bounds: Bounds;
+  readonly paragraphs: ReadonlyArray<Paragraph>;
 }
 
-/** A preset geometry shape. */
-export interface PShape {
+/** A preset geometry shape. ECMA-376 §20.1.9.18 (a:prstGeom). */
+export interface Shape {
   readonly kind: "shape";
-  /** X position in EMUs. */
-  readonly x: Emu;
-  /** Y position in EMUs. */
-  readonly y: Emu;
-  /** Width in EMUs. */
-  readonly cx: Emu;
-  /** Height in EMUs. */
-  readonly cy: Emu;
-  /** Preset geometry name (e.g. "rect", "ellipse", "roundRect"). ECMA-376 §20.1.10.56. */
+  readonly bounds: Bounds;
   readonly preset: string;
-  /** Optional text paragraphs. */
-  readonly paragraphs?: ReadonlyArray<PParagraph>;
+  readonly paragraphs: ReadonlyArray<Paragraph>;
 }
 
 /** Union of all slide element types. */
-export type PSlideElement = PTextBox | PShape;
+export type SlideElement = TextBox | Shape;
 
-/** A slide in the public API. */
-export interface PSlide {
-  /** Elements on this slide. */
-  readonly elements: ReadonlyArray<PSlideElement>;
+/**
+ * Create a text box with paragraphs.
+ *
+ * @example
+ * ```ts
+ * textbox(bounds(inches(1), inches(1), inches(8), inches(1)), [
+ *   paragraph("Hello, World!"),
+ *   paragraph([bold("Bold"), text(" and normal")]),
+ * ])
+ * ```
+ */
+export function textbox(
+  b: Bounds,
+  paragraphs: ReadonlyArray<Paragraph>,
+): TextBox {
+  return { kind: "textbox", bounds: b, paragraphs };
 }
 
-/** A complete presentation description. */
-export interface PPresentation {
-  /** Presentation title (used in document properties). */
+/**
+ * Create a preset geometry shape with optional text.
+ *
+ * Preset names follow ECMA-376 §20.1.10.56 (ST_ShapeType):
+ * "rect", "ellipse", "roundRect", "triangle", "diamond", etc.
+ *
+ * @example
+ * ```ts
+ * shape("rect", bounds(inches(1), inches(1), inches(4), inches(2)))
+ * shape("ellipse", bounds(inches(1), inches(1), inches(3), inches(3)), [
+ *   paragraph("Circle text", { alignment: "center" }),
+ * ])
+ * ```
+ */
+export function shape(
+  preset: string,
+  b: Bounds,
+  paragraphs?: ReadonlyArray<Paragraph>,
+): Shape {
+  return { kind: "shape", bounds: b, preset, paragraphs: paragraphs ?? [] };
+}
+
+// ---------------------------------------------------------------------------
+// Slides
+// ---------------------------------------------------------------------------
+
+/** A slide containing elements. ECMA-376 §13.3.8. */
+export interface Slide {
+  readonly elements: ReadonlyArray<SlideElement>;
+}
+
+/**
+ * Create a slide from its elements.
+ *
+ * @example
+ * ```ts
+ * slide(
+ *   textbox(bounds(inches(1), inches(1), inches(8), inches(1)), [
+ *     paragraph("Title"),
+ *   ]),
+ *   shape("rect", bounds(inches(2), inches(3), inches(4), inches(2))),
+ * )
+ * ```
+ */
+export function slide(...elements: ReadonlyArray<SlideElement>): Slide {
+  return { elements };
+}
+
+// ---------------------------------------------------------------------------
+// Presentation
+// ---------------------------------------------------------------------------
+
+/** Options for the presentation. */
+export interface PresentationOptions {
   readonly title?: string;
-  /** Author name (used in document properties). */
   readonly creator?: string;
-  /** Slide width in EMUs. Defaults to 10 inches (standard widescreen). */
   readonly slideWidth?: Emu;
-  /** Slide height in EMUs. Defaults to 7.5 inches (standard widescreen). */
   readonly slideHeight?: Emu;
-  /** Slides in order. */
-  readonly slides: ReadonlyArray<PSlide>;
 }
 
-const ALIGNMENT_MAP: Record<string, "l" | "ctr" | "r" | "just"> = {
+/** A complete presentation. ECMA-376 §13.3.6. */
+export interface Presentation {
+  readonly options: PresentationOptions;
+  readonly slides: ReadonlyArray<Slide>;
+}
+
+/**
+ * Create a presentation from slides.
+ *
+ * @example
+ * ```ts
+ * presentation(
+ *   slide(textbox(bounds(inches(1), inches(1), inches(8), inches(1)), [
+ *     paragraph("Hello"),
+ *   ])),
+ * )
+ *
+ * presentation(
+ *   { title: "My Deck", creator: "Author" },
+ *   slide(textbox(bounds(inches(1), inches(1), inches(8), inches(1)), [
+ *     paragraph("With options"),
+ *   ])),
+ * )
+ * ```
+ */
+export function presentation(
+  first: Slide | PresentationOptions,
+  ...rest: ReadonlyArray<Slide>
+): Presentation {
+  if ("elements" in first) {
+    return { options: {}, slides: [first, ...rest] };
+  }
+  return { options: first, slides: rest };
+}
+
+// ---------------------------------------------------------------------------
+// Generation
+// ---------------------------------------------------------------------------
+
+const ALIGNMENT_MAP: Record<Alignment, "l" | "ctr" | "r" | "just"> = {
   left: "l",
   center: "ctr",
   right: "r",
   justify: "just",
 };
 
-/** Convert a public paragraph to an internal text paragraph. */
-function toParagraph(p: PParagraph): TextParagraph {
-  const runs = typeof p.text === "string" ? [{ text: p.text }] : [...p.text];
-
+function toInternalRun(run: TextRun): InternalRun {
   return {
-    runs,
+    text: run.text,
+    bold: run.bold,
+    italic: run.italic,
+    fontSize: run.fontSize,
+    fontColor: run.fontColor,
+  };
+}
+
+function toInternalParagraph(p: Paragraph): InternalParagraph {
+  return {
+    runs: p.runs.map(toInternalRun),
     level: p.level,
     alignment: p.alignment ? ALIGNMENT_MAP[p.alignment] : undefined,
   };
 }
 
-/** Convert a public slide element to an internal slide shape. */
-function toShape(element: PSlideElement): SlideShape {
+function toInternalShape(element: SlideElement): SlideShape {
   switch (element.kind) {
     case "textbox":
       return {
         kind: "textbox",
-        x: element.x,
-        y: element.y,
-        cx: element.cx,
-        cy: element.cy,
-        paragraphs: element.paragraphs.map(toParagraph),
+        x: element.bounds.x,
+        y: element.bounds.y,
+        cx: element.bounds.cx,
+        cy: element.bounds.cy,
+        paragraphs: element.paragraphs.map(toInternalParagraph),
       };
     case "shape":
       return {
         kind: "preset",
-        x: element.x,
-        y: element.y,
-        cx: element.cx,
-        cy: element.cy,
+        x: element.bounds.x,
+        y: element.bounds.y,
+        cx: element.bounds.cx,
+        cy: element.bounds.cy,
         preset: element.preset,
-        paragraphs: element.paragraphs?.map(toParagraph),
+        paragraphs: element.paragraphs.map(toInternalParagraph),
       };
   }
 }
 
 /**
- * Generate a PPTX file from a declarative presentation description.
+ * Generate a PPTX file from a presentation.
  *
  * Returns the file contents as a Uint8Array (ZIP/PPTX binary).
+ *
+ * @example
+ * ```ts
+ * const pptx = generate(presentation(
+ *   slide(textbox(bounds(inches(1), inches(1), inches(8), inches(1)), [
+ *     paragraph("Hello, World!"),
+ *   ])),
+ * ));
+ * Deno.writeFileSync("output.pptx", pptx);
+ * ```
  */
-export function generatePresentation(presentation: PPresentation): Uint8Array {
-  const slideWidth = presentation.slideWidth ?? inches(10);
-  const slideHeight = presentation.slideHeight ?? inches(7.5);
+export function generate(pres: Presentation): Uint8Array {
+  const slideWidth = pres.options.slideWidth ?? inches(10);
+  const slideHeight = pres.options.slideHeight ?? inches(7.5);
 
   return generatePptx({
-    title: presentation.title,
-    creator: presentation.creator,
+    title: pres.options.title,
+    creator: pres.options.creator,
     slideWidth,
     slideHeight,
-    slides: presentation.slides.map((slide) => ({
-      shapes: slide.elements.map(toShape),
+    slides: pres.slides.map((s) => ({
+      shapes: s.elements.map(toInternalShape),
     })),
   });
 }
