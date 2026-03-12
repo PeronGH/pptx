@@ -22,14 +22,13 @@ deno add @pixel/pptx
 
 ```ts
 import {
+  align,
   bg,
   clr,
-  col,
   fill,
   generate,
   p,
   presentation,
-  shape,
   slide,
   sty,
   textbox,
@@ -38,13 +37,16 @@ import {
 } from "@pixel/pptx";
 
 const styles = sty.create({
-  hero: sty.box({ fill: fill.solid(clr.hex("1F4E79")) }),
+  hero: sty.box({
+    fill: fill.solid(clr.hex("1F4E79")),
+    verticalAlign: "middle",
+    inset: u.in(0.18),
+  }),
   heroText: sty.text({
-    fontSize: u.font(22),
+    fontSize: u.font(28),
     fontColor: clr.hex("FFFFFF"),
     bold: true,
   }),
-  card: sty.box({ fill: fill.solid(clr.hex("FFFFFF")), inset: u.in(0.16) }),
 });
 
 const deck = presentation(
@@ -52,24 +54,14 @@ const deck = presentation(
   slide(
     {
       background: bg.fill(
-        fill.grad(
-          90,
-          fill.stop(u.pct(0), clr.hex("FFF8F1")),
-          fill.stop(u.pct(100), clr.hex("F2F6FB")),
-        ),
+        fill.solid(clr.hex("F7F4EE")),
       ),
     },
-    col(
-      { padding: u.in(0.6), gap: u.in(0.3) },
-      shape(
-        "roundRect",
-        { style: styles.hero },
-        p(tx.bold("Quarterly Review", { style: styles.heroText })),
-      ),
+    align(
+      { x: "center", y: "center", w: u.in(6), h: u.in(1.2) },
       textbox(
-        { style: styles.card },
-        p("This slide uses only the high-level DSL."),
-        p("See the full polished example in examples/quarterly-review.ts."),
+        { style: styles.hero },
+        p(tx.bold("Hello, world!", { style: styles.heroText })),
       ),
     ),
   ),
@@ -77,6 +69,10 @@ const deck = presentation(
 
 Deno.writeFileSync("hello.pptx", generate(deck));
 ```
+
+Preview rendered from [`examples/minimal.ts`](./examples/minimal.ts).
+
+![Minimal example slide](./assets/minimal.webp)
 
 ## Showcase
 
