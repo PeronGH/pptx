@@ -61,7 +61,7 @@ export interface Col extends ContainerProps {
 /** An overlay stack container. */
 export interface Stack extends StackProps {
   readonly kind: "stack";
-  readonly children: ReadonlyArray<LayoutNode>;
+  readonly children: ReadonlyArray<StackChild>;
 }
 
 /** Align a child within its parent frame. */
@@ -84,7 +84,7 @@ export type SlideChild = SceneNode | Row | Col | Stack | Align;
 
 type RowChild = LayoutItem | LayoutNode;
 type ColChild = LayoutItem | LayoutNode;
-type StackChild = LayoutNode;
+type StackChild = LayoutNode | SceneNode;
 
 function isContainerProps(
   value: ContainerProps | RowChild,
@@ -290,7 +290,9 @@ function resolveStack(
   frame: Frame,
 ): ReadonlyArray<SceneNode> {
   const inner = insetFrame(frame, stackNode.padding);
-  return stackNode.children.flatMap((child) => resolveLayoutNode(child, inner));
+  return stackNode.children.flatMap((child) =>
+    isSceneNode(child) ? [child] : resolveLayoutNode(child, inner)
+  );
 }
 
 function resolveAlign(node: Align, frame: Frame): ReadonlyArray<SceneNode> {

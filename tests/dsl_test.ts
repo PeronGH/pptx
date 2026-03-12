@@ -346,6 +346,38 @@ Deno.test("stack() overlays children in the same frame", () => {
 });
 
 /**
+ * Nested scene nodes in stack() preserve their absolute geometry.
+ * Spec: implementation-specific.
+ */
+Deno.test("stack() preserves nested scene node geometry", () => {
+  const nodes = resolveSlideChildren(
+    [
+      stack(
+        { padding: st.in(1) },
+        scene.shape("rect", {
+          x: st.in(0.5),
+          y: st.in(0.5),
+          w: st.in(8),
+          h: st.in(1),
+          fill: solidFill(st.hex("17324D")),
+        }),
+        textbox("Overlay"),
+      ),
+    ],
+    { x: st.emu(0), y: st.emu(0), w: st.in(10), h: st.in(6) },
+  );
+
+  assertEquals(nodes.length, 2);
+  assertEquals(nodes[0]?.kind, "shape");
+  assertEquals(nodes[0]?.x, st.in(0.5));
+  assertEquals(nodes[0]?.y, st.in(0.5));
+  assertEquals(nodes[0]?.w, st.in(8));
+  assertEquals(nodes[0]?.h, st.in(1));
+  assertEquals(nodes[1]?.x, st.in(1));
+  assertEquals(nodes[1]?.w, st.in(8));
+});
+
+/**
  * Resolve an aligned child inside an overlay frame.
  * Spec: implementation-specific.
  */
