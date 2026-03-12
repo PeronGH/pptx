@@ -1,19 +1,25 @@
 # @pixel/pptx
 
-Deno library for generating PPTX files. Declarative, typed, spec-compliant.
+Deno library for generating PPTX files with a layout DSL that lowers to
+absolute-positioned scene nodes and then to OOXML.
 
-Outputs valid ECMA-376 Office Open XML packages that open in LibreOffice Impress
-and round-trip through python-pptx.
+The public surface is split into:
+
+- A **DSL layer** for composition: `row()`, `col()`, `item()`, `textbox()`,
+  `shape()`, `image()`, `table()`
+- A **scene escape hatch** for precise placement: `scene.textbox()`,
+  `scene.shape()`, `scene.image()`, `scene.table()`
+- A single `generate()` step that writes a valid PPTX package
 
 ## Install
 
 ```ts
 import {
-  bold,
   generate,
-  inches,
+  item,
   p,
   presentation,
+  row,
   slide,
   textbox,
 } from "jsr:@pixel/pptx";
@@ -24,177 +30,201 @@ import {
 ```ts
 import {
   bold,
+  boxStyle,
   generate,
   hexColor,
   image,
   inches,
-  link,
+  item,
   p,
   presentation,
-  shape,
+  row,
+  scene,
   slide,
   solidFill,
   table,
   td,
   textbox,
   tr,
-} from "@pixel/pptx";
+} from "jsr:@pixel/pptx";
 
-const pptx = generate(presentation(
-  { title: "Quarterly Report" },
-  // Title slide
+const deck = presentation(
+  { title: "Quarterly Review" },
   slide(
-    textbox(
-      { x: inches(1), y: inches(2), w: inches(8), h: inches(2) },
-      p({ align: "center" }, bold("Quarterly Report")),
-    ),
-  ),
-  // Content slide with table and link
-  slide(
-    table(
+    scene.shape(
+      "rect",
       {
-        x: inches(1),
-        y: inches(1),
-        w: inches(6),
-        h: inches(2),
-        cols: [inches(3), inches(3)],
+        x: inches(0.5),
+        y: inches(0.5),
+        w: inches(9),
+        h: inches(1.1),
+        fill: solidFill(hexColor("1F4E79")),
       },
-      tr(
-        inches(0.5),
-        td({ fill: solidFill(hexColor("4472C4")) }, p(bold("Metric"))),
-        td({ fill: solidFill(hexColor("4472C4")) }, p(bold("Value"))),
+      p({ align: "center" }, bold("Quarterly Review")),
+    ),
+    row(
+      { gap: inches(0.25), padding: inches(1) },
+      item(
+        { basis: inches(2.5) },
+        image({
+          data: Deno.readFileSync("chart.png"),
+          contentType: "image/png",
+          description: "Chart preview",
+        }),
       ),
-      tr(inches(0.5), td("Revenue"), td("$1.2M")),
-      tr(inches(0.5), td("Growth"), td("15%")),
-    ),
-    textbox(
-      { x: inches(1), y: inches(4), w: inches(8), h: inches(1) },
-      p("Details at ", link("example.com", "https://example.com")),
+      item(
+        { grow: 1 },
+        table(
+          { cols: [inches(2.5), inches(2.5)] },
+          tr(inches(0.5), td("Revenue"), td("$1.2M")),
+          tr(inches(0.5), td("Growth"), td("15%")),
+        ),
+      ),
+      item(
+        { basis: inches(2.5) },
+        textbox(
+          boxStyle({ fill: solidFill(hexColor("F3F6FA")) }),
+          p(bold("Notes")),
+          p("Highlights and next steps"),
+        ),
+      ),
     ),
   ),
-  // Image slide
-  slide(
-    shape("rect", {
-      x: inches(1),
-      y: inches(1),
-      w: inches(3),
-      h: inches(2),
-      fill: solidFill(hexColor("FF0000")),
-    }),
-    image({
-      x: inches(5),
-      y: inches(1),
-      w: inches(4),
-      h: inches(3),
-      data: Deno.readFileSync("photo.png"),
-      contentType: "image/png",
-    }),
-  ),
-));
+);
 
-Deno.writeFileSync("report.pptx", pptx);
+Deno.writeFileSync("report.pptx", generate(deck));
 ```
 
 ## API
 
 ### Structure
 
-| Function                            | Description                   |
-| ----------------------------------- | ----------------------------- |
-| `presentation(options?, ...slides)` | Create a presentation         |
-| `slide(...elements)`                | Create a slide                |
-| `generate(presentation)`            | Generate PPTX as `Uint8Array` |
+| Function                            | Description                                         |
+| ----------------------------------- | --------------------------------------------------- |
+| `presentation(options?, ...slides)` | Create a presentation                               |
+| `slide(...children)`                | Create a slide from layout roots and/or scene nodes |
+| `generate(presentation)`            | Generate PPTX as `Uint8Array`                       |
 
-### Elements
+### Layout DSL
 
-| Function                              | Description                                               |
-| ------------------------------------- | --------------------------------------------------------- |
-| `textbox(props, ...paragraphs)`       | Text box. Strings auto-coerce to paragraphs               |
-| `shape(preset, props, ...paragraphs)` | Preset shape (`"rect"`, `"ellipse"`, `"roundRect"`, etc.) |
-| `image(props)`                        | Embedded image (PNG, JPEG, GIF, BMP, TIFF, SVG)           |
-| `table(props, ...rows)`               | Table                                                     |
-| `tr(height, ...cells)`                | Table row                                                 |
-| `td(props?, ...paragraphs)`           | Table cell. Strings auto-coerce to paragraphs             |
+| Function                   | Description                                                 |
+| -------------------------- | ----------------------------------------------------------- |
+| `row(props?, ...children)` | Horizontal flex-like container                              |
+| `col(props?, ...children)` | Vertical flex-like container                                |
+| `item(props?, child)`      | Child layout wrapper for `grow`, `basis`, `alignSelf`, etc. |
+
+Container props:
+
+- `gap?: Emu`
+- `padding?: Emu | { top?, right?, bottom?, left? }`
+- `justify?: "start" | "center" | "end" | "space-between"`
+- `align?: "start" | "center" | "end" | "stretch"`
+
+Item props:
+
+- `basis?: Emu`
+- `grow?: number`
+- `w?: Emu`
+- `h?: Emu`
+- `alignSelf?: "start" | "center" | "end" | "stretch"`
+- `aspectRatio?: number`
+
+### Positionless leaves
+
+| Function                                     | Description                    |
+| -------------------------------------------- | ------------------------------ |
+| `textbox(style?, ...paragraphs)`             | Positionless text box leaf     |
+| `shape(preset, style?, ...paragraphs)`       | Positionless preset shape leaf |
+| `image({ data, contentType, description? })` | Positionless image leaf        |
+| `table({ cols }, ...rows)`                   | Positionless table leaf        |
+| `tr(height, ...cells)`                       | Table row                      |
+| `td(style?, ...paragraphs)`                  | Table cell                     |
+
+### Scene escape hatch
+
+| Function                                                       | Description       |
+| -------------------------------------------------------------- | ----------------- |
+| `scene.textbox({ x, y, w, h, ...style }, ...paragraphs)`       | Absolute text box |
+| `scene.shape(preset, { x, y, w, h, ...style }, ...paragraphs)` | Absolute shape    |
+| `scene.image({ x, y, w, h, data, contentType, description? })` | Absolute image    |
+| `scene.table({ x, y, w, h, cols }, ...rows)`                   | Absolute table    |
+
+Use `scene.*` when you need exact placement or when the layout DSL is not the
+right abstraction for a slide.
 
 ### Text
 
-| Function                      | Description                                 |
-| ----------------------------- | ------------------------------------------- |
-| `p(props?, ...runs)`          | Paragraph. Strings auto-coerce to text runs |
-| `text(content, style?)`       | Plain text run                              |
-| `bold(content, style?)`       | Bold text run                               |
-| `italic(content, style?)`     | Italic text run                             |
-| `boldItalic(content, style?)` | Bold + italic text run                      |
-| `underline(content, style?)`  | Underlined text run                         |
-| `link(content, url, style?)`  | Hyperlinked text run                        |
+| Function                      | Description            |
+| ----------------------------- | ---------------------- |
+| `p(style?, ...runs)`          | Paragraph              |
+| `text(content, style?)`       | Plain text run         |
+| `bold(content, style?)`       | Bold text run          |
+| `italic(content, style?)`     | Italic text run        |
+| `boldItalic(content, style?)` | Bold + italic text run |
+| `underline(content, style?)`  | Underlined text run    |
+| `link(content, url, style?)`  | Hyperlinked text run   |
 
-### Styling
+### Composable styles
 
-| Function                       | Description               |
-| ------------------------------ | ------------------------- |
-| `solidFill(color, alpha?)`     | Solid color fill          |
-| `noFill()`                     | No fill                   |
-| `lineStyle({ width?, fill? })` | Line/border style         |
-| `bulletChar(char)`             | Character bullet          |
-| `bulletAutoNum(type)`          | Auto-numbered bullet      |
-| `bulletNone()`                 | Suppress inherited bullet |
+| Function                    | Description                      |
+| --------------------------- | -------------------------------- |
+| `boxStyle(...)`             | Box/textbox/shape style fragment |
+| `textStyle(...)`            | Text-run style fragment          |
+| `paragraphStyle(...)`       | Paragraph style fragment         |
+| `cellStyle(...)`            | Table-cell style fragment        |
+| `mergeBoxStyles(...)`       | Merge box style fragments        |
+| `mergeTextStyles(...)`      | Merge text style fragments       |
+| `mergeParagraphStyles(...)` | Merge paragraph style fragments  |
+| `mergeCellStyles(...)`      | Merge cell style fragments       |
+
+Supporting style/value helpers:
+
+- `solidFill(color, alpha?)`
+- `noFill()`
+- `lineStyle({ width?, fill? })`
+- `bulletChar(char)`
+- `bulletAutoNum(type)`
+- `bulletNone()`
 
 ### Units
 
-All positions and sizes are in EMUs internally. Use these helpers:
-
-| Function        | Description                         |
-| --------------- | ----------------------------------- |
-| `inches(n)`     | Convert inches to EMUs              |
-| `cm(n)`         | Convert centimeters to EMUs         |
-| `pt(n)`         | Convert points to EMUs              |
-| `emu(n)`        | Raw EMU value                       |
-| `fontSize(pts)` | Font size in hundredths of a point  |
-| `hexColor(hex)` | 6-digit hex color (e.g. `"FF0000"`) |
-| `percentage(n)` | Percentage in thousandths           |
-
-### Props reference
-
-**Position** (required on all elements): `{ x, y, w, h }` — all `Emu` values.
-
-**TextBoxProps / ShapeProps**: `{ x, y, w, h, fill?, line?, verticalAlign? }`
-
-**ImageProps**: `{ x, y, w, h, data, contentType, description? }`
-
-**TableProps**: `{ x, y, w, h, cols }` — `cols` is column widths as `Emu[]`
-
-**ParagraphProps**: `{ align?, level?, bullet?, spacing? }`
-
-**CellProps**: `{ fill? }`
-
-**PresentationOptions**: `{ title?, creator?, slideWidth?, slideHeight? }`
+| Function        | Description                        |
+| --------------- | ---------------------------------- |
+| `inches(n)`     | Convert inches to EMUs             |
+| `cm(n)`         | Convert centimeters to EMUs        |
+| `pt(n)`         | Convert points to EMUs             |
+| `emu(n)`        | Raw EMU value                      |
+| `fontSize(pts)` | Font size in hundredths of a point |
+| `hexColor(hex)` | 6-digit hex color                  |
+| `percentage(n)` | Percentage in thousandths          |
 
 ## Feature support
 
-| Feature                          | Status |
-| -------------------------------- | ------ |
-| Text boxes with rich text        | ✓      |
-| Bold, italic, underline          | ✓      |
-| Font size, color, family         | ✓      |
-| Paragraph alignment              | ✓      |
-| Paragraph levels (indent)        | ✓      |
-| Bullet lists (char, auto-num)    | ✓      |
-| Paragraph spacing                | ✓      |
-| Preset shapes                    | ✓      |
-| Shape/textbox fill (solid, none) | ✓      |
-| Shape/textbox line/border        | ✓      |
-| Semi-transparent fills           | ✓      |
-| Vertical text alignment          | ✓      |
-| Embedded images                  | ✓      |
-| Tables with cell styling         | ✓      |
-| Hyperlinks                       | ✓      |
-| Custom slide dimensions          | ✓      |
-| Multiple slides                  | ✓      |
-| Gradients                        | ✗      |
-| Charts                           | ✗      |
-| Animations/transitions           | ✗      |
-| Slide masters/layouts            | ✗      |
-| Speaker notes                    | ✗      |
+| Feature                                       | Status |
+| --------------------------------------------- | ------ |
+| Positionless DSL leaves                       | ✓      |
+| Row/column/item layout DSL                    | ✓      |
+| Typed scene escape hatch                      | ✓      |
+| Text boxes with rich text                     | ✓      |
+| Bold, italic, underline                       | ✓      |
+| Font size, color, family                      | ✓      |
+| Paragraph alignment, levels, bullets, spacing | ✓      |
+| Preset shapes                                 | ✓      |
+| Shape/textbox fill and line styling           | ✓      |
+| Vertical text alignment                       | ✓      |
+| Embedded images                               | ✓      |
+| Tables with cell fill styling                 | ✓      |
+| Hyperlinks                                    | ✓      |
+| Custom slide dimensions                       | ✓      |
+| Multiple slides                               | ✓      |
+| Slide backgrounds                             | ✗      |
+| Explicit image fit/crop modes                 | ✗      |
+| Explicit text fit modes                       | ✗      |
+| Gradients/effects                             | ✗      |
+| Charts                                        | ✗      |
+| Animations/transitions                        | ✗      |
+| Slide masters/layouts                         | ✗      |
+| Speaker notes                                 | ✗      |
 
 ## License
 
