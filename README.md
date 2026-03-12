@@ -4,8 +4,7 @@ Deno library for generating PPTX files with a declarative layout DSL that lowers
 to absolute scene nodes and then to OOXML.
 
 The public API keeps slide-building primitives at the root and groups helper
-constructors into short namespaces. Reusable styling is built around named,
-typed style values created with `sty.create(...)`.
+constructors into short namespaces:
 
 - Root DSL: `presentation`, `slide`, `row`, `col`, `stack`, `align`, `item`
 - Root leaves: `textbox`, `shape`, `image`, `table`, `tr`, `td`
@@ -19,98 +18,37 @@ typed style values created with `sty.create(...)`.
 deno add @pixel/pptx
 ```
 
-```ts
-import { generate, p, presentation, slide, textbox, tx, u } from "@pixel/pptx";
-```
-
-## Example
+## Minimal Example
 
 ```ts
 import {
   bg,
   clr,
+  col,
   fill,
   generate,
-  image,
-  item,
   p,
   presentation,
-  row,
-  scene,
+  shape,
   slide,
   sty,
-  table,
-  td,
   textbox,
-  tr,
   tx,
   u,
 } from "@pixel/pptx";
 
 const styles = sty.create({
-  heroBar: sty.box({
-    fill: fill.solid(clr.hex("1F4E79")),
-    inset: {
-      top: u.in(0.18),
-      right: u.in(0.28),
-      bottom: u.in(0.18),
-      left: u.in(0.28),
-    },
-  }),
-  heroTitle: sty.text({
-    fontSize: u.font(24),
+  hero: sty.box({ fill: fill.solid(clr.hex("1F4E79")) }),
+  heroText: sty.text({
+    fontSize: u.font(22),
     fontColor: clr.hex("FFFFFF"),
     bold: true,
   }),
-  heroSubtitle: sty.text({
-    fontSize: u.font(11),
-    fontColor: clr.hex("D9E7F5"),
-  }),
-  card: sty.box({
-    fill: fill.solid(clr.hex("FFFFFF")),
-    inset: u.in(0.14),
-    shadow: sty.shadow({
-      color: clr.hex("000000"),
-      blur: u.emu(12000),
-      distance: u.emu(4000),
-      angle: 50,
-      alpha: u.pct(18),
-    }),
-  }),
-  cardTitle: sty.text({
-    fontSize: u.font(14),
-    fontColor: clr.hex("17324D"),
-    bold: true,
-  }),
-  body: sty.text({
-    fontSize: u.font(11),
-    fontColor: clr.hex("32465A"),
-  }),
-  bullets: sty.para({
-    bullet: sty.bullet.char("•"),
-  }),
-  metricHeadCell: sty.cell({
-    fill: fill.solid(clr.hex("17324D")),
-    padding: u.in(0.07),
-    verticalAlign: "middle",
-  }),
-  metricCell: sty.cell({
-    padding: u.in(0.07),
-    verticalAlign: "middle",
-  }),
-  metricHeadText: sty.text({
-    fontSize: u.font(11),
-    fontColor: clr.hex("FFFFFF"),
-    bold: true,
-  }),
-  metricText: sty.text({
-    fontSize: u.font(11),
-    fontColor: clr.hex("17324D"),
-  }),
+  card: sty.box({ fill: fill.solid(clr.hex("FFFFFF")), inset: u.in(0.16) }),
 });
 
 const deck = presentation(
-  { title: "Quarterly Review" },
+  { title: "Hello deck" },
   slide(
     {
       background: bg.fill(
@@ -122,175 +60,29 @@ const deck = presentation(
       ),
     },
     col(
-      {
-        padding: {
-          top: u.in(0.55),
-          right: u.in(0.55),
-          bottom: u.in(0.6),
-          left: u.in(0.55),
-        },
-        gap: u.in(0.35),
-      },
-      item(
-        { h: u.in(1.25) },
-        shape(
-          "roundRect",
-          { style: styles.heroBar },
-          p(tx.bold("Quarterly Review", { style: styles.heroTitle })),
-          p(tx.run("Q2 snapshot: growth is ahead of plan", {
-            style: styles.heroSubtitle,
-          })),
-        ),
+      { padding: u.in(0.6), gap: u.in(0.3) },
+      shape(
+        "roundRect",
+        { style: styles.hero },
+        p(tx.bold("Quarterly Review", { style: styles.heroText })),
       ),
-      item(
-        { h: u.in(4.45) },
-        row(
-          { gap: u.in(0.3), align: "start" },
-          item(
-            { basis: u.in(3.05), h: u.in(4.45), alignSelf: "start" },
-            stack(
-              shape("roundRect", { style: styles.card }),
-              align(
-                {
-                  x: "center",
-                  y: "start",
-                  padding: { top: u.in(0.2) },
-                  w: u.in(2.75),
-                  h: u.in(0.32),
-                },
-                textbox(
-                  p(tx.bold("Chart preview", { style: styles.cardTitle })),
-                ),
-              ),
-              align(
-                { x: "center", y: "center", w: u.in(2.75), h: u.in(2.35) },
-                image({
-                  data: Deno.readFileSync("chart.png"),
-                  contentType: "image/png",
-                  description: "Chart preview",
-                  fit: "cover",
-                }),
-              ),
-              align(
-                {
-                  x: "center",
-                  y: "end",
-                  padding: { bottom: u.in(0.18) },
-                  w: u.in(2.75),
-                  h: u.in(0.48),
-                },
-                textbox(
-                  p(tx.run("Pipeline and retention trend", {
-                    style: styles.body,
-                  })),
-                ),
-              ),
-            ),
-          ),
-          item(
-            { basis: u.in(2.3), h: u.in(4.45), alignSelf: "start" },
-            stack(
-              shape("roundRect", { style: styles.card }),
-              align(
-                {
-                  x: "center",
-                  y: "start",
-                  padding: { top: u.in(0.2) },
-                  w: u.in(1.98),
-                  h: u.in(3.2),
-                },
-                table(
-                  { cols: [u.in(1.15), u.in(0.85)] },
-                  tr(
-                    u.in(0.44),
-                    td(
-                      { style: styles.metricHeadCell },
-                      p(tx.run("Metric", { style: styles.metricHeadText })),
-                    ),
-                    td(
-                      { style: styles.metricHeadCell },
-                      p(tx.run("Value", { style: styles.metricHeadText })),
-                    ),
-                  ),
-                  tr(
-                    u.in(0.44),
-                    td(
-                      { style: styles.metricCell },
-                      p(tx.run("Revenue", { style: styles.metricText })),
-                    ),
-                    td(
-                      { style: styles.metricCell },
-                      p(tx.run("$1.2M", { style: styles.metricText })),
-                    ),
-                  ),
-                  tr(
-                    u.in(0.44),
-                    td(
-                      { style: styles.metricCell },
-                      p(tx.run("Growth", { style: styles.metricText })),
-                    ),
-                    td(
-                      { style: styles.metricCell },
-                      p(tx.run("15%", { style: styles.metricText })),
-                    ),
-                  ),
-                  tr(
-                    u.in(0.44),
-                    td(
-                      { style: styles.metricCell },
-                      p(tx.run("NPS", { style: styles.metricText })),
-                    ),
-                    td(
-                      { style: styles.metricCell },
-                      p(tx.run("61", { style: styles.metricText })),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          item(
-            { basis: u.in(2.9), h: u.in(4.45), alignSelf: "start" },
-            stack(
-              shape("roundRect", { style: styles.card }),
-              align(
-                {
-                  x: "center",
-                  y: "start",
-                  padding: { top: u.in(0.2) },
-                  w: u.in(2.58),
-                  h: u.in(3),
-                },
-                textbox(
-                  p(tx.bold("Notes", { style: styles.cardTitle })),
-                  p(
-                    { style: styles.bullets },
-                    tx.run("Highlights and next steps", { style: styles.body }),
-                  ),
-                  p(
-                    { style: styles.bullets },
-                    tx.run("Review pricing experiments", {
-                      style: styles.body,
-                    }),
-                  ),
-                  p(
-                    { style: styles.bullets },
-                    tx.run("Expand onboarding capacity", {
-                      style: styles.body,
-                    }),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
+      textbox(
+        { style: styles.card },
+        p("This slide uses only the high-level DSL."),
+        p("See the full polished example in examples/quarterly-review.ts."),
       ),
     ),
   ),
 );
 
-Deno.writeFileSync("report.pptx", generate(deck));
+Deno.writeFileSync("hello.pptx", generate(deck));
 ```
+
+## Showcase
+
+Full source: [`examples/quarterly-review.ts`](./examples/quarterly-review.ts)
+
+![Quarterly review slide](./assets/quarterly-review.webp)
 
 ## Public API
 
@@ -330,12 +122,6 @@ Deno.writeFileSync("report.pptx", generate(deck));
 | `u`          | `in`, `cm`, `pt`, `emu`, `pct`, `font`                    |
 | `clr`        | `hex`                                                     |
 
-### Layout props
-
-- Container props: `gap`, `padding`, `justify`, `align`
-- Item props: `basis`, `grow`, `w`, `h`, `alignSelf`, `aspectRatio`
-- Align props: `x`, `y`, `padding`, `w`, `h`, `aspectRatio`
-
 ### Style/data model
 
 - `slide()` accepts `background?: Background`
@@ -348,39 +134,6 @@ Deno.writeFileSync("report.pptx", generate(deck));
 - `table({ cols })` preserves column proportions and fits them to the resolved
   table frame
 - `image(...)` and `scene.image(...)` support `fit`, `crop`, `alpha`
-
-Examples:
-
-```ts
-const styles = sty.create({
-  card: sty.box({ fill: fill.solid(clr.hex("FFFFFF")) }),
-  body: sty.text({ fontFamily: "Aptos" }),
-  bullets: sty.para({ bullet: sty.bullet.char("•") }),
-});
-
-textbox({ style: styles.card }, p("Hello"));
-p({ style: styles.bullets }, "One bullet");
-tx.bold("Title", { style: styles.body });
-scene.shape("rect", {
-  x: u.in(1),
-  y: u.in(1),
-  w: u.in(2),
-  h: u.in(1),
-  style: styles.card,
-});
-```
-
-### Value helpers
-
-| Helper         | Description                                |
-| -------------- | ------------------------------------------ |
-| `u.in(n)`      | Convert inches to EMUs                     |
-| `u.cm(n)`      | Convert centimeters to EMUs                |
-| `u.pt(n)`      | Convert points to EMUs                     |
-| `u.emu(n)`     | Raw EMU value                              |
-| `u.pct(n)`     | Percentage in thousandths                  |
-| `u.font(pts)`  | Font size in hundredths of a point         |
-| `clr.hex(hex)` | Validate and normalize a 6-digit hex color |
 
 ## Validation
 
