@@ -3,6 +3,7 @@
  */
 
 import type { Emu } from "./types.ts";
+import type { Chart } from "./chart.ts";
 import type { BoxStyle, BoxStyleInput } from "./style.ts";
 import { resolveBoxStyle } from "./style.ts";
 import type { ParagraphContent } from "./text.ts";
@@ -67,12 +68,18 @@ export interface SceneTable extends Frame, Table {
   readonly kind: "table";
 }
 
+/** A positioned chart scene node. */
+export interface SceneChart extends Frame, Chart {
+  readonly kind: "chart";
+}
+
 /** Union of all scene nodes. */
 export type SceneNode =
   | SceneTextBox
   | SceneShape
   | SceneImage
-  | SceneTable;
+  | SceneTable
+  | SceneChart;
 
 /** Create a positioned text box scene node. */
 export function sceneTextbox(
@@ -149,13 +156,13 @@ export function isSceneNode(value: unknown): value is SceneNode {
   if (!("kind" in value) || !("x" in value) || !("y" in value)) return false;
   const kind = value.kind;
   return kind === "textbox" || kind === "shape" || kind === "image" ||
-    kind === "table";
+    kind === "table" || kind === "chart";
 }
 
 /** Convert a positioned frame and a leaf node into a scene node. */
 export function placeLeaf(
   frame: Frame,
-  leaf: TextBox | Shape | Image | Table,
+  leaf: TextBox | Shape | Image | Table | Chart,
 ): SceneNode {
   switch (leaf.kind) {
     case "textbox":
@@ -202,6 +209,23 @@ export function placeLeaf(
         h: frame.h,
         cols: leaf.cols,
         rows: leaf.rows,
+      };
+    case "chart":
+      return {
+        kind: "chart",
+        chartType: leaf.chartType,
+        points: leaf.points,
+        title: leaf.title,
+        seriesName: leaf.seriesName,
+        color: leaf.color,
+        labels: leaf.labels,
+        legend: leaf.legend,
+        direction: leaf.direction,
+        valueAxis: leaf.valueAxis,
+        x: frame.x,
+        y: frame.y,
+        w: frame.w,
+        h: frame.h,
       };
   }
 }

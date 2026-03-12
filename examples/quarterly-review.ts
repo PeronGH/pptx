@@ -1,6 +1,7 @@
 import {
   align,
   bg,
+  chart,
   clr,
   col,
   fill,
@@ -129,37 +130,26 @@ export const deck = presentation(
               align(
                 {
                   x: "center",
-                  y: "start",
-                  padding: { top: u.in(0.2) },
+                  y: "center",
                   w: u.in(2.75),
-                  h: u.in(0.32),
+                  h: u.in(3.9),
                 },
-                textbox(
-                  p(tx.bold("Chart preview", { style: styles.cardTitle })),
-                ),
-              ),
-              align(
-                { x: "center", y: "center", w: u.in(2.75), h: u.in(2.35) },
-                shape(
-                  "rect",
-                  { style: sty.box({ fill: fill.solid(clr.hex("2678B4")) }) },
-                ),
-              ),
-              align(
-                {
-                  x: "center",
-                  y: "end",
-                  padding: { bottom: u.in(0.18) },
-                  w: u.in(2.75),
-                  h: u.in(0.48),
-                },
-                textbox(
-                  p(
-                    tx.run("Pipeline and retention trend", {
-                      style: styles.body,
-                    }),
-                  ),
-                ),
+                chart.bar({
+                  data: [
+                    { quarter: "Q1", amount: 8 },
+                    { quarter: "Q2", amount: 12 },
+                    { quarter: "Q3", amount: 10 },
+                    { quarter: "Q4", amount: 15 },
+                  ],
+                  category: "quarter",
+                  value: "amount",
+                  title: "Pipeline",
+                  seriesName: "Pipeline",
+                  labels: true,
+                  legend: false,
+                  color: clr.hex("2678B4"),
+                  valueAxis: { min: 0, max: 16 },
+                }),
               ),
             ),
           ),

@@ -7,6 +7,7 @@ import { assertEquals } from "@std/assert/equals";
 import {
   align,
   bg,
+  chart,
   clr,
   col,
   fill,
@@ -168,6 +169,36 @@ Deno.test("e2e: image fits", async () => {
   assertEquals(result.slides[0]?.shape_count, 2);
   assertEquals(result.slides[0]?.shapes[0]?.is_picture, true);
   assertEquals(result.slides[0]?.shapes[1]?.is_picture, true);
+});
+
+/**
+ * Generate a bar chart leaf.
+ * Spec: ECMA-376 §14.2.1 and §21.2.2.16.
+ */
+Deno.test("e2e: bar chart leaf", async () => {
+  const pptx = generate(presentation(
+    slide(
+      align(
+        { x: "center", y: "center", w: u.in(5), h: u.in(3) },
+        chart.bar({
+          data: [
+            { quarter: "Q1", value: 12 },
+            { quarter: "Q2", value: 18 },
+            { quarter: "Q3", value: 15 },
+          ],
+          category: "quarter",
+          value: "value",
+          title: "Pipeline",
+          labels: true,
+          color: clr.hex("2678B4"),
+        }),
+      ),
+    ),
+  ));
+
+  const result = await validatePptx(pptx, 1);
+  assertEquals(result.slides[0]?.shape_count, 1);
+  assertEquals(result.slides[0]?.shapes[0]?.is_chart, true);
 });
 
 /**

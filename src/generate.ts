@@ -3,6 +3,7 @@
  */
 
 import { u } from "./st.ts";
+import type { Chart, ChartValueAxis } from "./chart.ts";
 import type { Emu } from "./types.ts";
 import type {
   Alignment,
@@ -19,10 +20,16 @@ import { resolveImageFit } from "./image_fit.ts";
 import { resolveSlideChildren } from "./layout.ts";
 import type { Frame, SceneNode } from "./scene.ts";
 import type { TableCell, TableRow } from "./nodes.ts";
-import type { HyperlinkResource, ImageResource } from "./packaging.ts";
+import type {
+  ChartResource,
+  HyperlinkResource,
+  ImageResource,
+} from "./packaging.ts";
 import { generatePptx } from "./packaging.ts";
 import { RelationshipIdGenerator } from "./ooxml/relationships.ts";
+import type { ChartDefinition } from "./ooxml/chart.ts";
 import type {
+  ChartShape,
   CropRect as InternalCropRect,
   Fill as InternalFill,
   Insets as InternalInsets,
@@ -57,6 +64,7 @@ const VALIGN_MAP: Record<VerticalAlignment, InternalVAlign> = {
 interface SlideContext {
   readonly relGen: RelationshipIdGenerator;
   readonly images: Map<string, ImageResource>;
+  readonly charts: Map<string, ChartResource>;
   readonly hyperlinks: Map<string, HyperlinkResource>;
 }
 
@@ -64,6 +72,7 @@ function createSlideContext(): SlideContext {
   return {
     relGen: new RelationshipIdGenerator(2),
     images: new Map(),
+    charts: new Map(),
     hyperlinks: new Map(),
   };
 }
@@ -123,6 +132,30 @@ function toInternalTextFit(
   fit: TextFit | undefined,
 ): InternalTextFit | undefined {
   return fit;
+}
+
+function toInternalChartValueAxis(
+  axis: ChartValueAxis | undefined,
+): ChartValueAxis | undefined {
+  if (!axis) return undefined;
+  return {
+    min: axis.min,
+    max: axis.max,
+  };
+}
+
+function toInternalChartDefinition(chart: Chart): ChartDefinition {
+  return {
+    type: chart.chartType,
+    title: chart.title,
+    seriesName: chart.seriesName,
+    points: chart.points,
+    color: chart.color,
+    labels: chart.labels,
+    legend: chart.legend,
+    direction: chart.direction,
+    valueAxis: toInternalChartValueAxis(chart.valueAxis),
+  };
 }
 
 function toInternalRun(run: TextRun, ctx: SlideContext): InternalRun {
@@ -291,6 +324,20 @@ function toInternalShape(
         columns: fitTableColumns(node.w, node.cols),
         rows: node.rows.map((row) => toInternalTableRow(row, ctx)),
       } satisfies InternalTableShape;
+    case "chart": {
+      const rId = ctx.relGen.next();
+      ctx.charts.set(rId, {
+        definition: toInternalChartDefinition(node),
+      });
+      return {
+        kind: "chart",
+        x: node.x,
+        y: node.y,
+        cx: node.w,
+        cy: node.h,
+        rId,
+      } satisfies ChartShape;
+    }
   }
 }
 
@@ -378,6 +425,7 @@ export function generate(presentation: Presentation): Uint8Array {
       ],
       background: backgroundToFill(slide.props.background),
       images: ctx.images.size > 0 ? ctx.images : undefined,
+      charts: ctx.charts.size > 0 ? ctx.charts : undefined,
       hyperlinks: ctx.hyperlinks.size > 0 ? ctx.hyperlinks : undefined,
     };
   });

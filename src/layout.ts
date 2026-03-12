@@ -263,6 +263,7 @@ function resolveLayoutNode(
     case "shape":
     case "image":
     case "table":
+    case "chart":
       return [placeLeaf(frame, node)];
     case "row":
       return resolveAxisContainer("row", node, frame);

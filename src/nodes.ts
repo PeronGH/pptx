@@ -3,6 +3,7 @@
  */
 
 import type { Emu } from "./types.ts";
+import type { Chart } from "./chart.ts";
 import type {
   BoxStyle,
   BoxStyleInput,
@@ -92,7 +93,7 @@ export interface Table {
 }
 
 /** Union of all positionless content leaves. */
-export type LeafNode = TextBox | Shape | Image | Table;
+export type LeafNode = TextBox | Shape | Image | Table | Chart;
 
 /** Create a positionless text box. */
 export function textbox(

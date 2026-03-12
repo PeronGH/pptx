@@ -10,7 +10,7 @@
 
 import { el, renderXmlDocument, type XmlElement } from "../xml.ts";
 import type { Emu, HexColor, HundredthPoint, Percentage } from "../types.ts";
-import { NS_A, NS_P, NS_R } from "./namespaces.ts";
+import { NS_A, NS_C, NS_P, NS_R } from "./namespaces.ts";
 
 /** Solid color fill. */
 export interface SolidFill {
@@ -206,6 +206,16 @@ export interface TableShape {
   readonly rows: ReadonlyArray<TableRow>;
 }
 
+/** Graphic-frame-backed chart. */
+export interface ChartShape {
+  readonly kind: "chart";
+  readonly x: Emu;
+  readonly y: Emu;
+  readonly cx: Emu;
+  readonly cy: Emu;
+  readonly rId: string;
+}
+
 /** Slide background. */
 export interface SlideBackground {
   readonly fill: Fill;
@@ -216,7 +226,8 @@ export type SlideShape =
   | TextBoxShape
   | PresetShape
   | PictureShape
-  | TableShape;
+  | TableShape
+  | ChartShape;
 
 /** Generate a slide XML part. */
 export function renderSlide(
@@ -235,6 +246,8 @@ export function renderSlide(
         return renderPicture(id, shape);
       case "table":
         return renderTable(id, shape);
+      case "chart":
+        return renderChart(id, shape);
     }
   });
 
@@ -559,6 +572,7 @@ function renderPicture(id: number, shape: PictureShape): XmlElement {
 }
 
 const TABLE_URI = "http://schemas.openxmlformats.org/drawingml/2006/table";
+const CHART_URI = "http://schemas.openxmlformats.org/drawingml/2006/chart";
 
 function renderTable(id: number, shape: TableShape): XmlElement {
   const gridCols = shape.columns.map((w) => el("a:gridCol", { w: String(w) }));
@@ -639,6 +653,35 @@ function renderTable(id: number, shape: TableShape): XmlElement {
           el("a:tblGrid", {}, ...gridCols),
           ...rows,
         ),
+      ),
+    ),
+  );
+}
+
+function renderChart(id: number, shape: ChartShape): XmlElement {
+  return el(
+    "p:graphicFrame",
+    {},
+    el(
+      "p:nvGraphicFramePr",
+      {},
+      el("p:cNvPr", { id: String(id), name: `Chart ${id}` }),
+      el("p:cNvGraphicFramePr", {}, el("a:graphicFrameLocks", { noGrp: "1" })),
+      el("p:nvPr", {}),
+    ),
+    el(
+      "p:xfrm",
+      {},
+      el("a:off", { x: String(shape.x), y: String(shape.y) }),
+      el("a:ext", { cx: String(shape.cx), cy: String(shape.cy) }),
+    ),
+    el(
+      "a:graphic",
+      {},
+      el(
+        "a:graphicData",
+        { uri: CHART_URI },
+        el("c:chart", { "xmlns:c": NS_C, "r:id": shape.rId }),
       ),
     ),
   );

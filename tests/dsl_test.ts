@@ -6,9 +6,11 @@ import { assert } from "@std/assert/assert";
 import { assertEquals } from "@std/assert/equals";
 import { assertThrows } from "@std/assert/throws";
 import {
+  align,
   bg,
   type BoxStyleInput,
   type CellStyleInput,
+  chart,
   clr,
   fill,
   generate,
@@ -32,6 +34,7 @@ import {
   u,
 } from "../mod.ts";
 import { resolveSlideChildren } from "../src/layout.ts";
+import { CONTENT_TYPE, REL_TYPE } from "../src/ooxml/namespaces.ts";
 import { cm, emu, font, hex, inch, pct, pt } from "../src/st.ts";
 import { createTestBmp, extractZipText } from "./helpers.ts";
 
@@ -219,6 +222,21 @@ Deno.test("leaf builders preserve style and image fields", () => {
   assertEquals(img.fit, "cover");
   assertEquals(img.crop?.left, u.pct(10));
   assertEquals(img.alpha, u.pct(80));
+
+  const bar = chart.bar({
+    data: [
+      { month: "Jan", amount: 12 },
+      { month: "Feb", amount: 18 },
+    ],
+    category: "month",
+    value: "amount",
+    title: "Pipeline",
+    labels: true,
+  });
+  assertEquals(bar.kind, "chart");
+  assertEquals(bar.chartType, "bar");
+  assertEquals(bar.points[0]?.category, "Jan");
+  assertEquals(bar.points[1]?.value, 18);
 
   const grid = table(
     { cols: [u.in(2), u.in(2)] },
@@ -494,6 +512,48 @@ Deno.test("pptx XML includes table cell padding and borders", () => {
   assert(slideXml.includes('marL="45720"'));
   assert(slideXml.includes('anchor="ctr"'));
   assert(slideXml.includes("<a:lnL"));
+});
+
+/**
+ * Generated package includes chart part and embedded workbook.
+ * Spec: ECMA-376 §14.2.1 and §15.2.11.
+ */
+Deno.test("pptx package includes chart part and embedded workbook", () => {
+  const pptx = generate(presentation(
+    slide(
+      align(
+        { x: "center", y: "center", w: u.in(5), h: u.in(3) },
+        chart.bar({
+          data: [
+            { metric: "Revenue", amount: 12 },
+            { metric: "Growth", amount: 15 },
+          ],
+          category: "metric",
+          value: "amount",
+          title: "Highlights",
+          labels: true,
+          color: clr.hex("2678B4"),
+        }),
+      ),
+    ),
+  ));
+
+  const contentTypes = extractZipText(pptx, "[Content_Types].xml");
+  const slideRels = extractZipText(pptx, "ppt/slides/_rels/slide1.xml.rels");
+  const chartXml = extractZipText(pptx, "ppt/charts/chart1.xml");
+  const chartRels = extractZipText(pptx, "ppt/charts/_rels/chart1.xml.rels");
+
+  assert(contentTypes.includes(CONTENT_TYPE.chart));
+  assert(contentTypes.includes(CONTENT_TYPE.spreadsheetPackage));
+  assert(slideRels.includes(REL_TYPE.chart));
+  assert(slideRels.includes("../charts/chart1.xml"));
+  assert(chartXml.includes("<c:chartSpace"));
+  assert(chartXml.includes("<c:barChart>"));
+  assert(chartXml.includes("<c:externalData"));
+  assert(chartXml.includes("Sheet1!$A$2:$A$3"));
+  assert(chartXml.includes("Sheet1!$B$2:$B$3"));
+  assert(chartRels.includes(REL_TYPE.package));
+  assert(chartRels.includes("../embeddings/chart1.xlsx"));
 });
 
 /**

@@ -13,6 +13,7 @@ export interface ValidationResult {
       text?: string;
       is_picture?: boolean;
       image_content_type?: string;
+      is_chart?: boolean;
       is_table?: boolean;
       table_rows?: number;
       table_cols?: number;

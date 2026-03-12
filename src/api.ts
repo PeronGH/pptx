@@ -2,6 +2,16 @@
  * Public API exports for the DSL and scene layers.
  */
 
+import { chart } from "./chart.ts";
+export type {
+  BarChart,
+  BarChartOptions,
+  Chart,
+  ChartBarDirection,
+  ChartPoint,
+  ChartValueAxis,
+} from "./chart.ts";
+
 import { bold, boldItalic, italic, link, p, text, underline } from "./text.ts";
 export type {
   Paragraph,
@@ -80,6 +90,8 @@ export type {
   TextBox,
   TextBoxOptions,
 } from "./nodes.ts";
+
+export { chart };
 
 export { align, col, item, row, stack } from "./layout.ts";
 export type {

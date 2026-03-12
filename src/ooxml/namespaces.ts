@@ -12,6 +12,9 @@ export const NS_P =
 /** DrawingML main namespace. */
 export const NS_A = "http://schemas.openxmlformats.org/drawingml/2006/main";
 
+/** DrawingML chart namespace. */
+export const NS_C = "http://schemas.openxmlformats.org/drawingml/2006/chart";
+
 /** Office document relationships namespace. */
 export const NS_R =
   "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
@@ -74,10 +77,16 @@ export const REL_TYPE = {
     "http://schemas.openxmlformats.org/officeDocument/2006/relationships/viewProps",
   tableStyles:
     "http://schemas.openxmlformats.org/officeDocument/2006/relationships/tableStyles",
+  chart:
+    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart",
+  package:
+    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/package",
   image:
     "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image",
   hyperlink:
     "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink",
+  worksheet:
+    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet",
 } as const;
 
 /**
@@ -100,6 +109,13 @@ export const CONTENT_TYPE = {
     "application/vnd.openxmlformats-officedocument.presentationml.viewProps+xml",
   tableStyles:
     "application/vnd.openxmlformats-officedocument.presentationml.tableStyles+xml",
+  chart: "application/vnd.openxmlformats-officedocument.drawingml.chart+xml",
+  spreadsheetPackage:
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  workbook:
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml",
+  worksheet:
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml",
   coreProperties: "application/vnd.openxmlformats-package.core-properties+xml",
   extendedProperties:
     "application/vnd.openxmlformats-officedocument.extended-properties+xml",

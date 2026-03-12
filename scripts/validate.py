@@ -130,6 +130,10 @@ def validate_python_pptx(path: str, expected_slides: int | None = None) -> list[
                         table_data.append(row_data)
                     shape_info["table_data"] = table_data
 
+                # Chart detection
+                if getattr(shape, "has_chart", False):
+                    shape_info["is_chart"] = True
+
                 slide_info["shapes"].append(shape_info)
             info["slides"].append(slide_info)
 

@@ -9,7 +9,9 @@
 import { zipSync } from "fflate";
 import type { Emu } from "./types.ts";
 import {
+  type ChartDefinition,
   CONTENT_TYPE,
+  createEmbeddedWorkbook,
   type DefaultContentType,
   type OverrideContentType,
   REL_TYPE,
@@ -17,6 +19,7 @@ import {
   RelationshipIdGenerator,
   renderAppProps,
   renderBlankSlideLayout,
+  renderChartSpace,
   renderContentTypes,
   renderCoreProps,
   renderPresentation,
@@ -51,12 +54,19 @@ export interface HyperlinkResource {
   readonly url: string;
 }
 
+/** A chart resource to embed in the package. */
+export interface ChartResource {
+  readonly definition: ChartDefinition;
+}
+
 /** A slide definition for packaging. */
 export interface PackageSlide {
   readonly shapes: ReadonlyArray<SlideShape>;
   readonly background?: SlideBackground;
   /** Images referenced by shapes on this slide. Map from rId to resource. */
   readonly images?: ReadonlyMap<string, ImageResource>;
+  /** Charts referenced by shapes on this slide. Map from rId to resource. */
+  readonly charts?: ReadonlyMap<string, ChartResource>;
   /** Hyperlinks referenced by shapes. Map from rId to resource. */
   readonly hyperlinks?: ReadonlyMap<string, HyperlinkResource>;
 }
@@ -91,6 +101,7 @@ export function generatePptx(options: PackageOptions): Uint8Array {
 
   // Track image extensions for content type defaults
   const imageExtensions = new Set<string>();
+  let hasEmbeddedWorkbook = false;
 
   // --- Presentation-level relationships ---
   const presRelGen = new RelationshipIdGenerator();
@@ -229,6 +240,7 @@ export function generatePptx(options: PackageOptions): Uint8Array {
 
   // --- Generate slide XML, relationships, and media ---
   let mediaCounter = 0;
+  let chartCounter = 0;
 
   for (let i = 0; i < options.slides.length; i++) {
     const slide = options.slides[i];
@@ -268,6 +280,42 @@ export function generatePptx(options: PackageOptions): Uint8Array {
       }
     }
 
+    if (slide.charts) {
+      for (const [rId, chart] of slide.charts) {
+        chartCounter++;
+
+        files[`ppt/charts/chart${chartCounter}.xml`] = encode(
+          renderChartSpace(chart.definition, "rId1"),
+        );
+        files[`ppt/charts/_rels/chart${chartCounter}.xml.rels`] = encode(
+          renderRelationships([
+            {
+              id: "rId1",
+              type: REL_TYPE.package,
+              target: `../embeddings/chart${chartCounter}.xlsx`,
+            },
+          ]),
+        );
+        files[`ppt/embeddings/chart${chartCounter}.xlsx`] =
+          createEmbeddedWorkbook(
+            chart.definition.seriesName,
+            chart.definition.points,
+          );
+        hasEmbeddedWorkbook = true;
+
+        overrides.push({
+          partName: `/ppt/charts/chart${chartCounter}.xml`,
+          contentType: CONTENT_TYPE.chart,
+        });
+
+        slideRels.push({
+          id: rId,
+          type: REL_TYPE.chart,
+          target: `../charts/chart${chartCounter}.xml`,
+        });
+      }
+    }
+
     // Hyperlink relationships
     if (slide.hyperlinks) {
       for (const [rId, link] of slide.hyperlinks) {
@@ -289,6 +337,12 @@ export function generatePptx(options: PackageOptions): Uint8Array {
   for (const ext of imageExtensions) {
     const ct = imageContentType(ext);
     defaults.push({ extension: ext, contentType: ct });
+  }
+  if (hasEmbeddedWorkbook) {
+    defaults.push({
+      extension: "xlsx",
+      contentType: CONTENT_TYPE.spreadsheetPackage,
+    });
   }
 
   // --- Write all files ---

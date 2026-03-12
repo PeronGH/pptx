@@ -14,11 +14,15 @@ export type { Relationship } from "./relationships.ts";
 export { CONTENT_TYPE, NS_A, NS_P, NS_R, REL_TYPE } from "./namespaces.ts";
 export { renderPresentation } from "./presentation.ts";
 export type { SlideRef } from "./presentation.ts";
+export { renderChartSpace } from "./chart.ts";
+export type { ChartDefinition } from "./chart.ts";
+export { createEmbeddedWorkbook } from "./embedded_workbook.ts";
 export { renderSlide } from "./slide.ts";
 export type {
   BulletAutoNum,
   BulletChar,
   BulletNone,
+  ChartShape,
   CropRect,
   Fill,
   GradientStop,

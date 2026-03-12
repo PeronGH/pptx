@@ -8,6 +8,7 @@ constructors into short namespaces:
 
 - Root DSL: `presentation`, `slide`, `row`, `col`, `stack`, `align`, `item`
 - Root leaves: `textbox`, `shape`, `image`, `table`, `tr`, `td`
+- Chart constructors: `chart.*`
 - Scene escape hatch: `scene.*`
 - Helper namespaces: `bg.*`, `fill.*`, `tx.*`, `sty.*`, `u.*`, `clr.*`
 - Output: `generate()`
@@ -101,6 +102,7 @@ Full source: [`examples/quarterly-review.ts`](./examples/quarterly-review.ts)
 | `table({ cols }, ...rows)`               | Positionless table leaf with proportional columns   |
 | `tr(height, ...cells)`                   | Table row                                           |
 | `td(options?, ...paragraphs)`            | Table cell                                          |
+| `chart.bar(options)`                     | Positionless categorical bar/column chart leaf      |
 | `scene.textbox(...)`                     | Absolute-position text box                          |
 | `scene.shape(...)`                       | Absolute-position shape                             |
 | `scene.image(...)`                       | Absolute-position image                             |
@@ -117,6 +119,7 @@ Full source: [`examples/quarterly-review.ts`](./examples/quarterly-review.ts)
 | `sty.bullet` | `char`, `num`, `none`                                     |
 | `u`          | `in`, `cm`, `pt`, `emu`, `pct`, `font`                    |
 | `clr`        | `hex`                                                     |
+| `chart`      | `bar`                                                     |
 
 ### Style/data model
 
@@ -129,6 +132,8 @@ Full source: [`examples/quarterly-review.ts`](./examples/quarterly-review.ts)
 - `sty.cell(...)` covers `fill`, `line`, `padding`, `verticalAlign`
 - `table({ cols })` preserves column proportions and fits them to the resolved
   table frame
+- `chart.bar(...)` takes row-object data with string category keys and number
+  value keys
 - `image(...)` and `scene.image(...)` support `fit`, `crop`, `alpha`
 
 ## Validation
