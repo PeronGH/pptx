@@ -63,7 +63,7 @@ export function renderPresentation(
 }
 
 /**
- * Default text style. ECMA-376 §13.3.6 (p:defaultTextStyle).
+ * Default text style. ECMA-376 Part 1 §19.2.1.8 (`p:defaultTextStyle`).
  * Provides 9 levels of text paragraph properties.
  */
 function renderDefaultTextStyle() {

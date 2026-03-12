@@ -75,7 +75,7 @@ function renderColorScheme() {
   );
 }
 
-/** Font scheme. ECMA-376 §20.1.6.5. */
+/** Font scheme. ECMA-376 §20.1.4.1.18. */
 function renderFontScheme() {
   return el(
     "a:fontScheme",

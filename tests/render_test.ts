@@ -40,7 +40,7 @@ import { createTestBmp, validatePptx } from "./helpers.ts";
 
 /**
  * Generate a slide with a solid background and overlay content.
- * Spec: ECMA-376 §13.3.8.
+ * Spec: ECMA-376 §13.3.8 and §19.3.1.1.
  */
 Deno.test("e2e: slide background and stack overlay", async () => {
   const pptx = generate(presentation(
@@ -116,7 +116,7 @@ Deno.test("e2e: slide background image", async () => {
 
 /**
  * Generate a contain-fit image card.
- * Spec: ECMA-376 §19.3.1.37.
+ * Spec: ECMA-376 §19.3.1.37 and §20.1.8.14.
  */
 Deno.test("e2e: image contain fit", async () => {
   const pptx = generate(presentation(
@@ -140,7 +140,7 @@ Deno.test("e2e: image contain fit", async () => {
 
 /**
  * Generate a cropped cover image.
- * Spec: ECMA-376 §19.3.1.37.
+ * Spec: ECMA-376 §19.3.1.37, §20.1.8.14, and §20.1.8.55.
  */
 Deno.test("e2e: image cover crop", async () => {
   const pptx = generate(presentation(
@@ -163,7 +163,7 @@ Deno.test("e2e: image cover crop", async () => {
 
 /**
  * Generate a text box with insets and shrink-text fit.
- * Spec: ECMA-376 §21.1.2.1.1.
+ * Spec: ECMA-376 §21.1.2.1.1 and §21.1.2.1.3.
  */
 Deno.test("e2e: textbox with insets and shrink-text", async () => {
   const pptx = generate(presentation(
@@ -195,7 +195,7 @@ Deno.test("e2e: textbox with insets and shrink-text", async () => {
 
 /**
  * Generate a gradient and shadow card.
- * Spec: ECMA-376 §20.1.8.
+ * Spec: ECMA-376 §20.1.8.33 and §20.1.8.45.
  */
 Deno.test("e2e: gradient fill and shadow", async () => {
   const pptx = generate(presentation(
@@ -279,7 +279,7 @@ Deno.test("e2e: stack and align with flex layout", async () => {
 
 /**
  * Generate a styled table with padding, borders, and alignment.
- * Spec: ECMA-376 §21.1.3.
+ * Spec: ECMA-376 §21.1.3.15 and §21.1.3.17.
  */
 Deno.test("e2e: styled table polish", async () => {
   const pptx = generate(presentation(

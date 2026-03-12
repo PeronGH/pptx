@@ -1,7 +1,8 @@
 /**
  * OPC packaging: assembles OOXML parts into a ZIP (PPTX file).
  *
- * ECMA-376 Part 2 §9 defines the Open Packaging Conventions.
+ * ECMA-376 Part 2 defines the Open Packaging Conventions; clauses 6 and 7
+ * cover the abstract and physical package models used here.
  * A PPTX is a ZIP containing XML parts, relationships, and content types.
  */
 
@@ -72,7 +73,7 @@ export interface PackageOptions {
 /**
  * Generate a complete PPTX file as a Uint8Array.
  *
- * Assembles all parts according to OPC (ECMA-376 Part 2):
+ * Assembles all parts according to OPC (ECMA-376 Part 2 clauses 6-7):
  * - [Content_Types].xml
  * - _rels/.rels
  * - ppt/presentation.xml and its relationships

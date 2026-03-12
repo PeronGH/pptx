@@ -1,8 +1,11 @@
 /**
  * Presentation properties, view properties, table styles, and document properties.
  *
- * ECMA-376 Part 1 §13.3.5 (presProps), §13.3.12 (viewPr), §20.1.4.2.27 (tblStyleLst).
- * ECMA-376 Part 2 §11.2 (core properties), §11.3 (extended properties).
+ * ECMA-376 Part 1 §13.3.7 (Presentation Properties Part), §19.2.1.27
+ * (`presentationPr`), §13.3.13 (View Properties Part), §19.2.2.18 (`viewPr`),
+ * §14.2.9 (Table Styles Part), §20.1.4.2.27 (`tblStyleLst`),
+ * §15.2.12.3 (Extended File Properties Part), and §22.2.2.21 (`Properties`).
+ * ECMA-376 Part 2 §8.2-§8.3 define the Core Properties part and markup.
  */
 
 import { el, renderXmlDocument } from "../xml.ts";
@@ -18,7 +21,7 @@ import {
   NS_XSI,
 } from "./namespaces.ts";
 
-/** Generate presProps.xml. ECMA-376 §13.3.5. */
+/** Generate presProps.xml. ECMA-376 Part 1 §13.3.7 and §19.2.1.27. */
 export function renderPresProps(): string {
   const root = el(
     "p:presentationPr",
@@ -32,7 +35,7 @@ export function renderPresProps(): string {
   return renderXmlDocument(root);
 }
 
-/** Generate viewProps.xml. ECMA-376 §13.3.12. */
+/** Generate viewProps.xml. ECMA-376 Part 1 §13.3.13 and §19.2.2.18. */
 export function renderViewProps(): string {
   const root = el(
     "p:viewPr",
@@ -71,7 +74,7 @@ export function renderViewProps(): string {
   return renderXmlDocument(root);
 }
 
-/** Generate tableStyles.xml. ECMA-376 §20.1.4.2.27. */
+/** Generate tableStyles.xml. ECMA-376 Part 1 §14.2.9 and §20.1.4.2.27. */
 export function renderTableStyles(): string {
   const root = el("a:tblStyleLst", {
     "xmlns:a": NS_A,
@@ -80,7 +83,7 @@ export function renderTableStyles(): string {
   return renderXmlDocument(root);
 }
 
-/** Generate docProps/core.xml. ECMA-376 Part 2 §11.2. */
+/** Generate docProps/core.xml. ECMA-376 Part 2 §8.2-§8.3. */
 export function renderCoreProps(title: string, creator: string): string {
   const now = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
   const root = el(
@@ -101,7 +104,7 @@ export function renderCoreProps(title: string, creator: string): string {
   return renderXmlDocument(root);
 }
 
-/** Generate docProps/app.xml. ECMA-376 Part 2 §11.3. */
+/** Generate docProps/app.xml. ECMA-376 Part 1 §15.2.12.3 and §22.2.2.21. */
 export function renderAppProps(slideCount: number): string {
   const root = el(
     "Properties",

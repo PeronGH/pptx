@@ -1,9 +1,9 @@
 /**
  * [Content_Types].xml generation.
  *
- * ECMA-376 Part 2 §10.1.2.2 defines the Content Types stream.
- * Default elements map file extensions to content types.
- * Override elements map specific part names to content types.
+ * ECMA-376 Part 2 §7.2.3.2 defines the Media Types stream markup.
+ * `Default` elements map file extensions to content types.
+ * `Override` elements map specific part names to content types.
  */
 
 import { el, renderXmlDocument, type XmlElement } from "../xml.ts";
@@ -21,7 +21,7 @@ export interface OverrideContentType {
   readonly contentType: string;
 }
 
-/** Generate [Content_Types].xml. ECMA-376 Part 2 §10.1.2.2.1. */
+/** Generate [Content_Types].xml. ECMA-376 Part 2 §7.2.3.2.3-§7.2.3.2.5. */
 export function renderContentTypes(
   defaults: ReadonlyArray<DefaultContentType>,
   overrides: ReadonlyArray<OverrideContentType>,

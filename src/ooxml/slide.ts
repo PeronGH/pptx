@@ -2,9 +2,10 @@
  * Slide part XML generation.
  *
  * ECMA-376 Part 1 §13.3.8 defines the slide element (p:sld).
- * §19.3.1.43 defines the shape tree (p:spTree).
- * §20.1.2.2.33 defines shape properties (a:spPr).
- * §21.1.2 defines text body (a:txBody).
+ * §19.3.1.45 defines the shape tree (p:spTree).
+ * §19.3.1.44 defines the PresentationML shape properties container (p:spPr).
+ * §19.3.1.51 defines the shape text body container (p:txBody), whose text
+ * content is specified by §21.1.2.
  */
 
 import { el, renderXmlDocument, type XmlElement } from "../xml.ts";

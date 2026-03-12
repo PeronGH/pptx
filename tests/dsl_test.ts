@@ -72,7 +72,7 @@ Deno.test("unit helpers convert correctly", () => {
 
 /**
  * Verify st.font() and st.hex().
- * Spec: ECMA-376 §21.1.2.3.10 and §20.1.2.3.19.
+ * Spec: ECMA-376 §20.1.10.68 and §22.9.2.5.
  */
 Deno.test("font and color helpers validate", () => {
   assertEquals(st.font(12) as number, 1200);
@@ -96,7 +96,7 @@ Deno.test("direct st helpers share implementation with st namespace", () => {
 
 /**
  * Verify text run builders create styled runs.
- * Spec: ECMA-376 §21.1.2.3.8.
+ * Spec: ECMA-376 §21.1.2.3.5, §21.1.2.3.8, and §21.1.2.3.9.
  */
 Deno.test("text run builders create styled runs", () => {
   assertEquals(text("plain").text, "plain");
@@ -430,7 +430,7 @@ Deno.test("slide() accepts slide props", () => {
 
 /**
  * Generated XML includes background fill.
- * Spec: ECMA-376 §13.3.8 and p:bgPr.
+ * Spec: ECMA-376 §19.3.1.1 and §19.3.1.2.
  */
 Deno.test("pptx XML includes slide background fill", () => {
   const pptx = generate(presentation(
@@ -451,7 +451,7 @@ Deno.test("pptx XML includes slide background fill", () => {
 
 /**
  * Generated XML includes text fit and inset attributes.
- * Spec: ECMA-376 §21.1.2.1.1 and §21.1.2.1.2.
+ * Spec: ECMA-376 §21.1.2.1.1 and §21.1.2.1.3.
  */
 Deno.test("pptx XML includes text fit and inset", () => {
   const pptx = generate(presentation(
@@ -481,7 +481,7 @@ Deno.test("pptx XML includes text fit and inset", () => {
 
 /**
  * Generated XML includes image crop data for cover fit.
- * Spec: ECMA-376 §20.1.8.14 (a:blipFill) and a:srcRect.
+ * Spec: ECMA-376 §20.1.8.14 (`a:blipFill`) and §20.1.8.55 (`a:srcRect`).
  */
 Deno.test("pptx XML includes image crop for cover fit", () => {
   const pptx = generate(presentation(
@@ -504,7 +504,7 @@ Deno.test("pptx XML includes image crop for cover fit", () => {
 
 /**
  * Generated XML includes gradient fill and outer shadow.
- * Spec: ECMA-376 §20.1.8 and §20.1.8.20.
+ * Spec: ECMA-376 §20.1.8.33 and §20.1.8.45.
  */
 Deno.test("pptx XML includes gradient fill and outer shadow", () => {
   const pptx = generate(presentation(
@@ -540,7 +540,7 @@ Deno.test("pptx XML includes gradient fill and outer shadow", () => {
 
 /**
  * Generated XML includes table padding, alignment, and borders.
- * Spec: ECMA-376 §21.1.3.15.
+ * Spec: ECMA-376 §21.1.3.7 and §21.1.3.17.
  */
 Deno.test("pptx XML includes table cell padding and borders", () => {
   const pptx = generate(presentation(

@@ -1,19 +1,20 @@
 /**
  * OPC relationship generation.
  *
- * ECMA-376 Part 2 §9.3 defines the Relationships element.
+ * ECMA-376 Part 2 §6.5 defines relationships and §6.5.3.3-§6.5.3.4 define
+ * the `Relationships` and `Relationship` XML elements.
  * Each relationship has an Id, Type URI, and Target path.
  */
 
 import { el, renderXmlDocument, type XmlElement } from "../xml.ts";
 import { NS_PKG_REL } from "./namespaces.ts";
 
-/** A single OPC relationship. ECMA-376 Part 2 §9.3. */
+/** A single OPC relationship. ECMA-376 Part 2 §6.5.3.4. */
 export interface Relationship {
   readonly id: string;
   readonly type: string;
   readonly target: string;
-  /** External target mode for hyperlinks. ECMA-376 Part 2 §9.3.2.2. */
+  /** External target mode for hyperlinks. ECMA-376 Part 2 §6.5.3.4. */
   readonly targetMode?: "External";
 }
 
@@ -33,7 +34,7 @@ export class RelationshipIdGenerator {
   }
 }
 
-/** Generate the XML for a .rels file. ECMA-376 Part 2 §9.3.1. */
+/** Generate the XML for a .rels file. ECMA-376 Part 2 §6.5.3.3-§6.5.3.4. */
 export function renderRelationships(
   relationships: ReadonlyArray<Relationship>,
 ): string {

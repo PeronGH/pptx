@@ -1,26 +1,26 @@
 /**
  * OOXML namespace URIs and prefixes.
  *
- * ECMA-376 Part 1 §8.1 defines the namespace URIs for PresentationML.
- * ECMA-376 Part 1 §20.1 defines the namespace URIs for DrawingML.
+ * PresentationML and DrawingML namespace URIs come from the Part 1 schemas.
+ * Package-wide namespaces come from ECMA-376 Part 2 Annex E.1.
  */
 
-/** PresentationML namespace. ECMA-376 §13. */
+/** PresentationML main namespace. */
 export const NS_P =
   "http://schemas.openxmlformats.org/presentationml/2006/main";
 
-/** DrawingML namespace. ECMA-376 §20. */
+/** DrawingML main namespace. */
 export const NS_A = "http://schemas.openxmlformats.org/drawingml/2006/main";
 
-/** Relationships namespace. ECMA-376 Part 2 §9.3. */
+/** Office document relationships namespace. */
 export const NS_R =
   "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
 
-/** Package relationships namespace. ECMA-376 Part 2 §9.3. */
+/** Package relationships namespace. ECMA-376 Part 2 Annex E.1. */
 export const NS_PKG_REL =
   "http://schemas.openxmlformats.org/package/2006/relationships";
 
-/** Content types namespace. ECMA-376 Part 2 §10.1.2.2. */
+/** Content types namespace. ECMA-376 Part 2 Annex E.1. */
 export const NS_CONTENT_TYPES =
   "http://schemas.openxmlformats.org/package/2006/content-types";
 
@@ -48,7 +48,11 @@ export const NS_EP =
 export const NS_VT =
   "http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes";
 
-/** Relationship type URIs. ECMA-376 Part 2 §Appendix F. */
+/**
+ * Relationship type URIs used by PPTX parts.
+ * Package-wide types are listed in ECMA-376 Part 2 Annex E.3; PresentationML-
+ * specific ones are defined by the corresponding Part 1 part clauses.
+ */
 export const REL_TYPE = {
   officeDocument:
     "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument",
@@ -76,7 +80,10 @@ export const REL_TYPE = {
     "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink",
 } as const;
 
-/** Content type strings for PPTX parts. ECMA-376 Part 2 §13.2.3. */
+/**
+ * Content type strings for PPTX parts.
+ * See the corresponding Part 1 part clauses and ECMA-376 Part 2 Annex E.2.
+ */
 export const CONTENT_TYPE = {
   presentation:
     "application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml",
