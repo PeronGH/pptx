@@ -9,7 +9,7 @@
  *
  * @example
  * ```ts
- * import { generatePresentation, inches, fontSize, hexColor } from "@pptx/pptx";
+ * import { generatePresentation, inches, fontSize, hexColor } from "@pixel/pptx";
  *
  * const pptx = generatePresentation({
  *   title: "My Presentation",
