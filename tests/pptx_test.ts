@@ -77,10 +77,11 @@ async function validate(
   pptxPath: string,
   expectedSlides: number,
 ): Promise<ValidationResult> {
+  const pythonPath = new URL("../scripts/python3", import.meta.url).pathname;
   const scriptPath = new URL("../scripts/validate.py", import.meta.url)
     .pathname;
 
-  const cmd = new Deno.Command("python3", {
+  const cmd = new Deno.Command(pythonPath, {
     args: [
       scriptPath,
       pptxPath,
