@@ -6,9 +6,6 @@
     ".": "./mod.ts"
   },
   "compilerOptions": {
-    "strict": true,
-    "strictNullChecks": true,
-    "noImplicitAny": true,
     "noUncheckedIndexedAccess": true
   },
   "imports": {
