@@ -495,3 +495,31 @@ Deno.test("pptx XML includes table cell padding and borders", () => {
   assert(slideXml.includes('anchor="ctr"'));
   assert(slideXml.includes("<a:lnL"));
 });
+
+/**
+ * Table columns are scaled to the allocated frame width.
+ * Spec: implementation-specific.
+ */
+Deno.test("table column widths fit the resolved table frame", () => {
+  const pptx = generate(presentation(
+    slide(
+      row(
+        { gap: u.in(0.25), padding: u.in(1) },
+        item({ basis: u.in(2.5) }, textbox("Left")),
+        item(
+          { grow: 1 },
+          table(
+            { cols: [u.in(2.5), u.in(2.5)] },
+            tr(u.in(0.5), td("Revenue"), td("$1.2M")),
+            tr(u.in(0.5), td("Growth"), td("15%")),
+          ),
+        ),
+        item({ basis: u.in(2.5) }, textbox("Right")),
+      ),
+    ),
+  ));
+
+  const slideXml = extractZipText(pptx, "ppt/slides/slide1.xml");
+  assert(slideXml.includes('<a:gridCol w="1143000"'));
+  assertEquals(slideXml.match(/<a:gridCol w="1143000"/g)?.length, 2);
+});

@@ -187,6 +187,30 @@ function toInternalTableRow(
   };
 }
 
+function fitTableColumns(
+  tableWidth: Emu,
+  columns: ReadonlyArray<Emu>,
+): ReadonlyArray<Emu> {
+  if (columns.length === 0) return columns;
+
+  const total = columns.reduce((sum, width) => sum + width, 0);
+  if (total === tableWidth) return columns;
+
+  if (total <= 0) {
+    const equal = Math.floor(tableWidth / columns.length);
+    const fitted = columns.map(() => equal);
+    const remainder = tableWidth - equal * columns.length;
+    fitted[fitted.length - 1] = equal + remainder;
+    return fitted.map((width) => width as Emu);
+  }
+
+  const scale = tableWidth / total;
+  const fitted = columns.map((width) => Math.round(width * scale));
+  const diff = tableWidth - fitted.reduce((sum, width) => sum + width, 0);
+  fitted[fitted.length - 1] = (fitted[fitted.length - 1] ?? 0) + diff;
+  return fitted.map((width) => width as Emu);
+}
+
 function toInternalShape(
   node: SceneNode,
   ctx: SlideContext,
@@ -264,7 +288,7 @@ function toInternalShape(
         y: node.y,
         cx: node.w,
         cy: node.h,
-        columns: node.cols,
+        columns: fitTableColumns(node.w, node.cols),
         rows: node.rows.map((row) => toInternalTableRow(row, ctx)),
       } satisfies InternalTableShape;
   }
