@@ -31,7 +31,9 @@ Do not add:
 - Do not build XML with string concatenation.
 - Generate relationship IDs from the content graph.
 - Do not add external theme support.
-- Assume PowerPoint/LibreOffice own text wrapping and autofit inside text bodies; this library owns sibling layout, resource relationships, and OOXML correctness.
+- Assume PowerPoint/LibreOffice own text wrapping and autofit inside text
+  bodies; this library owns sibling layout, resource relationships, and OOXML
+  correctness.
 
 ## Architecture
 
@@ -44,7 +46,8 @@ Do not add:
 - Keep the API declarative.
 - Prefer positionless leaves plus layout containers over absolute coordinates.
 - Keep the root surface small and focused on slide-building.
-- Prefer short helper namespaces such as `bg.*`, `fill.*`, `tx.*`, `sty.*`, `u.*`, and `clr.*`.
+- Prefer short helper namespaces such as `bg.*`, `fill.*`, `tx.*`, `sty.*`,
+  `u.*`, and `clr.*`.
 - Keep one canonical way to access helper constructors.
 - Break the API freely when the abstraction is wrong.
 
@@ -60,14 +63,20 @@ deno test
 deno publish --dry-run
 ```
 
-- Every PPTX-producing test must validate ZIP, OPC structure, `python-pptx` round-trip, and LibreOffice conversion.
-- Use `scripts/python3` for Python validation and `scripts/libreoffice` for LibreOffice invocation.
-- If `python-pptx`, `lxml`, LibreOffice, or rasterizer tools are missing, stop and ask the user to install them.
-- After large layout, styling, or public API changes, do a manual visual check by generating a complex deck, converting it with LibreOffice, rasterizing it, and inspecting the images.
+- Every PPTX-producing test must validate ZIP, OPC structure, `python-pptx`
+  round-trip, and LibreOffice conversion.
+- Use `scripts/python3` for Python validation and `scripts/libreoffice` for
+  LibreOffice invocation.
+- If `python-pptx`, `lxml`, LibreOffice, or rasterizer tools are missing, stop
+  and ask the user to install them.
+- After large layout, styling, or public API changes, do a manual visual check
+  by generating a complex deck, converting it with LibreOffice, rasterizing it,
+  and inspecting the images.
 
 ## Release and docs
 
 - Bump `deno.json` for user-facing changes on `main`.
 - Treat breaking API changes as version-bump-worthy in the same batch.
-- Use `deno publish --dry-run --allow-dirty` during iteration; the final pre-commit verification should pass on a clean tree.
+- Use `deno publish --dry-run --allow-dirty` during iteration; the final
+  pre-commit verification should pass on a clean tree.
 - Keep the README aligned with the actual public API.
