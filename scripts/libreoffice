@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+if command -v libreoffice >/dev/null 2>&1; then
+  exec libreoffice "$@"
+fi
+
+if command -v soffice >/dev/null 2>&1; then
+  exec soffice "$@"
+fi
+
+echo "LibreOffice not found: expected 'libreoffice' or 'soffice' on PATH" >&2
+exit 1

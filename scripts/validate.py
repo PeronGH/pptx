@@ -17,7 +17,6 @@ Exit codes:
 """
 
 import json
-import os
 import subprocess
 import sys
 import tempfile
@@ -27,6 +26,8 @@ from pathlib import Path
 from lxml import etree
 from pptx import Presentation
 from pptx.enum.shapes import MSO_SHAPE_TYPE
+
+LIBREOFFICE_PATH = Path(__file__).with_name("libreoffice")
 
 
 def validate_zip(path: str) -> list[str]:
@@ -148,7 +149,7 @@ def validate_libreoffice(path: str) -> list[str]:
         try:
             result = subprocess.run(
                 [
-                    "libreoffice",
+                    str(LIBREOFFICE_PATH),
                     "--headless",
                     "--convert-to",
                     "pdf",

@@ -73,7 +73,9 @@ Testing rules:
 
 - Every PPTX-producing test must validate ZIP, OPC structure, `python-pptx`
   round-trip, and LibreOffice conversion.
-- Use `scripts/validate.py` from Deno tests via `scripts/python3`.
+- Use `scripts/validate.py` from Deno tests via `scripts/python3`, and invoke
+  LibreOffice through `scripts/libreoffice` so `libreoffice`/`soffice`
+  differences stay behind the shim.
 - If a required local tool is missing (`python-pptx`, `lxml`, LibreOffice`,
   rasterizer tools), stop and ask the user to install it. Do not work around it.
 
