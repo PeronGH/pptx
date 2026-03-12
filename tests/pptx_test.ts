@@ -14,11 +14,9 @@ import { assertThrows } from "@std/assert/throws";
 import {
   bold,
   boldItalic,
-  bounds,
   bulletAutoNum,
   bulletChar,
   bulletNone,
-  cell,
   cm,
   emu,
   fontSize,
@@ -30,17 +28,18 @@ import {
   lineStyle,
   link,
   noFill,
-  paragraph,
+  p,
   percentage,
   presentation,
   pt,
-  row,
   shape,
   slide,
   solidFill,
   table,
+  td,
   text,
   textbox,
+  tr,
   underline,
 } from "../mod.ts";
 
@@ -413,107 +412,114 @@ Deno.test("link() with styles", () => {
 // ---------------------------------------------------------------------------
 
 /**
- * Verify paragraph() from a string creates a single-run paragraph.
+ * Verify p() from a string creates a single-run paragraph.
  * Spec: ECMA-376 §21.1.2.2.6 (a:p).
  */
-Deno.test("paragraph() from string", () => {
-  const p = paragraph("hello");
-  assertEquals(p.runs.length, 1);
-  assertEquals(p.runs[0]?.text, "hello");
-  assertEquals(p.level, undefined);
-  assertEquals(p.alignment, undefined);
+Deno.test("p() from string", () => {
+  const para = p("hello");
+  assertEquals(para.runs.length, 1);
+  assertEquals(para.runs[0]?.text, "hello");
+  assertEquals(para.level, undefined);
+  assertEquals(para.align, undefined);
 });
 
 /**
- * Verify paragraph() from a single TextRun.
+ * Verify p() from a single TextRun.
  * Spec: ECMA-376 §21.1.2.2.6.
  */
-Deno.test("paragraph() from single TextRun", () => {
-  const p = paragraph(bold("title"));
-  assertEquals(p.runs.length, 1);
-  assertEquals(p.runs[0]?.text, "title");
-  assertEquals(p.runs[0]?.bold, true);
+Deno.test("p() from single TextRun", () => {
+  const para = p(bold("title"));
+  assertEquals(para.runs.length, 1);
+  assertEquals(para.runs[0]?.text, "title");
+  assertEquals(para.runs[0]?.bold, true);
 });
 
 /**
- * Verify paragraph() from an array of runs composes them.
+ * Verify p() composes multiple runs as varargs.
  * Spec: ECMA-376 §21.1.2.2.6.
  */
-Deno.test("paragraph() from array of runs", () => {
-  const p = paragraph([bold("Hello"), text(", "), italic("world")]);
-  assertEquals(p.runs.length, 3);
-  assertEquals(p.runs[0]?.bold, true);
-  assertEquals(p.runs[1]?.text, ", ");
-  assertEquals(p.runs[2]?.italic, true);
+Deno.test("p() from varargs of runs", () => {
+  const para = p(bold("Hello"), ", ", italic("world"));
+  assertEquals(para.runs.length, 3);
+  assertEquals(para.runs[0]?.bold, true);
+  assertEquals(para.runs[1]?.text, ", ");
+  assertEquals(para.runs[2]?.italic, true);
 });
 
 /**
- * Verify paragraph() with alignment option.
+ * Verify p() with alignment prop.
  * Spec: ECMA-376 §21.1.2.2.7 (a:pPr algn attribute).
  */
-Deno.test("paragraph() with alignment", () => {
-  const p = paragraph("centered", { alignment: "center" });
-  assertEquals(p.alignment, "center");
-  assertEquals(p.runs[0]?.text, "centered");
+Deno.test("p() with alignment", () => {
+  const para = p({ align: "center" }, "centered");
+  assertEquals(para.align, "center");
+  assertEquals(para.runs[0]?.text, "centered");
 });
 
 /**
- * Verify paragraph() with level option for indentation.
+ * Verify p() with level prop for indentation.
  * Spec: ECMA-376 §21.1.2.2.7 (a:pPr lvl attribute).
  */
-Deno.test("paragraph() with level", () => {
-  const p = paragraph("indented", { level: 2 });
-  assertEquals(p.level, 2);
+Deno.test("p() with level", () => {
+  const para = p({ level: 2 }, "indented");
+  assertEquals(para.level, 2);
 });
 
 /**
- * Verify paragraph() with all options.
+ * Verify p() with all props.
  * Spec: ECMA-376 §21.1.2.2.7.
  */
-Deno.test("paragraph() with all options", () => {
-  const p = paragraph([bold("title")], { alignment: "right", level: 1 });
-  assertEquals(p.alignment, "right");
-  assertEquals(p.level, 1);
-  assertEquals(p.runs.length, 1);
+Deno.test("p() with all props", () => {
+  const para = p({ align: "right", level: 1 }, bold("title"));
+  assertEquals(para.align, "right");
+  assertEquals(para.level, 1);
+  assertEquals(para.runs.length, 1);
 });
 
 /**
- * Verify paragraph() with bullet character.
+ * Verify p() with bullet character.
  * Spec: ECMA-376 §21.1.2.4.3 (a:buChar).
  */
-Deno.test("paragraph() with bullet char", () => {
-  const p = paragraph("Item", { bullet: bulletChar("\u2022") });
-  assertEquals(p.bullet?.kind, "char");
+Deno.test("p() with bullet char", () => {
+  const para = p({ bullet: bulletChar("\u2022") }, "Item");
+  assertEquals(para.bullet?.kind, "char");
 });
 
 /**
- * Verify paragraph() with auto-numbered bullet.
+ * Verify p() with auto-numbered bullet.
  * Spec: ECMA-376 §21.1.2.4.1 (a:buAutoNum).
  */
-Deno.test("paragraph() with bullet autonum", () => {
-  const p = paragraph("Step", { bullet: bulletAutoNum("arabicPeriod") });
-  assertEquals(p.bullet?.kind, "autonum");
+Deno.test("p() with bullet autonum", () => {
+  const para = p({ bullet: bulletAutoNum("arabicPeriod") }, "Step");
+  assertEquals(para.bullet?.kind, "autonum");
 });
 
 /**
- * Verify paragraph() with no bullet override.
+ * Verify p() with no bullet override.
  * Spec: ECMA-376 §21.1.2.4.4 (a:buNone).
  */
-Deno.test("paragraph() with bullet none", () => {
-  const p = paragraph("No bullet", { bullet: bulletNone() });
-  assertEquals(p.bullet?.kind, "none");
+Deno.test("p() with bullet none", () => {
+  const para = p({ bullet: bulletNone() }, "No bullet");
+  assertEquals(para.bullet?.kind, "none");
 });
 
 /**
- * Verify paragraph() with spacing.
+ * Verify p() with spacing.
  * Spec: ECMA-376 §21.1.2.2.10 (a:spcBef/a:spcAft).
  */
-Deno.test("paragraph() with spacing", () => {
-  const p = paragraph("Spaced", {
-    spacing: { before: pt(12), after: pt(6) },
-  });
-  assertEquals(p.spacing?.before, pt(12));
-  assertEquals(p.spacing?.after, pt(6));
+Deno.test("p() with spacing", () => {
+  const para = p({ spacing: { before: pt(12), after: pt(6) } }, "Spaced");
+  assertEquals(para.spacing?.before, pt(12));
+  assertEquals(para.spacing?.after, pt(6));
+});
+
+/**
+ * Verify p() with no arguments creates empty paragraph.
+ * Spec: ECMA-376 §21.1.2.2.6.
+ */
+Deno.test("p() with no args", () => {
+  const para = p();
+  assertEquals(para.runs.length, 0);
 });
 
 // ---------------------------------------------------------------------------
@@ -567,22 +573,6 @@ Deno.test("lineStyle() creates line properties", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Bounds builder test
-// ---------------------------------------------------------------------------
-
-/**
- * Verify bounds() creates a position+size record.
- * Spec: ECMA-376 §20.1.7.5 (a:xfrm).
- */
-Deno.test("bounds() creates position and size", () => {
-  const b = bounds(inches(1), inches(2), inches(8), inches(5));
-  assertEquals(b.x, inches(1));
-  assertEquals(b.y, inches(2));
-  assertEquals(b.cx, inches(8));
-  assertEquals(b.cy, inches(5));
-});
-
-// ---------------------------------------------------------------------------
 // Shape builder tests
 // ---------------------------------------------------------------------------
 
@@ -592,32 +582,35 @@ Deno.test("bounds() creates position and size", () => {
  */
 Deno.test("textbox() creates a text box", () => {
   const tb = textbox(
-    bounds(inches(1), inches(1), inches(4), inches(1)),
-    [paragraph("content")],
+    { x: inches(1), y: inches(1), w: inches(4), h: inches(1) },
+    "content",
   );
   assertEquals(tb.kind, "textbox");
-  assertEquals(tb.bounds.x, inches(1));
+  assertEquals(tb.x, inches(1));
   assertEquals(tb.paragraphs.length, 1);
   assertEquals(tb.paragraphs[0]?.runs[0]?.text, "content");
 });
 
 /**
- * Verify textbox() with styling options.
+ * Verify textbox() with styling props.
  * Spec: ECMA-376 §20.1.8, §20.1.2.2.24.
  */
 Deno.test("textbox() with styling", () => {
   const tb = textbox(
-    bounds(inches(1), inches(1), inches(4), inches(1)),
-    [paragraph("styled")],
     {
+      x: inches(1),
+      y: inches(1),
+      w: inches(4),
+      h: inches(1),
       fill: solidFill(hexColor("FFFF00")),
       line: lineStyle({ width: pt(1), fill: solidFill(hexColor("000000")) }),
-      verticalAlignment: "middle",
+      verticalAlign: "middle",
     },
+    "styled",
   );
   assertEquals(tb.fill?.kind, "solid");
   assertEquals(tb.line?.width, pt(1));
-  assertEquals(tb.verticalAlignment, "middle");
+  assertEquals(tb.verticalAlign, "middle");
 });
 
 /**
@@ -625,7 +618,12 @@ Deno.test("textbox() with styling", () => {
  * Spec: ECMA-376 §20.1.9.18 (a:prstGeom).
  */
 Deno.test("shape() without text", () => {
-  const s = shape("rect", bounds(inches(0), inches(0), inches(3), inches(2)));
+  const s = shape("rect", {
+    x: inches(0),
+    y: inches(0),
+    w: inches(3),
+    h: inches(2),
+  });
   assertEquals(s.kind, "shape");
   assertEquals(s.preset, "rect");
   assertEquals(s.paragraphs.length, 0);
@@ -638,12 +636,12 @@ Deno.test("shape() without text", () => {
 Deno.test("shape() with text", () => {
   const s = shape(
     "ellipse",
-    bounds(inches(1), inches(1), inches(3), inches(3)),
-    [paragraph("circle", { alignment: "center" })],
+    { x: inches(1), y: inches(1), w: inches(3), h: inches(3) },
+    p({ align: "center" }, "circle"),
   );
   assertEquals(s.preset, "ellipse");
   assertEquals(s.paragraphs.length, 1);
-  assertEquals(s.paragraphs[0]?.alignment, "center");
+  assertEquals(s.paragraphs[0]?.align, "center");
 });
 
 /**
@@ -653,9 +651,11 @@ Deno.test("shape() with text", () => {
 Deno.test("shape() with styling", () => {
   const s = shape(
     "rect",
-    bounds(inches(1), inches(1), inches(3), inches(2)),
-    [],
     {
+      x: inches(1),
+      y: inches(1),
+      w: inches(3),
+      h: inches(2),
       fill: solidFill(hexColor("FF0000")),
       line: lineStyle({ width: pt(2), fill: solidFill(hexColor("000000")) }),
     },
@@ -670,12 +670,15 @@ Deno.test("shape() with styling", () => {
  */
 Deno.test("image() creates an image element", () => {
   const png = createTestPng();
-  const img = image(
-    bounds(inches(1), inches(1), inches(4), inches(3)),
-    png,
-    "image/png",
-    "Test image",
-  );
+  const img = image({
+    x: inches(1),
+    y: inches(1),
+    w: inches(4),
+    h: inches(3),
+    data: png,
+    contentType: "image/png",
+    description: "Test image",
+  });
   assertEquals(img.kind, "image");
   assertEquals(img.contentType, "image/png");
   assertEquals(img.description, "Test image");
@@ -687,30 +690,37 @@ Deno.test("image() creates an image element", () => {
  */
 Deno.test("table() creates a table element", () => {
   const t = table(
-    bounds(inches(1), inches(1), inches(6), inches(3)),
-    [inches(3), inches(3)],
-    [
-      row(inches(0.5), [
-        cell([paragraph("A")]),
-        cell([paragraph("B")]),
-      ]),
-    ],
+    {
+      x: inches(1),
+      y: inches(1),
+      w: inches(6),
+      h: inches(3),
+      cols: [inches(3), inches(3)],
+    },
+    tr(inches(0.5), td("A"), td("B")),
   );
   assertEquals(t.kind, "table");
-  assertEquals(t.columns.length, 2);
+  assertEquals(t.cols.length, 2);
   assertEquals(t.rows.length, 1);
   assertEquals(t.rows[0]?.cells.length, 2);
 });
 
 /**
- * Verify cell() with fill option.
+ * Verify td() with fill prop.
  * Spec: ECMA-376 §21.1.3.15 (a:tc).
  */
-Deno.test("cell() with fill", () => {
-  const c = cell([paragraph("colored")], {
-    fill: solidFill(hexColor("4472C4")),
-  });
+Deno.test("td() with fill", () => {
+  const c = td({ fill: solidFill(hexColor("4472C4")) }, "colored");
   assertEquals(c.fill?.kind, "solid");
+});
+
+/**
+ * Verify td() string coercion.
+ */
+Deno.test("td() auto-coerces string to paragraph", () => {
+  const c = td("hello");
+  assertEquals(c.paragraphs.length, 1);
+  assertEquals(c.paragraphs[0]?.runs[0]?.text, "hello");
 });
 
 // ---------------------------------------------------------------------------
@@ -723,10 +733,8 @@ Deno.test("cell() with fill", () => {
  */
 Deno.test("slide() collects elements", () => {
   const s = slide(
-    textbox(bounds(inches(1), inches(1), inches(4), inches(1)), [
-      paragraph("a"),
-    ]),
-    shape("rect", bounds(inches(1), inches(3), inches(4), inches(2))),
+    textbox({ x: inches(1), y: inches(1), w: inches(4), h: inches(1) }, "a"),
+    shape("rect", { x: inches(1), y: inches(3), w: inches(4), h: inches(2) }),
   );
   assertEquals(s.elements.length, 2);
   assertEquals(s.elements[0]?.kind, "textbox");
@@ -793,9 +801,10 @@ Deno.test("e2e: minimal text box presentation", async () => {
   const pptx = generate(presentation(
     { title: "Test Presentation" },
     slide(
-      textbox(bounds(inches(1), inches(1), inches(8), inches(1)), [
-        paragraph("Hello, World!"),
-      ]),
+      textbox(
+        { x: inches(1), y: inches(1), w: inches(8), h: inches(1) },
+        "Hello, World!",
+      ),
     ),
   ));
 
@@ -815,9 +824,10 @@ Deno.test("e2e: minimal text box presentation", async () => {
 Deno.test("e2e: multi-slide presentation", async () => {
   const makeSlide = (label: string) =>
     slide(
-      textbox(bounds(inches(1), inches(1), inches(6), inches(1)), [
-        paragraph(label),
-      ]),
+      textbox(
+        { x: inches(1), y: inches(1), w: inches(6), h: inches(1) },
+        label,
+      ),
     );
 
   const pptx = generate(presentation(
@@ -841,9 +851,11 @@ Deno.test("e2e: multi-slide presentation", async () => {
 Deno.test("e2e: preset shape (rectangle)", async () => {
   const pptx = generate(presentation(
     slide(
-      shape("rect", bounds(inches(1), inches(1), inches(4), inches(2)), [
-        paragraph("Rectangle text"),
-      ]),
+      shape(
+        "rect",
+        { x: inches(1), y: inches(1), w: inches(4), h: inches(2) },
+        "Rectangle text",
+      ),
     ),
   ));
 
@@ -859,9 +871,11 @@ Deno.test("e2e: preset shape (rectangle)", async () => {
 Deno.test("e2e: preset shape (ellipse)", async () => {
   const pptx = generate(presentation(
     slide(
-      shape("ellipse", bounds(inches(1), inches(1), inches(3), inches(3)), [
-        paragraph("Circle", { alignment: "center" }),
-      ]),
+      shape(
+        "ellipse",
+        { x: inches(1), y: inches(1), w: inches(3), h: inches(3) },
+        p({ align: "center" }, "Circle"),
+      ),
     ),
   ));
 
@@ -876,7 +890,12 @@ Deno.test("e2e: preset shape (ellipse)", async () => {
 Deno.test("e2e: shape without text", async () => {
   const pptx = generate(presentation(
     slide(
-      shape("roundRect", bounds(inches(2), inches(2), inches(4), inches(3))),
+      shape("roundRect", {
+        x: inches(2),
+        y: inches(2),
+        w: inches(4),
+        h: inches(3),
+      }),
     ),
   ));
 
@@ -891,15 +910,10 @@ Deno.test("e2e: shape without text", async () => {
 Deno.test("e2e: bold, italic, and boldItalic text", async () => {
   const pptx = generate(presentation(
     slide(
-      textbox(bounds(inches(1), inches(1), inches(8), inches(2)), [
-        paragraph([
-          bold("Bold"),
-          text(" "),
-          italic("Italic"),
-          text(" "),
-          boldItalic("Both"),
-        ]),
-      ]),
+      textbox(
+        { x: inches(1), y: inches(1), w: inches(8), h: inches(2) },
+        p(bold("Bold"), " ", italic("Italic"), " ", boldItalic("Both")),
+      ),
     ),
   ));
 
@@ -917,20 +931,17 @@ Deno.test("e2e: bold, italic, and boldItalic text", async () => {
 Deno.test("e2e: font size and color", async () => {
   const pptx = generate(presentation(
     slide(
-      textbox(bounds(inches(1), inches(1), inches(8), inches(2)), [
-        paragraph([
-          text("Large red text", {
-            fontSize: fontSize(36),
-            fontColor: hexColor("FF0000"),
-          }),
-        ]),
-        paragraph([
-          text("Small blue text", {
-            fontSize: fontSize(10),
-            fontColor: hexColor("0000FF"),
-          }),
-        ]),
-      ]),
+      textbox(
+        { x: inches(1), y: inches(1), w: inches(8), h: inches(2) },
+        p(text("Large red text", {
+          fontSize: fontSize(36),
+          fontColor: hexColor("FF0000"),
+        })),
+        p(text("Small blue text", {
+          fontSize: fontSize(10),
+          fontColor: hexColor("0000FF"),
+        })),
+      ),
     ),
   ));
 
@@ -947,12 +958,13 @@ Deno.test("e2e: font size and color", async () => {
 Deno.test("e2e: paragraph alignment", async () => {
   const pptx = generate(presentation(
     slide(
-      textbox(bounds(inches(1), inches(1), inches(8), inches(3)), [
-        paragraph("Left aligned", { alignment: "left" }),
-        paragraph("Center aligned", { alignment: "center" }),
-        paragraph("Right aligned", { alignment: "right" }),
-        paragraph("Justified text", { alignment: "justify" }),
-      ]),
+      textbox(
+        { x: inches(1), y: inches(1), w: inches(8), h: inches(3) },
+        p({ align: "left" }, "Left aligned"),
+        p({ align: "center" }, "Center aligned"),
+        p({ align: "right" }, "Right aligned"),
+        p({ align: "justify" }, "Justified text"),
+      ),
     ),
   ));
 
@@ -971,11 +983,12 @@ Deno.test("e2e: paragraph alignment", async () => {
 Deno.test("e2e: paragraph levels", async () => {
   const pptx = generate(presentation(
     slide(
-      textbox(bounds(inches(1), inches(1), inches(8), inches(3)), [
-        paragraph("Level 0", { level: 0 }),
-        paragraph("Level 1", { level: 1 }),
-        paragraph("Level 2", { level: 2 }),
-      ]),
+      textbox(
+        { x: inches(1), y: inches(1), w: inches(8), h: inches(3) },
+        p({ level: 0 }, "Level 0"),
+        p({ level: 1 }, "Level 1"),
+        p({ level: 2 }, "Level 2"),
+      ),
     ),
   ));
 
@@ -993,13 +1006,21 @@ Deno.test("e2e: paragraph levels", async () => {
 Deno.test("e2e: multiple shapes on one slide", async () => {
   const pptx = generate(presentation(
     slide(
-      textbox(bounds(inches(1), inches(1), inches(4), inches(1)), [
-        paragraph("Text box"),
-      ]),
-      shape("ellipse", bounds(inches(1), inches(3), inches(3), inches(2)), [
-        paragraph("Ellipse"),
-      ]),
-      shape("roundRect", bounds(inches(5), inches(3), inches(3), inches(2))),
+      textbox(
+        { x: inches(1), y: inches(1), w: inches(4), h: inches(1) },
+        "Text box",
+      ),
+      shape(
+        "ellipse",
+        { x: inches(1), y: inches(3), w: inches(3), h: inches(2) },
+        "Ellipse",
+      ),
+      shape("roundRect", {
+        x: inches(5),
+        y: inches(3),
+        w: inches(3),
+        h: inches(2),
+      }),
     ),
   ));
 
@@ -1028,9 +1049,10 @@ Deno.test("e2e: custom slide dimensions", async () => {
   const pptx = generate(presentation(
     { slideWidth: inches(13.333), slideHeight: inches(7.5) },
     slide(
-      textbox(bounds(inches(1), inches(1), inches(11), inches(1)), [
-        paragraph("Wide slide"),
-      ]),
+      textbox(
+        { x: inches(1), y: inches(1), w: inches(11), h: inches(1) },
+        "Wide slide",
+      ),
     ),
   ));
 
@@ -1045,9 +1067,10 @@ Deno.test("e2e: custom slide dimensions", async () => {
 Deno.test("e2e: cm unit conversions", async () => {
   const pptx = generate(presentation(
     slide(
-      textbox(bounds(cm(2), cm(2), cm(20), cm(3)), [
-        paragraph("Centimeter-positioned text"),
-      ]),
+      textbox(
+        { x: cm(2), y: cm(2), w: cm(20), h: cm(3) },
+        "Centimeter-positioned text",
+      ),
     ),
   ));
 
@@ -1065,9 +1088,10 @@ Deno.test("e2e: cm unit conversions", async () => {
 Deno.test("e2e: pt unit conversions", async () => {
   const pptx = generate(presentation(
     slide(
-      textbox(bounds(pt(72), pt(72), pt(500), pt(72)), [
-        paragraph("Point-positioned text"),
-      ]),
+      textbox(
+        { x: pt(72), y: pt(72), w: pt(500), h: pt(72) },
+        "Point-positioned text",
+      ),
     ),
   ));
 
@@ -1082,19 +1106,21 @@ Deno.test("e2e: pt unit conversions", async () => {
 Deno.test("e2e: composable reusable functions", async () => {
   const titleSlide = (title: string) =>
     slide(
-      textbox(bounds(inches(1), inches(2), inches(8), inches(2)), [
-        paragraph(bold(title), { alignment: "center" }),
-      ]),
+      textbox(
+        { x: inches(1), y: inches(2), w: inches(8), h: inches(2) },
+        p({ align: "center" }, bold(title)),
+      ),
     );
 
   const bulletSlide = (title: string, bullets: ReadonlyArray<string>) =>
     slide(
-      textbox(bounds(inches(1), inches(0.5), inches(8), inches(1)), [
-        paragraph(bold(title)),
-      ]),
       textbox(
-        bounds(inches(1), inches(2), inches(8), inches(4)),
-        bullets.map((b, i) => paragraph(b, { level: i > 0 ? 1 : 0 })),
+        { x: inches(1), y: inches(0.5), w: inches(8), h: inches(1) },
+        p(bold(title)),
+      ),
+      textbox(
+        { x: inches(1), y: inches(2), w: inches(8), h: inches(4) },
+        ...bullets.map((b, i) => p({ level: i > 0 ? 1 : 0 }, b)),
       ),
     );
 
@@ -1119,16 +1145,17 @@ Deno.test("e2e: composable reusable functions", async () => {
 Deno.test("e2e: mixed text runs in one paragraph", async () => {
   const pptx = generate(presentation(
     slide(
-      textbox(bounds(inches(1), inches(1), inches(8), inches(1)), [
-        paragraph([
-          text("Normal "),
+      textbox(
+        { x: inches(1), y: inches(1), w: inches(8), h: inches(1) },
+        p(
+          "Normal ",
           bold("bold "),
           italic("italic "),
           boldItalic("both "),
           text("sized", { fontSize: fontSize(24) }),
           text(" colored", { fontColor: hexColor("00FF00") }),
-        ]),
-      ]),
+        ),
+      ),
     ),
   ));
 
@@ -1150,9 +1177,10 @@ Deno.test("e2e: presentation with title and creator", async () => {
   const pptx = generate(presentation(
     { title: "Titled Presentation", creator: "Test Author" },
     slide(
-      textbox(bounds(inches(1), inches(1), inches(6), inches(1)), [
-        paragraph("Has metadata"),
-      ]),
+      textbox(
+        { x: inches(1), y: inches(1), w: inches(6), h: inches(1) },
+        "Has metadata",
+      ),
     ),
   ));
 
@@ -1172,12 +1200,15 @@ Deno.test("e2e: embedded PNG image", async () => {
   const png = createTestPng();
   const pptx = generate(presentation(
     slide(
-      image(
-        bounds(inches(1), inches(1), inches(4), inches(3)),
-        png,
-        "image/png",
-        "Test image",
-      ),
+      image({
+        x: inches(1),
+        y: inches(1),
+        w: inches(4),
+        h: inches(3),
+        data: png,
+        contentType: "image/png",
+        description: "Test image",
+      }),
     ),
   ));
 
@@ -1196,14 +1227,18 @@ Deno.test("e2e: image with text box on same slide", async () => {
   const png = createTestPng();
   const pptx = generate(presentation(
     slide(
-      textbox(bounds(inches(1), inches(0.5), inches(8), inches(1)), [
-        paragraph("Slide with image"),
-      ]),
-      image(
-        bounds(inches(2), inches(2), inches(4), inches(3)),
-        png,
-        "image/png",
+      textbox(
+        { x: inches(1), y: inches(0.5), w: inches(8), h: inches(1) },
+        "Slide with image",
       ),
+      image({
+        x: inches(2),
+        y: inches(2),
+        w: inches(4),
+        h: inches(3),
+        data: png,
+        contentType: "image/png",
+      }),
     ),
   ));
 
@@ -1221,18 +1256,24 @@ Deno.test("e2e: images on multiple slides", async () => {
   const png = createTestPng();
   const pptx = generate(presentation(
     slide(
-      image(
-        bounds(inches(1), inches(1), inches(3), inches(2)),
-        png,
-        "image/png",
-      ),
+      image({
+        x: inches(1),
+        y: inches(1),
+        w: inches(3),
+        h: inches(2),
+        data: png,
+        contentType: "image/png",
+      }),
     ),
     slide(
-      image(
-        bounds(inches(2), inches(2), inches(4), inches(3)),
-        png,
-        "image/png",
-      ),
+      image({
+        x: inches(2),
+        y: inches(2),
+        w: inches(4),
+        h: inches(3),
+        data: png,
+        contentType: "image/png",
+      }),
     ),
   ));
 
@@ -1252,12 +1293,10 @@ Deno.test("e2e: images on multiple slides", async () => {
 Deno.test("e2e: underlined text", async () => {
   const pptx = generate(presentation(
     slide(
-      textbox(bounds(inches(1), inches(1), inches(8), inches(1)), [
-        paragraph([
-          underline("This is underlined"),
-          text(" and this is not"),
-        ]),
-      ]),
+      textbox(
+        { x: inches(1), y: inches(1), w: inches(8), h: inches(1) },
+        p(underline("This is underlined"), " and this is not"),
+      ),
     ),
   ));
 
@@ -1274,11 +1313,10 @@ Deno.test("e2e: underlined text", async () => {
 Deno.test("e2e: custom font family", async () => {
   const pptx = generate(presentation(
     slide(
-      textbox(bounds(inches(1), inches(1), inches(8), inches(1)), [
-        paragraph([
-          text("Courier text", { fontFamily: "Courier New" }),
-        ]),
-      ]),
+      textbox(
+        { x: inches(1), y: inches(1), w: inches(8), h: inches(1) },
+        p(text("Courier text", { fontFamily: "Courier New" })),
+      ),
     ),
   ));
 
@@ -1293,11 +1331,12 @@ Deno.test("e2e: custom font family", async () => {
 Deno.test("e2e: bullet characters", async () => {
   const pptx = generate(presentation(
     slide(
-      textbox(bounds(inches(1), inches(1), inches(8), inches(3)), [
-        paragraph("First bullet", { bullet: bulletChar("\u2022") }),
-        paragraph("Second bullet", { bullet: bulletChar("\u2022") }),
-        paragraph("Third bullet", { bullet: bulletChar("\u2022") }),
-      ]),
+      textbox(
+        { x: inches(1), y: inches(1), w: inches(8), h: inches(3) },
+        p({ bullet: bulletChar("\u2022") }, "First bullet"),
+        p({ bullet: bulletChar("\u2022") }, "Second bullet"),
+        p({ bullet: bulletChar("\u2022") }, "Third bullet"),
+      ),
     ),
   ));
 
@@ -1315,11 +1354,12 @@ Deno.test("e2e: bullet characters", async () => {
 Deno.test("e2e: auto-numbered bullets", async () => {
   const pptx = generate(presentation(
     slide(
-      textbox(bounds(inches(1), inches(1), inches(8), inches(3)), [
-        paragraph("Step one", { bullet: bulletAutoNum("arabicPeriod") }),
-        paragraph("Step two", { bullet: bulletAutoNum("arabicPeriod") }),
-        paragraph("Step three", { bullet: bulletAutoNum("arabicPeriod") }),
-      ]),
+      textbox(
+        { x: inches(1), y: inches(1), w: inches(8), h: inches(3) },
+        p({ bullet: bulletAutoNum("arabicPeriod") }, "Step one"),
+        p({ bullet: bulletAutoNum("arabicPeriod") }, "Step two"),
+        p({ bullet: bulletAutoNum("arabicPeriod") }, "Step three"),
+      ),
     ),
   ));
 
@@ -1336,14 +1376,11 @@ Deno.test("e2e: auto-numbered bullets", async () => {
 Deno.test("e2e: paragraph spacing", async () => {
   const pptx = generate(presentation(
     slide(
-      textbox(bounds(inches(1), inches(1), inches(8), inches(4)), [
-        paragraph("Before space", {
-          spacing: { before: pt(12), after: pt(6) },
-        }),
-        paragraph("After space", {
-          spacing: { before: pt(6), after: pt(12) },
-        }),
-      ]),
+      textbox(
+        { x: inches(1), y: inches(1), w: inches(8), h: inches(4) },
+        p({ spacing: { before: pt(12), after: pt(6) } }, "Before space"),
+        p({ spacing: { before: pt(6), after: pt(12) } }, "After space"),
+      ),
     ),
   ));
 
@@ -1365,9 +1402,14 @@ Deno.test("e2e: textbox with solid fill", async () => {
   const pptx = generate(presentation(
     slide(
       textbox(
-        bounds(inches(1), inches(1), inches(6), inches(2)),
-        [paragraph("Yellow background")],
-        { fill: solidFill(hexColor("FFFF00")) },
+        {
+          x: inches(1),
+          y: inches(1),
+          w: inches(6),
+          h: inches(2),
+          fill: solidFill(hexColor("FFFF00")),
+        },
+        "Yellow background",
       ),
     ),
   ));
@@ -1384,15 +1426,18 @@ Deno.test("e2e: textbox with line border", async () => {
   const pptx = generate(presentation(
     slide(
       textbox(
-        bounds(inches(1), inches(1), inches(6), inches(2)),
-        [paragraph("Bordered text")],
         {
+          x: inches(1),
+          y: inches(1),
+          w: inches(6),
+          h: inches(2),
           fill: noFill(),
           line: lineStyle({
             width: pt(2),
             fill: solidFill(hexColor("000000")),
           }),
         },
+        "Bordered text",
       ),
     ),
   ));
@@ -1410,15 +1455,18 @@ Deno.test("e2e: shape with custom fill and line", async () => {
     slide(
       shape(
         "rect",
-        bounds(inches(1), inches(1), inches(4), inches(2)),
-        [paragraph("Red box", { alignment: "center" })],
         {
+          x: inches(1),
+          y: inches(1),
+          w: inches(4),
+          h: inches(2),
           fill: solidFill(hexColor("FF0000")),
           line: lineStyle({
             width: pt(3),
             fill: solidFill(hexColor("000000")),
           }),
         },
+        p({ align: "center" }, "Red box"),
       ),
     ),
   ));
@@ -1436,12 +1484,15 @@ Deno.test("e2e: shape with noFill", async () => {
     slide(
       shape(
         "ellipse",
-        bounds(inches(1), inches(1), inches(3), inches(3)),
-        [paragraph("Transparent", { alignment: "center" })],
         {
+          x: inches(1),
+          y: inches(1),
+          w: inches(3),
+          h: inches(3),
           fill: noFill(),
           line: lineStyle({ fill: noFill() }),
         },
+        p({ align: "center" }, "Transparent"),
       ),
     ),
   ));
@@ -1459,9 +1510,14 @@ Deno.test("e2e: shape with semi-transparent fill", async () => {
     slide(
       shape(
         "rect",
-        bounds(inches(1), inches(1), inches(4), inches(2)),
-        [paragraph("50% transparent")],
-        { fill: solidFill(hexColor("0000FF"), 50000) },
+        {
+          x: inches(1),
+          y: inches(1),
+          w: inches(4),
+          h: inches(2),
+          fill: solidFill(hexColor("0000FF"), 50000),
+        },
+        "50% transparent",
       ),
     ),
   ));
@@ -1478,14 +1534,24 @@ Deno.test("e2e: textbox vertical alignment", async () => {
   const pptx = generate(presentation(
     slide(
       textbox(
-        bounds(inches(1), inches(1), inches(4), inches(3)),
-        [paragraph("Top")],
-        { verticalAlignment: "top" },
+        {
+          x: inches(1),
+          y: inches(1),
+          w: inches(4),
+          h: inches(3),
+          verticalAlign: "top",
+        },
+        "Top",
       ),
       textbox(
-        bounds(inches(5), inches(1), inches(4), inches(3)),
-        [paragraph("Middle")],
-        { verticalAlignment: "middle" },
+        {
+          x: inches(5),
+          y: inches(1),
+          w: inches(4),
+          h: inches(3),
+          verticalAlign: "middle",
+        },
+        "Middle",
       ),
     ),
   ));
@@ -1508,18 +1574,15 @@ Deno.test("e2e: simple 2x2 table", async () => {
   const pptx = generate(presentation(
     slide(
       table(
-        bounds(inches(1), inches(1), inches(6), inches(2)),
-        [inches(3), inches(3)],
-        [
-          row(inches(0.5), [
-            cell([paragraph("A1")]),
-            cell([paragraph("B1")]),
-          ]),
-          row(inches(0.5), [
-            cell([paragraph("A2")]),
-            cell([paragraph("B2")]),
-          ]),
-        ],
+        {
+          x: inches(1),
+          y: inches(1),
+          w: inches(6),
+          h: inches(2),
+          cols: [inches(3), inches(3)],
+        },
+        tr(inches(0.5), td("A1"), td("B1")),
+        tr(inches(0.5), td("A2"), td("B2")),
       ),
     ),
   ));
@@ -1545,25 +1608,21 @@ Deno.test("e2e: table with styled header", async () => {
   const pptx = generate(presentation(
     slide(
       table(
-        bounds(inches(1), inches(1), inches(6), inches(2)),
-        [inches(2), inches(2), inches(2)],
-        [
-          row(inches(0.5), [
-            cell([paragraph(bold("Name"))], { fill: headerFill }),
-            cell([paragraph(bold("Age"))], { fill: headerFill }),
-            cell([paragraph(bold("City"))], { fill: headerFill }),
-          ]),
-          row(inches(0.5), [
-            cell([paragraph("Alice")]),
-            cell([paragraph("30")]),
-            cell([paragraph("NYC")]),
-          ]),
-          row(inches(0.5), [
-            cell([paragraph("Bob")]),
-            cell([paragraph("25")]),
-            cell([paragraph("LA")]),
-          ]),
-        ],
+        {
+          x: inches(1),
+          y: inches(1),
+          w: inches(6),
+          h: inches(2),
+          cols: [inches(2), inches(2), inches(2)],
+        },
+        tr(
+          inches(0.5),
+          td({ fill: headerFill }, p(bold("Name"))),
+          td({ fill: headerFill }, p(bold("Age"))),
+          td({ fill: headerFill }, p(bold("City"))),
+        ),
+        tr(inches(0.5), td("Alice"), td("30"), td("NYC")),
+        tr(inches(0.5), td("Bob"), td("25"), td("LA")),
       ),
     ),
   ));
@@ -1585,18 +1644,19 @@ Deno.test("e2e: table with styled header", async () => {
 Deno.test("e2e: table with text box on same slide", async () => {
   const pptx = generate(presentation(
     slide(
-      textbox(bounds(inches(1), inches(0.5), inches(8), inches(1)), [
-        paragraph(bold("Data Report")),
-      ]),
+      textbox(
+        { x: inches(1), y: inches(0.5), w: inches(8), h: inches(1) },
+        p(bold("Data Report")),
+      ),
       table(
-        bounds(inches(1), inches(2), inches(6), inches(2)),
-        [inches(3), inches(3)],
-        [
-          row(inches(0.5), [
-            cell([paragraph("X")]),
-            cell([paragraph("Y")]),
-          ]),
-        ],
+        {
+          x: inches(1),
+          y: inches(2),
+          w: inches(6),
+          h: inches(2),
+          cols: [inches(3), inches(3)],
+        },
+        tr(inches(0.5), td("X"), td("Y")),
       ),
     ),
   ));
@@ -1618,13 +1678,14 @@ Deno.test("e2e: table with text box on same slide", async () => {
 Deno.test("e2e: text with hyperlink", async () => {
   const pptx = generate(presentation(
     slide(
-      textbox(bounds(inches(1), inches(1), inches(8), inches(1)), [
-        paragraph([
-          text("Visit "),
+      textbox(
+        { x: inches(1), y: inches(1), w: inches(8), h: inches(1) },
+        p(
+          "Visit ",
           link("our website", "https://example.com"),
-          text(" for more info"),
-        ]),
-      ]),
+          " for more info",
+        ),
+      ),
     ),
   ));
 
@@ -1642,16 +1703,15 @@ Deno.test("e2e: text with hyperlink", async () => {
 Deno.test("e2e: multiple hyperlinks", async () => {
   const pptx = generate(presentation(
     slide(
-      textbox(bounds(inches(1), inches(1), inches(8), inches(2)), [
-        paragraph([
+      textbox(
+        { x: inches(1), y: inches(1), w: inches(8), h: inches(2) },
+        p(
           link("Link 1", "https://example.com/1"),
-          text(" | "),
+          " | ",
           link("Link 2", "https://example.com/2"),
-        ]),
-        paragraph([
-          link("Link 3", "https://example.com/3", { bold: true }),
-        ]),
-      ]),
+        ),
+        p(link("Link 3", "https://example.com/3", { bold: true })),
+      ),
     ),
   ));
 
@@ -1669,14 +1729,16 @@ Deno.test("e2e: multiple hyperlinks", async () => {
 Deno.test("e2e: hyperlinks on multiple slides", async () => {
   const pptx = generate(presentation(
     slide(
-      textbox(bounds(inches(1), inches(1), inches(8), inches(1)), [
-        paragraph(link("Slide 1 link", "https://example.com/s1")),
-      ]),
+      textbox(
+        { x: inches(1), y: inches(1), w: inches(8), h: inches(1) },
+        p(link("Slide 1 link", "https://example.com/s1")),
+      ),
     ),
     slide(
-      textbox(bounds(inches(1), inches(1), inches(8), inches(1)), [
-        paragraph(link("Slide 2 link", "https://example.com/s2")),
-      ]),
+      textbox(
+        { x: inches(1), y: inches(1), w: inches(8), h: inches(1) },
+        p(link("Slide 2 link", "https://example.com/s2")),
+      ),
     ),
   ));
 
@@ -1690,7 +1752,7 @@ Deno.test("e2e: hyperlinks on multiple slides", async () => {
 // ---------------------------------------------------------------------------
 
 /**
- * Generate a presentation using all five new features together.
+ * Generate a presentation using all five features together.
  */
 Deno.test("e2e: all features combined", async () => {
   const png = createTestPng();
@@ -1699,65 +1761,78 @@ Deno.test("e2e: all features combined", async () => {
     // Slide 1: Image + styled text
     slide(
       textbox(
-        bounds(inches(1), inches(0.5), inches(8), inches(1)),
-        [
-          paragraph([
-            bold("Feature Showcase"),
-            text(" - "),
-            underline("Complete Demo"),
-          ], { alignment: "center" }),
-        ],
-        { fill: solidFill(hexColor("E8E8E8")) },
+        {
+          x: inches(1),
+          y: inches(0.5),
+          w: inches(8),
+          h: inches(1),
+          fill: solidFill(hexColor("E8E8E8")),
+        },
+        p(
+          { align: "center" },
+          bold("Feature Showcase"),
+          " - ",
+          underline("Complete Demo"),
+        ),
       ),
-      image(
-        bounds(inches(3), inches(2), inches(4), inches(3)),
-        png,
-        "image/png",
-        "Demo image",
-      ),
+      image({
+        x: inches(3),
+        y: inches(2),
+        w: inches(4),
+        h: inches(3),
+        data: png,
+        contentType: "image/png",
+        description: "Demo image",
+      }),
     ),
     // Slide 2: Table + hyperlink
     slide(
       table(
-        bounds(inches(1), inches(1), inches(6), inches(2)),
-        [inches(3), inches(3)],
-        [
-          row(inches(0.5), [
-            cell([paragraph(bold("Feature"))], {
-              fill: solidFill(hexColor("4472C4")),
-            }),
-            cell([paragraph(bold("Status"))], {
-              fill: solidFill(hexColor("4472C4")),
-            }),
-          ]),
-          row(inches(0.5), [
-            cell([paragraph("Images")]),
-            cell([paragraph("Done")]),
-          ]),
-        ],
+        {
+          x: inches(1),
+          y: inches(1),
+          w: inches(6),
+          h: inches(2),
+          cols: [inches(3), inches(3)],
+        },
+        tr(
+          inches(0.5),
+          td(
+            { fill: solidFill(hexColor("4472C4")) },
+            p(bold("Feature")),
+          ),
+          td(
+            { fill: solidFill(hexColor("4472C4")) },
+            p(bold("Status")),
+          ),
+        ),
+        tr(inches(0.5), td("Images"), td("Done")),
       ),
-      textbox(bounds(inches(1), inches(4), inches(8), inches(1)), [
-        paragraph([
-          text("See "),
-          link("docs", "https://example.com/docs"),
-          text(" for details"),
-        ]),
-      ]),
+      textbox(
+        { x: inches(1), y: inches(4), w: inches(8), h: inches(1) },
+        p("See ", link("docs", "https://example.com/docs"), " for details"),
+      ),
     ),
     // Slide 3: Styled shapes + bullets
     slide(
       shape(
         "rect",
-        bounds(inches(1), inches(1), inches(3), inches(2)),
-        [paragraph("Red box", { alignment: "center" })],
-        { fill: solidFill(hexColor("FF0000")) },
+        {
+          x: inches(1),
+          y: inches(1),
+          w: inches(3),
+          h: inches(2),
+          fill: solidFill(hexColor("FF0000")),
+        },
+        p({ align: "center" }, "Red box"),
       ),
-      textbox(bounds(inches(5), inches(1), inches(4), inches(4)), [
-        paragraph("Bullet list:", { bullet: bulletNone() }),
-        paragraph("First item", { bullet: bulletChar("\u2022"), level: 0 }),
-        paragraph("Second item", { bullet: bulletChar("\u2022"), level: 0 }),
-        paragraph("Sub-item", { bullet: bulletChar("\u2013"), level: 1 }),
-      ]),
+      textbox(
+        { x: inches(5), y: inches(1), w: inches(4), h: inches(4) },
+        p({ bullet: bulletNone() }, "Bullet list:"),
+        p({ bullet: bulletChar("\u2022"), level: 0 }, "First item"),
+        p({ bullet: bulletChar("\u2022"), level: 0 }, "Second item"),
+        p({ bullet: bulletChar("\u2013"), level: 1 }, "Sub-item"),
+      ),
     ),
   ));
 
@@ -1817,11 +1892,14 @@ Deno.test("e2e: JPEG image content type", async () => {
   ]);
   const pptx = generate(presentation(
     slide(
-      image(
-        bounds(inches(1), inches(1), inches(4), inches(3)),
-        jpeg,
-        "image/jpeg",
-      ),
+      image({
+        x: inches(1),
+        y: inches(1),
+        w: inches(4),
+        h: inches(3),
+        data: jpeg,
+        contentType: "image/jpeg",
+      }),
     ),
   ));
 
@@ -1833,14 +1911,19 @@ Deno.test("e2e: JPEG image content type", async () => {
  * Generate a shape with vertical alignment and text.
  * Spec: ECMA-376 §21.1.2.1.1 (a:bodyPr anchor).
  */
-Deno.test("e2e: preset shape with verticalAlignment", async () => {
+Deno.test("e2e: preset shape with verticalAlign", async () => {
   const pptx = generate(presentation(
     slide(
       shape(
         "rect",
-        bounds(inches(1), inches(1), inches(4), inches(3)),
-        [paragraph("Bottom aligned")],
-        { verticalAlignment: "bottom" },
+        {
+          x: inches(1),
+          y: inches(1),
+          w: inches(4),
+          h: inches(3),
+          verticalAlign: "bottom",
+        },
+        "Bottom aligned",
       ),
     ),
   ));
@@ -1857,14 +1940,14 @@ Deno.test("e2e: table with empty cell", async () => {
   const pptx = generate(presentation(
     slide(
       table(
-        bounds(inches(1), inches(1), inches(4), inches(1)),
-        [inches(2), inches(2)],
-        [
-          row(inches(0.5), [
-            cell([paragraph("Data")]),
-            cell([]),
-          ]),
-        ],
+        {
+          x: inches(1),
+          y: inches(1),
+          w: inches(4),
+          h: inches(1),
+          cols: [inches(2), inches(2)],
+        },
+        tr(inches(0.5), td("Data"), td()),
       ),
     ),
   ));
@@ -1883,9 +1966,14 @@ Deno.test("e2e: textbox with line width only", async () => {
   const pptx = generate(presentation(
     slide(
       textbox(
-        bounds(inches(1), inches(1), inches(6), inches(2)),
-        [paragraph("Line width only")],
-        { line: lineStyle({ width: pt(3) }) },
+        {
+          x: inches(1),
+          y: inches(1),
+          w: inches(6),
+          h: inches(2),
+          line: lineStyle({ width: pt(3) }),
+        },
+        "Line width only",
       ),
     ),
   ));

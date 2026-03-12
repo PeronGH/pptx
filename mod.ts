@@ -9,15 +9,15 @@
  *
  * @example
  * ```ts
- * import { generate, presentation, slide, textbox, shape, paragraph, bold, text, bounds, inches } from "@pixel/pptx";
+ * import { generate, presentation, slide, textbox, shape, p, bold, inches } from "@pixel/pptx";
  *
  * const pptx = generate(presentation(
  *   { title: "My Presentation" },
  *   slide(
- *     textbox(bounds(inches(1), inches(1), inches(8), inches(1)), [
- *       paragraph([bold("Hello"), text(", World!")]),
- *     ]),
- *     shape("rect", bounds(inches(2), inches(3), inches(4), inches(2))),
+ *     textbox({ x: inches(1), y: inches(1), w: inches(8), h: inches(1) },
+ *       p(bold("Hello"), ", World!"),
+ *     ),
+ *     shape("rect", { x: inches(2), y: inches(3), w: inches(4), h: inches(2) }),
  *   ),
  * ));
  *
@@ -29,51 +29,52 @@
 export {
   bold,
   boldItalic,
-  bounds,
   bulletAutoNum,
   bulletChar,
   bulletNone,
-  cell,
   generate,
   image,
   italic,
   lineStyle,
   link,
   noFill,
-  paragraph,
+  p,
   presentation,
-  row,
   shape,
   slide,
   solidFill,
   table,
+  td,
   text,
   textbox,
+  tr,
   underline,
 } from "./src/api.ts";
 
 // Types
 export type {
   Alignment,
-  Bounds,
   Bullet,
+  CellProps,
   Fill,
   Image,
+  ImageProps,
   LineStyle,
   Paragraph,
-  ParagraphOptions,
+  ParagraphProps,
   Presentation,
   PresentationOptions,
   Shape,
-  ShapeOptions,
+  ShapeProps,
   Slide,
   SlideElement,
   Spacing,
   Table,
   TableCell,
+  TableProps,
   TableRow,
   TextBox,
-  TextBoxOptions,
+  TextBoxProps,
   TextRun,
   TextRunStyle,
   VerticalAlignment,
