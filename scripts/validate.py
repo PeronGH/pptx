@@ -26,6 +26,7 @@ from pathlib import Path
 
 from lxml import etree
 from pptx import Presentation
+from pptx.enum.shapes import MSO_SHAPE_TYPE
 
 
 def validate_zip(path: str) -> list[str]:
@@ -105,6 +106,29 @@ def validate_python_pptx(path: str, expected_slides: int | None = None) -> list[
                 }
                 if shape.has_text_frame:
                     shape_info["text"] = shape.text_frame.text
+
+                # Image detection
+                if shape.shape_type == MSO_SHAPE_TYPE.PICTURE:
+                    shape_info["is_picture"] = True
+                    try:
+                        shape_info["image_content_type"] = shape.image.content_type
+                    except Exception:
+                        pass
+
+                # Table detection
+                if shape.has_table:
+                    tbl = shape.table
+                    shape_info["is_table"] = True
+                    shape_info["table_rows"] = len(tbl.rows)
+                    shape_info["table_cols"] = len(tbl.columns)
+                    table_data = []
+                    for row in tbl.rows:
+                        row_data = []
+                        for cell in row.cells:
+                            row_data.append(cell.text)
+                        table_data.append(row_data)
+                    shape_info["table_data"] = table_data
+
                 slide_info["shapes"].append(shape_info)
             info["slides"].append(slide_info)
 

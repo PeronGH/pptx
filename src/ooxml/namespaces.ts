@@ -70,6 +70,10 @@ export const REL_TYPE = {
     "http://schemas.openxmlformats.org/officeDocument/2006/relationships/viewProps",
   tableStyles:
     "http://schemas.openxmlformats.org/officeDocument/2006/relationships/tableStyles",
+  image:
+    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image",
+  hyperlink:
+    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink",
 } as const;
 
 /** Content type strings for PPTX parts. ECMA-376 Part 2 §13.2.3. */

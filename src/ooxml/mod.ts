@@ -16,11 +16,25 @@ export { renderPresentation } from "./presentation.ts";
 export type { SlideRef } from "./presentation.ts";
 export { renderSlide } from "./slide.ts";
 export type {
+  BulletAutoNum,
+  BulletChar,
+  BulletNone,
+  Fill,
+  HyperlinkInfo,
+  LineProperties,
+  NoFill,
+  ParagraphSpacing,
+  PictureShape,
   PresetShape,
   SlideShape,
+  SolidFill,
+  TableCell,
+  TableRow,
+  TableShape,
   TextBoxShape,
   TextParagraph,
   TextRun,
+  VerticalAlignment,
 } from "./slide.ts";
 export { renderBlankSlideLayout } from "./slide_layout.ts";
 export { renderSlideMaster } from "./slide_master.ts";

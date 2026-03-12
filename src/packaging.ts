@@ -35,9 +35,27 @@ function encode(text: string): Uint8Array {
   return new TextEncoder().encode(text);
 }
 
+/** An image resource to embed in the package. */
+export interface ImageResource {
+  readonly data: Uint8Array;
+  /** File extension without dot, e.g. "png", "jpeg". */
+  readonly extension: string;
+  /** Content type MIME, e.g. "image/png". */
+  readonly contentType: string;
+}
+
+/** A hyperlink target. */
+export interface HyperlinkResource {
+  readonly url: string;
+}
+
 /** A slide definition for packaging. */
 export interface PackageSlide {
   readonly shapes: ReadonlyArray<SlideShape>;
+  /** Images referenced by shapes on this slide. Map from rId to resource. */
+  readonly images?: ReadonlyMap<string, ImageResource>;
+  /** Hyperlinks referenced by shapes. Map from rId to resource. */
+  readonly hyperlinks?: ReadonlyMap<string, HyperlinkResource>;
 }
 
 /** Options for generating a PPTX package. */
@@ -60,6 +78,7 @@ export interface PackageOptions {
  * - ppt/slideMasters/slideMaster1.xml and its relationships
  * - ppt/slideLayouts/slideLayout1.xml and its relationships
  * - ppt/theme/theme1.xml
+ * - ppt/media/* (image files)
  * - Supporting properties files
  */
 export function generatePptx(options: PackageOptions): Uint8Array {
@@ -67,11 +86,13 @@ export function generatePptx(options: PackageOptions): Uint8Array {
   const title = options.title ?? "";
   const creator = options.creator ?? "pptx-deno";
 
+  // Track image extensions for content type defaults
+  const imageExtensions = new Set<string>();
+
   // --- Presentation-level relationships ---
   const presRelGen = new RelationshipIdGenerator();
   const presRels: Relationship[] = [];
 
-  // slideMaster
   const slideMasterRelId = presRelGen.next();
   presRels.push({
     id: slideMasterRelId,
@@ -79,7 +100,6 @@ export function generatePptx(options: PackageOptions): Uint8Array {
     target: "slideMasters/slideMaster1.xml",
   });
 
-  // presProps
   const presPropsRelId = presRelGen.next();
   presRels.push({
     id: presPropsRelId,
@@ -87,26 +107,20 @@ export function generatePptx(options: PackageOptions): Uint8Array {
     target: "presProps.xml",
   });
 
-  // viewProps
-  const viewPropsRelId = presRelGen.next();
   presRels.push({
-    id: viewPropsRelId,
+    id: presRelGen.next(),
     type: REL_TYPE.viewProps,
     target: "viewProps.xml",
   });
 
-  // theme
-  const themeRelId = presRelGen.next();
   presRels.push({
-    id: themeRelId,
+    id: presRelGen.next(),
     type: REL_TYPE.theme,
     target: "theme/theme1.xml",
   });
 
-  // tableStyles
-  const tableStylesRelId = presRelGen.next();
   presRels.push({
-    id: tableStylesRelId,
+    id: presRelGen.next(),
     type: REL_TYPE.tableStyles,
     target: "tableStyles.xml",
   });
@@ -127,23 +141,18 @@ export function generatePptx(options: PackageOptions): Uint8Array {
   const rootRelGen = new RelationshipIdGenerator();
   const rootRels: Relationship[] = [];
 
-  const presDocRelId = rootRelGen.next();
   rootRels.push({
-    id: presDocRelId,
+    id: rootRelGen.next(),
     type: REL_TYPE.officeDocument,
     target: "ppt/presentation.xml",
   });
-
-  const corePropsRelId = rootRelGen.next();
   rootRels.push({
-    id: corePropsRelId,
+    id: rootRelGen.next(),
     type: REL_TYPE.coreProperties,
     target: "docProps/core.xml",
   });
-
-  const appPropsRelId = rootRelGen.next();
   rootRels.push({
-    id: appPropsRelId,
+    id: rootRelGen.next(),
     type: REL_TYPE.extendedProperties,
     target: "docProps/app.xml",
   });
@@ -157,9 +166,8 @@ export function generatePptx(options: PackageOptions): Uint8Array {
     type: REL_TYPE.slideLayout,
     target: "../slideLayouts/slideLayout1.xml",
   });
-  const smThemeRelId = smRelGen.next();
   smRels.push({
-    id: smThemeRelId,
+    id: smRelGen.next(),
     type: REL_TYPE.theme,
     target: "../theme/theme1.xml",
   });
@@ -167,9 +175,8 @@ export function generatePptx(options: PackageOptions): Uint8Array {
   // --- Slide layout relationships ---
   const slRelGen = new RelationshipIdGenerator();
   const slRels: Relationship[] = [];
-  const slMasterRelId = slRelGen.next();
   slRels.push({
-    id: slMasterRelId,
+    id: slRelGen.next(),
     type: REL_TYPE.slideMaster,
     target: "../slideMasters/slideMaster1.xml",
   });
@@ -217,6 +224,70 @@ export function generatePptx(options: PackageOptions): Uint8Array {
     });
   }
 
+  // --- Generate slide XML, relationships, and media ---
+  let mediaCounter = 0;
+
+  for (let i = 0; i < options.slides.length; i++) {
+    const slide = options.slides[i];
+    if (!slide) continue;
+
+    files[`ppt/slides/slide${i + 1}.xml`] = encode(
+      renderSlide(slide.shapes),
+    );
+
+    // Build per-slide relationships
+    const slideRelGen = new RelationshipIdGenerator();
+    const slideRels: Relationship[] = [];
+
+    // Layout relationship (always first)
+    slideRels.push({
+      id: slideRelGen.next(),
+      type: REL_TYPE.slideLayout,
+      target: "../slideLayouts/slideLayout1.xml",
+    });
+
+    // Image relationships and media files
+    if (slide.images) {
+      for (const [rId, img] of slide.images) {
+        mediaCounter++;
+        const mediaPath = `ppt/media/image${mediaCounter}.${img.extension}`;
+        files[mediaPath] = img.data;
+        imageExtensions.add(img.extension);
+
+        // The rId was pre-assigned by the API layer, but we need to
+        // ensure it matches what was assigned by the slide rel generator.
+        // We skip the generator for pre-assigned IDs.
+        slideRels.push({
+          id: rId,
+          type: REL_TYPE.image,
+          target: `../media/image${mediaCounter}.${img.extension}`,
+        });
+      }
+    }
+
+    // Hyperlink relationships
+    if (slide.hyperlinks) {
+      for (const [rId, link] of slide.hyperlinks) {
+        slideRels.push({
+          id: rId,
+          type: REL_TYPE.hyperlink,
+          target: link.url,
+          targetMode: "External",
+        });
+      }
+    }
+
+    files[`ppt/slides/_rels/slide${i + 1}.xml.rels`] = encode(
+      renderRelationships(slideRels),
+    );
+  }
+
+  // Add image extension defaults to content types
+  for (const ext of imageExtensions) {
+    const ct = imageContentType(ext);
+    defaults.push({ extension: ext, contentType: ct });
+  }
+
   // --- Write all files ---
   files["[Content_Types].xml"] = encode(
     renderContentTypes(defaults, overrides),
@@ -252,28 +323,27 @@ export function generatePptx(options: PackageOptions): Uint8Array {
   files["docProps/core.xml"] = encode(renderCoreProps(title, creator));
   files["docProps/app.xml"] = encode(renderAppProps(options.slides.length));
 
-  // Generate slide XML and relationships
-  for (let i = 0; i < options.slides.length; i++) {
-    const slide = options.slides[i];
-    if (!slide) continue;
-
-    files[`ppt/slides/slide${i + 1}.xml`] = encode(
-      renderSlide(slide.shapes),
-    );
-
-    // Each slide needs a relationship to its layout
-    const slideRelGen = new RelationshipIdGenerator();
-    const slideRels: Relationship[] = [];
-    const slideLayoutRelId = slideRelGen.next();
-    slideRels.push({
-      id: slideLayoutRelId,
-      type: REL_TYPE.slideLayout,
-      target: "../slideLayouts/slideLayout1.xml",
-    });
-    files[`ppt/slides/_rels/slide${i + 1}.xml.rels`] = encode(
-      renderRelationships(slideRels),
-    );
-  }
-
   return zipSync(files);
+}
+
+/** Map image file extension to MIME content type. */
+function imageContentType(ext: string): string {
+  switch (ext.toLowerCase()) {
+    case "png":
+      return "image/png";
+    case "jpeg":
+    case "jpg":
+      return "image/jpeg";
+    case "gif":
+      return "image/gif";
+    case "bmp":
+      return "image/bmp";
+    case "tiff":
+    case "tif":
+      return "image/tiff";
+    case "svg":
+      return "image/svg+xml";
+    default:
+      return `image/${ext}`;
+  }
 }

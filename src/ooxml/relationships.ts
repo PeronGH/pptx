@@ -8,11 +8,13 @@
 import { el, renderXmlDocument, type XmlElement } from "../xml.ts";
 import { NS_PKG_REL } from "./namespaces.ts";
 
-/** A single OPC relationship. */
+/** A single OPC relationship. ECMA-376 Part 2 §9.3. */
 export interface Relationship {
   readonly id: string;
   readonly type: string;
   readonly target: string;
+  /** External target mode for hyperlinks. ECMA-376 Part 2 §9.3.2.2. */
+  readonly targetMode?: "External";
 }
 
 /** Counter-based relationship ID generator. */
@@ -40,6 +42,7 @@ export function renderRelationships(
       Id: rel.id,
       Type: rel.type,
       Target: rel.target,
+      TargetMode: rel.targetMode,
     })
   );
 
