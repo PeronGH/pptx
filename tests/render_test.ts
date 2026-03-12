@@ -6,35 +6,25 @@ import { assert } from "@std/assert/assert";
 import { assertEquals } from "@std/assert/equals";
 import {
   align,
-  backgroundFill,
-  backgroundImage,
-  bold,
-  boxStyle,
-  bulletChar,
-  cellStyle,
+  bg,
+  clr,
   col,
+  fill,
   generate,
-  gradientStop,
   image,
   item,
-  linearGradient,
-  lineStyle,
-  link,
   p,
-  paragraphStyle,
   presentation,
   row,
   scene,
-  shadow,
   slide,
-  solidFill,
-  st,
   stack,
+  sty,
   td,
-  text,
   textbox,
-  textStyle,
   tr,
+  tx,
+  u,
 } from "../mod.ts";
 import { createTestBmp, validatePptx } from "./helpers.ts";
 
@@ -45,29 +35,29 @@ import { createTestBmp, validatePptx } from "./helpers.ts";
 Deno.test("e2e: slide background and stack overlay", async () => {
   const pptx = generate(presentation(
     slide(
-      { background: backgroundFill(solidFill(st.hex("F7F4EE"))) },
+      { background: bg.fill(fill.solid(clr.hex("F7F4EE"))) },
       stack(
         scene.shape(
           "rect",
           {
-            x: st.in(0.6),
-            y: st.in(0.6),
-            w: st.in(8.8),
-            h: st.in(1),
-            fill: solidFill(st.hex("17324D")),
+            x: u.in(0.6),
+            y: u.in(0.6),
+            w: u.in(8.8),
+            h: u.in(1),
+            fill: fill.solid(clr.hex("17324D")),
           },
         ),
         align(
-          { x: "center", y: "start", w: st.in(6), h: st.in(1) },
+          { x: "center", y: "start", w: u.in(6), h: u.in(1) },
           textbox(
-            boxStyle({ verticalAlign: "middle" }),
+            sty.box({ verticalAlign: "middle" }),
             p(
-              paragraphStyle({ align: "center" }),
-              bold(
+              sty.para({ align: "center" }),
+              tx.bold(
                 "Hero Title",
-                textStyle({
-                  fontSize: st.font(22),
-                  fontColor: st.hex("FFFFFF"),
+                sty.text({
+                  fontSize: u.font(22),
+                  fontColor: clr.hex("FFFFFF"),
                 }),
               ),
             ),
@@ -90,7 +80,7 @@ Deno.test("e2e: slide background image", async () => {
   const pptx = generate(presentation(
     slide(
       {
-        background: backgroundImage({
+        background: bg.image({
           data: createTestBmp(8, 4),
           contentType: "image/bmp",
           fit: "cover",
@@ -98,11 +88,11 @@ Deno.test("e2e: slide background image", async () => {
       },
       scene.textbox(
         {
-          x: st.in(1),
-          y: st.in(1),
-          w: st.in(5),
-          h: st.in(1),
-          fill: solidFill(st.hex("FFFFFF"), st.pct(80)),
+          x: u.in(1),
+          y: u.in(1),
+          w: u.in(5),
+          h: u.in(1),
+          fill: fill.solid(clr.hex("FFFFFF"), u.pct(80)),
         },
         p("On top of background"),
       ),
@@ -122,10 +112,10 @@ Deno.test("e2e: image contain fit", async () => {
   const pptx = generate(presentation(
     slide(
       scene.image({
-        x: st.in(1),
-        y: st.in(1),
-        w: st.in(4),
-        h: st.in(4),
+        x: u.in(1),
+        y: u.in(1),
+        w: u.in(4),
+        h: u.in(4),
         data: createTestBmp(4, 2),
         contentType: "image/bmp",
         fit: "contain",
@@ -146,10 +136,10 @@ Deno.test("e2e: image cover crop", async () => {
   const pptx = generate(presentation(
     slide(
       scene.image({
-        x: st.in(1),
-        y: st.in(1),
-        w: st.in(2),
-        h: st.in(2),
+        x: u.in(1),
+        y: u.in(1),
+        w: u.in(2),
+        h: u.in(2),
         data: createTestBmp(4, 2),
         contentType: "image/bmp",
         fit: "cover",
@@ -170,19 +160,19 @@ Deno.test("e2e: textbox with insets and shrink-text", async () => {
     slide(
       scene.textbox(
         {
-          x: st.in(1),
-          y: st.in(1),
-          w: st.in(5),
-          h: st.in(1.2),
-          inset: st.in(0.1),
+          x: u.in(1),
+          y: u.in(1),
+          w: u.in(5),
+          h: u.in(1.2),
+          inset: u.in(0.1),
           fit: "shrink-text",
-          fill: solidFill(st.hex("FFF7E6")),
-          line: lineStyle({ width: st.emu(12700) }),
+          fill: fill.solid(clr.hex("FFF7E6")),
+          line: sty.line({ width: u.emu(12700) }),
         },
         p(
-          text(
+          tx.run(
             "Dense label that should still render cleanly",
-            textStyle({ fontSize: st.font(18) }),
+            sty.text({ fontSize: u.font(18) }),
           ),
         ),
       ),
@@ -203,26 +193,26 @@ Deno.test("e2e: gradient fill and shadow", async () => {
       scene.shape(
         "roundRect",
         {
-          x: st.in(1),
-          y: st.in(1),
-          w: st.in(4),
-          h: st.in(2),
-          fill: linearGradient(
+          x: u.in(1),
+          y: u.in(1),
+          w: u.in(4),
+          h: u.in(2),
+          fill: fill.grad(
             35,
-            gradientStop(st.pct(0), st.hex("4F81BD")),
-            gradientStop(st.pct(100), st.hex("1F497D")),
+            fill.stop(u.pct(0), clr.hex("4F81BD")),
+            fill.stop(u.pct(100), clr.hex("1F497D")),
           ),
-          shadow: shadow({
-            color: st.hex("000000"),
-            blur: st.emu(30000),
-            distance: st.emu(15000),
+          shadow: sty.shadow({
+            color: clr.hex("000000"),
+            blur: u.emu(30000),
+            distance: u.emu(15000),
             angle: 45,
-            alpha: st.pct(30),
+            alpha: u.pct(30),
           }),
         },
         p(
-          paragraphStyle({ align: "center" }),
-          bold("Gradient card", textStyle({ fontColor: st.hex("FFFFFF") })),
+          sty.para({ align: "center" }),
+          tx.bold("Gradient card", sty.text({ fontColor: clr.hex("FFFFFF") })),
         ),
       ),
     ),
@@ -243,22 +233,22 @@ Deno.test("e2e: stack and align with flex layout", async () => {
         scene.shape(
           "rect",
           {
-            x: st.emu(0),
-            y: st.emu(0),
-            w: st.in(10),
-            h: st.in(7.5),
-            fill: solidFill(st.hex("F5F5F5")),
+            x: u.emu(0),
+            y: u.emu(0),
+            w: u.in(10),
+            h: u.in(7.5),
+            fill: fill.solid(clr.hex("F5F5F5")),
           },
         ),
         align(
-          { x: "center", y: "center", w: st.in(8), h: st.in(4.5) },
+          { x: "center", y: "center", w: u.in(8), h: u.in(4.5) },
           row(
-            { gap: st.in(0.25) },
+            { gap: u.in(0.25) },
             item({ grow: 1 }, textbox(p("Left panel"))),
             item(
               { grow: 1 },
               col(
-                { gap: st.in(0.25) },
+                { gap: u.in(0.25) },
                 textbox(p("Top right")),
                 textbox(p("Bottom right")),
               ),
@@ -286,46 +276,46 @@ Deno.test("e2e: styled table polish", async () => {
     slide(
       scene.table(
         {
-          x: st.in(1),
-          y: st.in(1),
-          w: st.in(6),
-          h: st.in(2),
-          cols: [st.in(2), st.in(2), st.in(2)],
+          x: u.in(1),
+          y: u.in(1),
+          w: u.in(6),
+          h: u.in(2),
+          cols: [u.in(2), u.in(2), u.in(2)],
         },
         tr(
-          st.in(0.5),
+          u.in(0.5),
           td(
-            cellStyle({
-              fill: solidFill(st.hex("17324D")),
-              line: lineStyle({ width: st.emu(6350) }),
-              padding: st.in(0.05),
+            sty.cell({
+              fill: fill.solid(clr.hex("17324D")),
+              line: sty.line({ width: u.emu(6350) }),
+              padding: u.in(0.05),
               verticalAlign: "middle",
             }),
             p(
-              bold("Metric", textStyle({ fontColor: st.hex("FFFFFF") })),
+              tx.bold("Metric", sty.text({ fontColor: clr.hex("FFFFFF") })),
             ),
           ),
           td(
-            cellStyle({
-              fill: solidFill(st.hex("17324D")),
-              line: lineStyle({ width: st.emu(6350) }),
-              padding: st.in(0.05),
+            sty.cell({
+              fill: fill.solid(clr.hex("17324D")),
+              line: sty.line({ width: u.emu(6350) }),
+              padding: u.in(0.05),
               verticalAlign: "middle",
             }),
-            p(bold("Owner", textStyle({ fontColor: st.hex("FFFFFF") }))),
+            p(tx.bold("Owner", sty.text({ fontColor: clr.hex("FFFFFF") }))),
           ),
           td(
-            cellStyle({
-              fill: solidFill(st.hex("17324D")),
-              line: lineStyle({ width: st.emu(6350) }),
-              padding: st.in(0.05),
+            sty.cell({
+              fill: fill.solid(clr.hex("17324D")),
+              line: sty.line({ width: u.emu(6350) }),
+              padding: u.in(0.05),
               verticalAlign: "middle",
             }),
-            p(bold("Status", textStyle({ fontColor: st.hex("FFFFFF") }))),
+            p(tx.bold("Status", sty.text({ fontColor: clr.hex("FFFFFF") }))),
           ),
         ),
-        tr(st.in(0.5), td("Activation"), td("Mia"), td("Ready")),
-        tr(st.in(0.5), td("Onboarding"), td("Ken"), td("Blocked")),
+        tr(u.in(0.5), td("Activation"), td("Mia"), td("Ready")),
+        tr(u.in(0.5), td("Onboarding"), td("Ken"), td("Blocked")),
       ),
     ),
   ));
@@ -345,67 +335,67 @@ Deno.test("e2e: design stress test", async () => {
   const pptx = generate(presentation(
     slide(
       {
-        background: backgroundFill(
-          linearGradient(
+        background: bg.fill(
+          fill.grad(
             90,
-            gradientStop(st.pct(0), st.hex("FFF8F1")),
-            gradientStop(st.pct(100), st.hex("F2F6FB")),
+            fill.stop(u.pct(0), clr.hex("FFF8F1")),
+            fill.stop(u.pct(100), clr.hex("F2F6FB")),
           ),
         ),
       },
       scene.shape(
         "roundRect",
         {
-          x: st.in(0.7),
-          y: st.in(0.6),
-          w: st.in(8.6),
-          h: st.in(0.9),
-          fill: solidFill(st.hex("17324D")),
+          x: u.in(0.7),
+          y: u.in(0.6),
+          w: u.in(8.6),
+          h: u.in(0.9),
+          fill: fill.solid(clr.hex("17324D")),
         },
       ),
       scene.textbox(
-        { x: st.in(1), y: st.in(0.75), w: st.in(5), h: st.in(0.4) },
+        { x: u.in(1), y: u.in(0.75), w: u.in(5), h: u.in(0.4) },
         p(
-          bold(
+          tx.bold(
             "Q2 Strategy",
-            textStyle({ fontSize: st.font(22), fontColor: st.hex("FFFFFF") }),
+            sty.text({ fontSize: u.font(22), fontColor: clr.hex("FFFFFF") }),
           ),
         ),
       ),
       row(
         {
           padding: {
-            left: st.in(0.9),
-            right: st.in(0.9),
-            top: st.in(1.8),
-            bottom: st.in(0.8),
+            left: u.in(0.9),
+            right: u.in(0.9),
+            top: u.in(1.8),
+            bottom: u.in(0.8),
           },
-          gap: st.in(0.25),
+          gap: u.in(0.25),
         },
         item(
           { grow: 2 },
           textbox(
-            boxStyle({
-              fill: solidFill(st.hex("FFFFFF")),
-              line: lineStyle({ width: st.emu(6350), dash: "dash" }),
-              shadow: shadow({
-                color: st.hex("000000"),
-                blur: st.emu(15000),
-                distance: st.emu(5000),
+            sty.box({
+              fill: fill.solid(clr.hex("FFFFFF")),
+              line: sty.line({ width: u.emu(6350), dash: "dash" }),
+              shadow: sty.shadow({
+                color: clr.hex("000000"),
+                blur: u.emu(15000),
+                distance: u.emu(5000),
                 angle: 50,
-                alpha: st.pct(20),
+                alpha: u.pct(20),
               }),
-              inset: st.in(0.1),
+              inset: u.in(0.1),
             }),
             p(
-              paragraphStyle({ bullet: bulletChar("•") }),
+              sty.para({ bullet: sty.bullet.char("•") }),
               "One clear hero, one comparison region, one action region.",
             ),
             p(
-              paragraphStyle({ bullet: bulletChar("•") }),
+              sty.para({ bullet: sty.bullet.char("•") }),
               "Styling and layout should cooperate without theme support.",
             ),
-            p("Memo: ", link("example.com", "https://example.com")),
+            p("Memo: ", tx.link("example.com", "https://example.com")),
           ),
         ),
         item(

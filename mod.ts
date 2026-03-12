@@ -10,34 +10,34 @@
  * @example
  * ```ts
  * import {
- *   backgroundFill,
- *   bold,
+ *   bg,
+ *   clr,
+ *   fill,
  *   generate,
- *   linearGradient,
- *   gradientStop,
  *   p,
  *   presentation,
  *   scene,
  *   slide,
- *   st,
+ *   tx,
+ *   u,
  * } from "@pixel/pptx";
  *
  * const pptx = generate(presentation(
  *   { title: "My Presentation" },
  *   slide(
  *     {
- *       background: backgroundFill(
- *         linearGradient(
+ *       background: bg.fill(
+ *         fill.grad(
  *           90,
- *           gradientStop(st.pct(0), st.hex("FFFFFF")),
- *           gradientStop(st.pct(100), st.hex("EAF2FF")),
+ *           fill.stop(u.pct(0), clr.hex("FFFFFF")),
+ *           fill.stop(u.pct(100), clr.hex("EAF2FF")),
  *         ),
  *       ),
  *     },
- *     scene.textbox({ x: st.in(1), y: st.in(1), w: st.in(8), h: st.in(1) },
- *       p(bold("Hello"), ", World!"),
+ *     scene.textbox({ x: u.in(1), y: u.in(1), w: u.in(8), h: u.in(1) },
+ *       p(tx.bold("Hello"), ", World!"),
  *     ),
- *     scene.shape("rect", { x: st.in(2), y: st.in(3), w: st.in(4), h: st.in(2) }),
+ *     scene.shape("rect", { x: u.in(2), y: u.in(3), w: u.in(4), h: u.in(2) }),
  *   ),
  * ));
  *
@@ -45,58 +45,30 @@
  * ```
  */
 
-// Builder functions
 export {
   align,
-  backgroundFill,
-  backgroundImage,
-  bold,
-  boldItalic,
-  boxStyle,
-  bulletAutoNum,
-  bulletChar,
-  bulletNone,
-  cellStyle,
+  bg,
+  clr,
   col,
+  fill,
   generate,
-  gradientStop,
   image,
-  italic,
   item,
-  linearGradient,
-  lineStyle,
-  link,
-  mergeBoxStyles,
-  mergeCellStyles,
-  mergeParagraphStyles,
-  mergeTextStyles,
-  noFill,
   p,
-  paragraphStyle,
   presentation,
-  resolveSlideChildren,
   row,
   scene,
-  sceneImage,
-  sceneShape,
-  sceneTable,
-  sceneTextbox,
-  shadow,
   shape,
   slide,
-  solidFill,
   stack,
+  sty,
   table,
   td,
-  text,
   textbox,
-  textStyle,
   tr,
-  underline,
+  tx,
+  u,
 } from "./src/api.ts";
-
-// Typed value constructors
-export { st } from "./src/st.ts";
 
 // Types
 export type {

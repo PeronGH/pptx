@@ -2,7 +2,7 @@
  * Public generation pipeline: presentation -> layout -> scene -> OOXML package.
  */
 
-import { st } from "./st.ts";
+import { u } from "./st.ts";
 import type { Emu } from "./types.ts";
 import type {
   Alignment,
@@ -328,8 +328,8 @@ function mimeToExtension(mime: string): string {
 
 /** Generate a PPTX file from the public presentation model. */
 export function generate(presentation: Presentation): Uint8Array {
-  const slideWidth = presentation.options.slideWidth ?? st.in(10);
-  const slideHeight = presentation.options.slideHeight ?? st.in(7.5);
+  const slideWidth = presentation.options.slideWidth ?? u.in(10);
+  const slideHeight = presentation.options.slideHeight ?? u.in(7.5);
   const slideFrame = {
     x: 0 as Emu,
     y: 0 as Emu,

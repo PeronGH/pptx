@@ -2,16 +2,7 @@
  * Public API exports for the DSL and scene layers.
  */
 
-export {
-  bold,
-  boldItalic,
-  italic,
-  link,
-  p,
-  text,
-  toParagraph,
-  underline,
-} from "./text.ts";
+import { bold, boldItalic, italic, link, p, text, underline } from "./text.ts";
 export type {
   Paragraph,
   ParagraphContent,
@@ -19,7 +10,7 @@ export type {
   TextRun,
 } from "./text.ts";
 
-export {
+import {
   boxStyle,
   bulletAutoNum,
   bulletChar,
@@ -73,14 +64,7 @@ export type {
   TextBox,
 } from "./nodes.ts";
 
-export {
-  align,
-  col,
-  item,
-  resolveSlideChildren,
-  row,
-  stack,
-} from "./layout.ts";
+export { align, col, item, row, stack } from "./layout.ts";
 export type {
   Align,
   AlignAxis,
@@ -95,14 +79,7 @@ export type {
   StackProps,
 } from "./layout.ts";
 
-export {
-  isSceneNode,
-  scene,
-  sceneImage,
-  sceneShape,
-  sceneTable,
-  sceneTextbox,
-} from "./scene.ts";
+export { scene } from "./scene.ts";
 export type {
   Frame,
   SceneImage,
@@ -114,7 +91,7 @@ export type {
   SceneTextBox,
 } from "./scene.ts";
 
-export {
+import {
   backgroundFill,
   backgroundImage,
   presentation,
@@ -130,3 +107,54 @@ export type {
 } from "./document.ts";
 
 export { generate } from "./generate.ts";
+
+export { p };
+export { presentation, slide };
+
+import { clr, u } from "./st.ts";
+export { clr, u };
+
+/** Background helpers. */
+export const bg = {
+  fill: backgroundFill,
+  image: backgroundImage,
+} as const;
+
+/** Fill helpers. */
+export const fill = {
+  solid: solidFill,
+  grad: linearGradient,
+  stop: gradientStop,
+  none: noFill,
+} as const;
+
+/** Text-run helpers. */
+export const tx = {
+  run: text,
+  bold,
+  italic,
+  bi: boldItalic,
+  underline,
+  link,
+} as const;
+
+/** Style fragment helpers. */
+export const sty = {
+  box: boxStyle,
+  text: textStyle,
+  para: paragraphStyle,
+  cell: cellStyle,
+  line: lineStyle,
+  shadow,
+  bullet: {
+    char: bulletChar,
+    num: bulletAutoNum,
+    none: bulletNone,
+  },
+  merge: {
+    box: mergeBoxStyles,
+    text: mergeTextStyles,
+    para: mergeParagraphStyles,
+    cell: mergeCellStyles,
+  },
+} as const;

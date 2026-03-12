@@ -48,17 +48,17 @@ export function pct(value: number): Percentage {
   return (value * 1000) as Percentage;
 }
 
-/**
- * Canonical typed helper namespace.
- *
- * `in` is namespace-only because it cannot be imported as a bare binding.
- */
-export const st = {
+/** Unit and numeric constructor helpers. */
+export const u = {
   in: inch,
   cm,
   pt,
   emu,
-  hex,
   font,
   pct,
+} as const;
+
+/** Color constructor helpers. */
+export const clr = {
+  hex,
 } as const;

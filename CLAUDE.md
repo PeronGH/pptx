@@ -49,9 +49,11 @@ narrow escape hatch. Do not expose raw OOXML or raw XML injection publicly.
 - Keep the API declarative. No mutation chains like `slide.addText()`.
 - Prefer positionless leaves plus layout containers over absolute coordinates in
   the main DSL.
-- Prefer typed constructor helpers under `st.*`.
-- If a helper-only subpath exists, keep it as a thin re-export of the same
-  constructor functions used by `st.*`. Do not create duplicate behavior.
+- Keep the root surface focused on the slide-building DSL.
+- Prefer short helper namespaces such as `bg.*`, `fill.*`, `tx.*`, `sty.*`,
+  `u.*`, and `clr.*` over many top-level helper exports.
+- Keep one canonical way to access helper constructors; do not add duplicate
+  helper-only subpaths.
 - Make breaking changes freely when the abstraction is wrong. There are no users
   yet, so design quality wins over compatibility.
 - Keep the public surface minimal; add escape hatches only when the DSL cannot

@@ -1,7 +1,7 @@
 /**
  * Core branded value types for OOXML presentation generation.
  *
- * Constructor helpers live in `./st.ts`.
+ * Constructor helpers live in the `u.*` and `clr.*` namespaces.
  */
 
 /** Branded type for English Metric Units (EMUs). ECMA-376 §20.1.10.16. */
