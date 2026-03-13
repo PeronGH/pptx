@@ -53,6 +53,7 @@
  * ```
  */
 
+export { ChartBar } from "./src/chart_component.ts";
 export { generate } from "./src/generate.ts";
 export { clr, u } from "./src/st.ts";
 
@@ -99,7 +100,7 @@ export type { Paragraph, TextRun } from "./src/text.ts";
 
 export type {
   AlignProps,
-  ChartProps,
+  ChartBarProps,
   ColumnProps,
   ImageProps,
   LayoutDefaults,

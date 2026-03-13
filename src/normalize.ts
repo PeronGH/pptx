@@ -27,7 +27,8 @@ import type {
 } from "./nodes.ts";
 import type { Paragraph, TextRun } from "./text.ts";
 import {
-  type ChartProps,
+  type AnyChartBarElement,
+  ChartBarTag,
   Fragment,
   type LayoutDefaults,
   type LayoutProps,
@@ -53,9 +54,21 @@ type TaggedElement<Tag extends IntrinsicTag> = PptxElement<
   PptxIntrinsicElements[Tag]
 >;
 
+function invalidTree(message: string): never {
+  // Runtime validation remains for dynamic or plain-JS callers that can bypass
+  // the JSX type graph. Typed TypeScript callers should fail before execution.
+  throw new Error(message);
+}
+
 function isElement(value: unknown): value is PptxElement {
   return typeof value === "object" && value !== null &&
     "type" in value && "props" in value;
+}
+
+function isChartBarElement(
+  element: PptxElement,
+): element is AnyChartBarElement {
+  return element.type === ChartBarTag;
 }
 
 function isTag<Tag extends IntrinsicTag>(
@@ -70,20 +83,22 @@ function expectTag<Tag extends IntrinsicTag>(
   tag: Tag,
 ): TaggedElement<Tag> {
   if (!isTag(element, tag)) {
-    throw new Error(`Expected <${tag}>, found <${String(element.type)}>`);
+    invalidTree(`Expected <${tag}>, found <${String(element.type)}>`);
   }
   return element;
 }
 
-function flattenChildren(children: PptxChild): ReadonlyArray<unknown> {
+function flattenChildren(
+  children: PptxChild | undefined,
+): ReadonlyArray<unknown> {
   const items: unknown[] = [];
-  const visit = (value: PptxChild): void => {
+  const visit = (value: PptxChild | undefined): void => {
     if (Array.isArray(value)) {
       for (const entry of value) visit(entry);
       return;
     }
     if (isElement(value) && value.type === Fragment) {
-      visit(value.props.children);
+      visit((value.props as { readonly children?: PptxChild }).children);
       return;
     }
     items.push(value);
@@ -103,7 +118,7 @@ function expectElement(
   parentTag: string,
 ): PptxElement {
   if (!isElement(child)) {
-    throw new Error(`<${parentTag}> only accepts JSX element children`);
+    invalidTree(`<${parentTag}> only accepts JSX element children`);
   }
   return child;
 }
@@ -191,7 +206,7 @@ function applyTextGap(
 }
 
 function spacerIsLayoutOnly(parentTag: string): never {
-  throw new Error(
+  invalidTree(
     `<spacer> is layout-only and cannot be used inside <${parentTag}>; use the container's gap prop instead`,
   );
 }
@@ -263,7 +278,7 @@ function normalizeInlineChildren(
 
     const element = expectElement(child, "inline");
     if (!isInlineTag(element.type)) {
-      throw new Error(
+      invalidTree(
         `Inline content only accepts text and <span>/<a>/<b>/<i>/<u>, found <${
           String(element.type)
         }>`,
@@ -399,11 +414,11 @@ function normalizeTextBlocks(
     }
 
     if (isInlineTag(element.type)) {
-      inlineBuffer.push(element);
+      inlineBuffer.push(element as PptxChild);
       continue;
     }
 
-    throw new Error(
+    invalidTree(
       `<${parentTag}> only accepts text, inline tags, and <p>; found <${
         String(element.type)
       }>`,
@@ -435,7 +450,7 @@ function toPositioned(
     props.x === undefined || props.y === undefined ||
     props.w === undefined || props.h === undefined
   ) {
-    throw new Error(
+    invalidTree(
       `<${tag}> absolute placement requires x, y, w, and h together`,
     );
   }
@@ -478,38 +493,23 @@ function layoutPropsOf(element: PptxElement): LayoutProps {
     isTag(element, "stack") ||
     isTag(element, "align") || isTag(element, "textbox") ||
     isTag(element, "shape") || isTag(element, "image") ||
-    isTag(element, "table") || isTag(element, "chart")
+    isTag(element, "table") || isChartBarElement(element)
   ) {
     return element.props;
   }
-  throw new Error(
+  invalidTree(
     `Element <${String(element.type)}> cannot participate in layout`,
   );
 }
 
-function normalizeChart(props: ChartProps): BarChart {
-  if (props.kind !== "bar") {
-    throw new Error(`<chart> kind "${props.kind}" is not supported`);
-  }
-
+function normalizeChart(props: AnyChartBarElement["props"]): BarChart {
   return {
     kind: "chart",
     chartType: "bar",
-    points: props.data.map((row, index) => {
-      const category = row[props.category];
-      const value = row[props.value];
-      if (typeof category !== "string") {
-        throw new Error(
-          `<chart> data row ${index} has non-string category "${props.category}"`,
-        );
-      }
-      if (typeof value !== "number") {
-        throw new Error(
-          `<chart> data row ${index} has non-number value "${props.value}"`,
-        );
-      }
-      return { category, value };
-    }),
+    points: props.data.map((row) => ({
+      category: (row as Record<string, unknown>)[props.category] as string,
+      value: (row as Record<string, unknown>)[props.value] as number,
+    })),
     title: props.title,
     seriesName: props.seriesName ?? props.value,
     color: props.color,
@@ -586,7 +586,7 @@ function normalizeBaseNode(
     const props = element.props;
     const children = nonIgnorableChildren(props.children);
     if (children.length !== 1) {
-      throw new Error("<align> requires exactly one child");
+      invalidTree("<align> requires exactly one child");
     }
     return {
       kind: "align",
@@ -647,10 +647,10 @@ function normalizeBaseNode(
       rows,
     } satisfies LeafTable;
   }
-  if (isTag(element, "chart")) {
+  if (isChartBarElement(element)) {
     return normalizeChart(element.props) satisfies Chart;
   }
-  throw new Error(`Unexpected element <${String(element.type)}> in slide tree`);
+  invalidTree(`Unexpected element <${String(element.type)}> in slide tree`);
 }
 
 function normalizeNode(
@@ -680,8 +680,8 @@ function normalizeNode(
   if (isTag(element, "table")) {
     return toPositioned("table", element.props, base);
   }
-  if (isTag(element, "chart")) {
-    return toPositioned("chart", element.props, base);
+  if (isChartBarElement(element)) {
+    return toPositioned("ChartBar", element.props, base);
   }
   return base;
 }
@@ -705,7 +705,7 @@ function normalizeAxisChildren(
     const props = layoutPropsOf(element);
     if (node.kind === "positioned") {
       if (hasAbsoluteFlowConflict(props)) {
-        throw new Error(
+        invalidTree(
           `Absolute children in <${parentTag}> cannot also use basis/grow/alignSelf/aspectRatio`,
         );
       }
@@ -751,9 +751,9 @@ function normalizeSlide(
 }
 
 /** Normalize a JSX-authored presentation into the internal presentation model. */
-export function normalizePresentation(root: unknown): Presentation {
+export function normalizePresentation(root: PptxElement): Presentation {
   if (!isElement(root) || !isTag(root, "presentation")) {
-    throw new Error("generate() expects a <presentation> root element");
+    invalidTree("generate() expects a <presentation> root element");
   }
 
   const props = root.props;

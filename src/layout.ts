@@ -122,14 +122,25 @@ function isLayoutItem(value: LayoutNode | LayoutItem): value is LayoutItem {
   return value.kind === "item";
 }
 
+function invalidLayout(message: string): never {
+  // Runtime validation remains for dynamic or plain-JS callers that can bypass
+  // TypeScript overloads and JSX child constraints.
+  throw new Error(message);
+}
+
 /** Create a layout item wrapper. */
+export function item(first: LayoutNode): LayoutItem;
+export function item(
+  first: LayoutItemProps,
+  second: LayoutNode,
+): LayoutItem;
 export function item(
   first: LayoutItemProps | LayoutNode,
   second?: LayoutNode,
 ): LayoutItem {
   if (isLayoutItemProps(first)) {
     if (second === undefined) {
-      throw new Error("item(props, child) requires a child node");
+      invalidLayout("item(props, child) requires a child node");
     }
     return { kind: "item", child: second, ...first };
   }

@@ -8,6 +8,12 @@ const EMU_PER_INCH = 914400;
 const EMU_PER_CM = 360000;
 const EMU_PER_PT = 12700;
 
+function invalidSimpleType(message: string): never {
+  // Arbitrary runtime strings can bypass any literal-level typing, so simple
+  // OOXML scalar constructors still validate their external string boundary.
+  throw new Error(message);
+}
+
 /** Convert inches to EMUs. */
 export function inch(value: number): Emu {
   return Math.round(value * EMU_PER_INCH) as Emu;
@@ -31,7 +37,7 @@ export function emu(value: number): Emu {
 /** Create a validated OOXML hex color. */
 export function hex(value: string): HexColor {
   if (!/^[0-9A-Fa-f]{6}$/.test(value)) {
-    throw new Error(
+    invalidSimpleType(
       `Invalid hex color "${value}": expected 6 hex digits (e.g. "FF0000")`,
     );
   }

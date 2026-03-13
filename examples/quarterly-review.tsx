@@ -3,6 +3,7 @@
 import {
   type BoxStyle,
   type CellStyle,
+  ChartBar,
   clr,
   generate,
   type ParagraphStyle,
@@ -136,8 +137,7 @@ export const deck = (
               w={u.in(2.75)}
               h={u.in(3.35)}
             >
-              <chart
-                kind="bar"
+              <ChartBar
                 data={[
                   { quarter: "Q1", amount: 8 },
                   { quarter: "Q2", amount: 12 },

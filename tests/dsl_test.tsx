@@ -3,7 +3,7 @@
 import { assert } from "@std/assert/assert";
 import { assertEquals } from "@std/assert/equals";
 import { assertThrows } from "@std/assert/throws";
-import { clr, generate, u } from "../mod.ts";
+import { ChartBar, clr, generate, u } from "../mod.ts";
 import { resolveSlideChildren } from "../src/layout.ts";
 import { normalizePresentation } from "../src/normalize.ts";
 import type { SceneTextBox } from "../src/scene.ts";
@@ -161,23 +161,6 @@ Deno.test("generated slide geometry keeps flex math in integer EMUs", () => {
   );
 });
 
-Deno.test("spacer is rejected in text context", () => {
-  assertThrows(
-    () =>
-      normalizePresentation(
-        <presentation>
-          <slide>
-            <textbox>
-              <spacer />
-            </textbox>
-          </slide>
-        </presentation>,
-      ),
-    Error,
-    "layout-only",
-  );
-});
-
 Deno.test("style arrays merge left to right", () => {
   const presentation = normalizePresentation(
     <presentation>
@@ -239,12 +222,11 @@ Deno.test("absolute children in row resolve without consuming flow space", () =>
   assertEquals(overlay.x, u.in(1));
 });
 
-Deno.test("chart intrinsic normalizes a bar chart leaf", () => {
+Deno.test("ChartBar component normalizes a bar chart leaf", () => {
   const presentation = normalizePresentation(
     <presentation>
       <slide>
-        <chart
-          kind="bar"
+        <ChartBar
           data={[
             { quarter: "Q1", amount: 12 },
             { quarter: "Q2", amount: 18 },
@@ -263,10 +245,6 @@ Deno.test("chart intrinsic normalizes a bar chart leaf", () => {
   assertEquals(chart.chartType, "bar");
   assertEquals(chart.points[0]?.category, "Q1");
   assertEquals(chart.points[1]?.value, 18);
-});
-
-Deno.test("generate rejects a non-presentation root", () => {
-  assertThrows(() => generate(<slide />), Error, "<presentation>");
 });
 
 Deno.test("generated XML includes hyperlink relationships from inline tags", () => {

@@ -11,6 +11,8 @@ export type {
   ChartPoint,
   ChartValueAxis,
 } from "./chart.ts";
+export { ChartBar } from "./chart_component.ts";
+export type { ChartBarProps } from "./public_types.ts";
 
 import { bold, boldItalic, italic, link, p, text, underline } from "./text.ts";
 export type {

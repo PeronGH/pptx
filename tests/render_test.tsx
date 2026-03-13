@@ -5,6 +5,7 @@ import { assertEquals } from "@std/assert/equals";
 import {
   type BoxStyle,
   type CellStyle,
+  ChartBar,
   clr,
   generate,
   type ParagraphStyle,
@@ -157,10 +158,9 @@ Deno.test("e2e: chart and table layout", async () => {
     <presentation>
       <slide>
         <row gap={u.in(0.3)}>
-          <chart
+          <ChartBar
             basis={u.in(4.8)}
             h={u.in(3)}
-            kind="bar"
             data={[
               { quarter: "Q1", value: 12 },
               { quarter: "Q2", value: 18 },

@@ -97,14 +97,15 @@ Full source: [`examples/quarterly-review.tsx`](./examples/quarterly-review.tsx)
 - `<table cols=[...]>`
 - `<tr height={...}>`
 - `<td>`
-- `<chart kind="bar" ... />`
+- `<ChartBar ... />`
 
 ### Text JSX tags
 
 - Raw string and number children create text directly
 - `<p>` creates an explicit paragraph
 - `gap={...}` on `textbox`, `shape`, and `td` inserts paragraph-block spacing
-- `<spacer />` is a flex spacer for `row` and `column`
+- `<spacer />` is a flex spacer for `row` and `column`, and TypeScript rejects
+  it outside layout containers
 - Inline tags: `<span>`, `<a href="...">`, `<b>`, `<i>`, `<u>`
 
 ### Styling model
