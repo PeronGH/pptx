@@ -110,89 +110,115 @@ export const deck = (
         <row gap={u.in(0.3)} align="start" h={u.in(4.45)}>
           <stack basis={u.in(3.05)} h={u.in(4.45)}>
             <shape preset="roundRect" style={styles.card} />
-            <chart
-              kind="bar"
-              x={u.in(0.15)}
-              y={u.in(0.2)}
+            <align
+              x="center"
+              y="start"
+              padding={{ top: u.in(0.18) }}
               w={u.in(2.75)}
-              h={u.in(3.9)}
-              data={[
-                { quarter: "Q1", amount: 8 },
-                { quarter: "Q2", amount: 12 },
-                { quarter: "Q3", amount: 10 },
-                { quarter: "Q4", amount: 15 },
-              ]}
-              category="quarter"
-              value="amount"
-              title="Pipeline"
-              seriesName="Pipeline"
-              labels
-              color={clr.hex("2678B4")}
-              valueAxis={{ min: 0, max: 16 }}
-            />
+              h={u.in(0.32)}
+            >
+              <textbox>
+                <p style={{ align: "center" }}>
+                  <span style={styles.cardTitle}>Pipeline</span>
+                </p>
+              </textbox>
+            </align>
+            <align
+              x="center"
+              y="start"
+              padding={{ top: u.in(0.55) }}
+              w={u.in(2.75)}
+              h={u.in(3.35)}
+            >
+              <chart
+                kind="bar"
+                data={[
+                  { quarter: "Q1", amount: 8 },
+                  { quarter: "Q2", amount: 12 },
+                  { quarter: "Q3", amount: 10 },
+                  { quarter: "Q4", amount: 15 },
+                ]}
+                category="quarter"
+                value="amount"
+                seriesName="Pipeline"
+                labels
+                color={clr.hex("2678B4")}
+                valueAxis={{ min: 0, max: 16 }}
+              />
+            </align>
           </stack>
 
           <stack basis={u.in(2.3)} h={u.in(4.45)}>
             <shape preset="roundRect" style={styles.card} />
-            <table
-              x={u.in(0.16)}
-              y={u.in(0.2)}
+            <align
+              x="center"
+              y="start"
+              padding={{ top: u.in(0.2) }}
               w={u.in(1.98)}
               h={u.in(3.2)}
-              cols={[u.in(1.15), u.in(0.85)]}
             >
-              <tr height={u.in(0.44)}>
-                <td style={styles.headCell}>
-                  <span style={styles.headText}>Metric</span>
-                </td>
-                <td style={styles.headCell}>
-                  <span style={styles.headText}>Value</span>
-                </td>
-              </tr>
-              <tr height={u.in(0.44)}>
-                <td style={styles.cell}>
-                  <span style={styles.metricText}>Revenue</span>
-                </td>
-                <td style={styles.cell}>
-                  <span style={styles.metricText}>$1.2M</span>
-                </td>
-              </tr>
-              <tr height={u.in(0.44)}>
-                <td style={styles.cell}>
-                  <span style={styles.metricText}>Growth</span>
-                </td>
-                <td style={styles.cell}>
-                  <span style={styles.metricText}>15%</span>
-                </td>
-              </tr>
-              <tr height={u.in(0.44)}>
-                <td style={styles.cell}>
-                  <span style={styles.metricText}>NPS</span>
-                </td>
-                <td style={styles.cell}>
-                  <span style={styles.metricText}>61</span>
-                </td>
-              </tr>
-            </table>
+              <table cols={[u.in(1.15), u.in(0.85)]}>
+                <tr height={u.in(0.44)}>
+                  <td style={styles.headCell}>
+                    <span style={styles.headText}>Metric</span>
+                  </td>
+                  <td style={styles.headCell}>
+                    <span style={styles.headText}>Value</span>
+                  </td>
+                </tr>
+                <tr height={u.in(0.44)}>
+                  <td style={styles.cell}>
+                    <span style={styles.metricText}>Revenue</span>
+                  </td>
+                  <td style={styles.cell}>
+                    <span style={styles.metricText}>$1.2M</span>
+                  </td>
+                </tr>
+                <tr height={u.in(0.44)}>
+                  <td style={styles.cell}>
+                    <span style={styles.metricText}>Growth</span>
+                  </td>
+                  <td style={styles.cell}>
+                    <span style={styles.metricText}>15%</span>
+                  </td>
+                </tr>
+                <tr height={u.in(0.44)}>
+                  <td style={styles.cell}>
+                    <span style={styles.metricText}>NPS</span>
+                  </td>
+                  <td style={styles.cell}>
+                    <span style={styles.metricText}>61</span>
+                  </td>
+                </tr>
+              </table>
+            </align>
           </stack>
 
           <stack basis={u.in(2.9)} h={u.in(4.45)}>
             <shape preset="roundRect" style={styles.card} />
-            <textbox x={u.in(0.16)} y={u.in(0.2)} w={u.in(2.58)} h={u.in(3)}>
-              <p>
-                <span style={styles.cardTitle}>Notes</span>
-              </p>
-              <spacer size={u.in(0.08)} />
-              <p style={styles.bullet}>
-                <span style={styles.body}>Highlights and next steps</span>
-              </p>
-              <p style={styles.bullet}>
-                <span style={styles.body}>Review pricing experiments</span>
-              </p>
-              <p style={styles.bullet}>
-                <span style={styles.body}>Expand onboarding capacity</span>
-              </p>
-            </textbox>
+            <align
+              x="center"
+              y="start"
+              padding={{ top: u.in(0.2) }}
+              w={u.in(2.58)}
+              h={u.in(3)}
+            >
+              <textbox>
+                <p>
+                  <span style={styles.cardTitle}>Notes</span>
+                </p>
+                <spacer size={u.in(0.08)} />
+                <p style={styles.bullet}>
+                  <span style={styles.body}>Highlights and next steps</span>
+                </p>
+                <p style={styles.bullet}>
+                  <span style={styles.body}>Review pricing experiments</span>
+                </p>
+                <p style={styles.bullet}>
+                  <span style={styles.body}>Expand onboarding capacity</span>
+                </p>
+              </textbox>
+            </align>
           </stack>
         </row>
       </column>
