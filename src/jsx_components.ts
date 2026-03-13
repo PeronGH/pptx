@@ -6,9 +6,18 @@ import {
   type AlignElement,
   type AlignProps,
   type AnyChartBarElement,
+  type AnyChartDonutElement,
+  type AnyChartLineElement,
+  type AnyChartPieElement,
   type BoldElement,
   type ChartBarProps,
   ChartBarTag,
+  type ChartDonutProps,
+  ChartDonutTag,
+  type ChartLineProps,
+  ChartLineTag,
+  type ChartPieProps,
+  ChartPieTag,
   type ColumnElement,
   type ColumnEndElement,
   ColumnEndTag,
@@ -102,10 +111,27 @@ type ChartComponentFamily = {
   readonly Bar: <
     Row extends object,
     CategoryKey extends KeysOfType<Row, string>,
-    ValueKey extends KeysOfType<Row, number>,
   >(
-    props: ChartBarProps<Row, CategoryKey, ValueKey>,
+    props: ChartBarProps<Row, CategoryKey>,
   ) => AnyChartBarElement;
+  readonly Line: <
+    Row extends object,
+    CategoryKey extends KeysOfType<Row, string>,
+  >(
+    props: ChartLineProps<Row, CategoryKey>,
+  ) => AnyChartLineElement;
+  readonly Pie: <
+    Row extends object,
+    CategoryKey extends KeysOfType<Row, string>,
+  >(
+    props: ChartPieProps<Row, CategoryKey>,
+  ) => AnyChartPieElement;
+  readonly Donut: <
+    Row extends object,
+    CategoryKey extends KeysOfType<Row, string>,
+  >(
+    props: ChartDonutProps<Row, CategoryKey>,
+  ) => AnyChartDonutElement;
 };
 
 export function Presentation(props: PresentationProps): PresentationElement {
@@ -227,13 +253,42 @@ export const Text: TextComponentFamily = {
 function ChartBar<
   Row extends object,
   CategoryKey extends KeysOfType<Row, string>,
-  ValueKey extends KeysOfType<Row, number>,
 >(
-  props: ChartBarProps<Row, CategoryKey, ValueKey>,
+  props: ChartBarProps<Row, CategoryKey>,
 ): AnyChartBarElement {
   return node(ChartBarTag, props);
 }
 
+function ChartLine<
+  Row extends object,
+  CategoryKey extends KeysOfType<Row, string>,
+>(
+  props: ChartLineProps<Row, CategoryKey>,
+): AnyChartLineElement {
+  return node(ChartLineTag, props);
+}
+
+function ChartPie<
+  Row extends object,
+  CategoryKey extends KeysOfType<Row, string>,
+>(
+  props: ChartPieProps<Row, CategoryKey>,
+): AnyChartPieElement {
+  return node(ChartPieTag, props);
+}
+
+function ChartDonut<
+  Row extends object,
+  CategoryKey extends KeysOfType<Row, string>,
+>(
+  props: ChartDonutProps<Row, CategoryKey>,
+): AnyChartDonutElement {
+  return node(ChartDonutTag, props);
+}
+
 export const Chart: ChartComponentFamily = {
   Bar: ChartBar,
+  Line: ChartLine,
+  Pie: ChartPie,
+  Donut: ChartDonut,
 } as const;

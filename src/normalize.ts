@@ -3,7 +3,7 @@
  */
 
 import type { Presentation, Slide } from "./document.ts";
-import type { BarChart, Chart } from "./chart.ts";
+import type { Chart, ChartLegend, ChartSeriesData } from "./chart.ts";
 import type {
   Align,
   Col,
@@ -27,7 +27,14 @@ import type {
 import type { Paragraph, TextRun } from "./text.ts";
 import {
   type AnyChartBarElement,
+  type AnyChartDonutElement,
+  type AnyChartElement,
+  type AnyChartLineElement,
+  type AnyChartPieElement,
   ChartBarTag,
+  ChartDonutTag,
+  ChartLineTag,
+  ChartPieTag,
   ColumnEndTag,
   ColumnStartTag,
   Fragment,
@@ -84,6 +91,29 @@ function isChartBarElement(
   element: PptxElement,
 ): element is AnyChartBarElement {
   return element.type === ChartBarTag;
+}
+
+function isChartLineElement(
+  element: PptxElement,
+): element is AnyChartLineElement {
+  return element.type === ChartLineTag;
+}
+
+function isChartPieElement(
+  element: PptxElement,
+): element is AnyChartPieElement {
+  return element.type === ChartPieTag;
+}
+
+function isChartDonutElement(
+  element: PptxElement,
+): element is AnyChartDonutElement {
+  return element.type === ChartDonutTag;
+}
+
+function isChartElement(element: PptxElement): element is AnyChartElement {
+  return isChartBarElement(element) || isChartLineElement(element) ||
+    isChartPieElement(element) || isChartDonutElement(element);
 }
 
 function isPositionedElement(
@@ -503,7 +533,9 @@ function normalizePositionedElement(
   const props = layoutPropsOf(childElement);
   if (hasFlowLayoutProps(props)) {
     invalidPositionedChild(
-      isChartBarElement(childElement) ? "Chart.Bar" : String(childElement.type),
+      isChartElement(childElement)
+        ? elementDisplayTag(childElement)
+        : String(childElement.type),
     );
   }
   const child = normalizeBaseNode(childElement, defaults);
@@ -528,13 +560,13 @@ function isFlowLayoutElement(
   | TaggedElement<"shape">
   | TaggedElement<"image">
   | TaggedElement<"table">
-  | AnyChartBarElement {
+  | AnyChartElement {
   if (
     isTag(element, "row") || isTag(element, "column") ||
     isTag(element, "stack") || isTag(element, "align") ||
     isTag(element, "textbox") || isTag(element, "shape") ||
     isTag(element, "image") || isTag(element, "table") ||
-    isChartBarElement(element)
+    isChartElement(element)
   ) {
     return true;
   }
@@ -565,7 +597,7 @@ function layoutPropsOf(element: PptxElement): LayoutProps {
     isTag(element, "stack") ||
     isTag(element, "align") || isTag(element, "textbox") ||
     isTag(element, "shape") || isTag(element, "image") ||
-    isTag(element, "table") || isChartBarElement(element)
+    isTag(element, "table") || isChartElement(element)
   ) {
     return element.props;
   }
@@ -574,21 +606,117 @@ function layoutPropsOf(element: PptxElement): LayoutProps {
   );
 }
 
-function normalizeChart(props: AnyChartBarElement["props"]): BarChart {
+function normalizeLegend(legend: ChartLegend | undefined) {
+  if (legend === undefined || legend === false) {
+    return { show: false, position: "right" as const };
+  }
+  if (legend === true) {
+    return { show: true, position: "right" as const };
+  }
+  return {
+    show: true,
+    position: legend.position ?? "right",
+  };
+}
+
+function normalizeHoleSize(holeSize: number | undefined): number {
+  const value = holeSize ?? 50;
+  if (!Number.isInteger(value) || value < 1 || value > 90) {
+    invalidTree(
+      `Invalid donut holeSize "${value}": expected an integer from 1 to 90`,
+    );
+  }
+  return value;
+}
+
+function requireNonEmptySeries(
+  series: ReadonlyArray<ChartSeriesData>,
+): readonly [ChartSeriesData, ...ReadonlyArray<ChartSeriesData>] {
+  if (series.length === 0) {
+    invalidTree("Charts require at least one series");
+  }
+  return series as readonly [
+    ChartSeriesData,
+    ...ReadonlyArray<ChartSeriesData>,
+  ];
+}
+
+function normalizeChartSeries(
+  data: ReadonlyArray<object>,
+  series: ReadonlyArray<{
+    readonly name: string;
+    readonly value: string;
+    readonly color?: ChartSeriesData["color"];
+  }>,
+) {
+  return requireNonEmptySeries(series.map((entry) => ({
+    name: entry.name,
+    values: data.map((row) =>
+      (row as Record<string, unknown>)[entry.value] as number
+    ),
+    color: entry.color,
+  })));
+}
+
+function normalizeChart(element: AnyChartElement): Chart {
+  const categories = element.props.data.map((row) =>
+    (row as Record<string, unknown>)[element.props.category] as string
+  );
+  const legend = normalizeLegend(element.props.legend);
+
+  if (isChartBarElement(element)) {
+    return {
+      kind: "chart",
+      chartType: "bar",
+      categories,
+      series: normalizeChartSeries(element.props.data, element.props.series),
+      title: element.props.title,
+      labels: element.props.labels ?? false,
+      legend,
+      direction: element.props.direction ?? "column",
+      categoryAxis: element.props.categoryAxis,
+      valueAxis: element.props.valueAxis,
+    };
+  }
+  if (isChartLineElement(element)) {
+    return {
+      kind: "chart",
+      chartType: "line",
+      categories,
+      series: normalizeChartSeries(element.props.data, element.props.series),
+      title: element.props.title,
+      labels: element.props.labels ?? false,
+      legend,
+      markers: element.props.markers ?? false,
+      categoryAxis: element.props.categoryAxis,
+      valueAxis: element.props.valueAxis,
+    };
+  }
+  if (isChartPieElement(element)) {
+    const series = normalizeChartSeries(
+      element.props.data,
+      element.props.series,
+    );
+    return {
+      kind: "chart",
+      chartType: "pie",
+      categories,
+      series: [series[0]!],
+      title: element.props.title,
+      labels: element.props.labels ?? false,
+      legend,
+    };
+  }
+  const series = normalizeChartSeries(element.props.data, element.props.series);
   return {
     kind: "chart",
-    chartType: "bar",
-    points: props.data.map((row) => ({
-      category: (row as Record<string, unknown>)[props.category] as string,
-      value: (row as Record<string, unknown>)[props.value] as number,
-    })),
-    title: props.title,
-    seriesName: props.seriesName ?? props.value,
-    color: props.color,
-    labels: props.labels ?? false,
-    legend: props.legend ?? false,
-    direction: props.direction ?? "column",
-    valueAxis: props.valueAxis,
+    chartType: "donut",
+    categories,
+    series: [series[0]!],
+    title: element.props.title,
+    labels: element.props.labels ?? false,
+    legend,
+    holeSize: normalizeHoleSize(element.props.holeSize),
   };
 }
 
@@ -754,14 +882,17 @@ function normalizeBaseNode(
       rows,
     } satisfies LeafTable;
   }
-  if (isChartBarElement(element)) {
-    return normalizeChart(element.props) satisfies Chart;
+  if (isChartElement(element)) {
+    return normalizeChart(element) satisfies Chart;
   }
   invalidTree(`Unexpected element <${String(element.type)}> in slide tree`);
 }
 
 function elementDisplayTag(element: PptxElement): string {
   if (isChartBarElement(element)) return "Chart.Bar";
+  if (isChartLineElement(element)) return "Chart.Line";
+  if (isChartPieElement(element)) return "Chart.Pie";
+  if (isChartDonutElement(element)) return "Chart.Donut";
   if (isPositionedElement(element)) return "Positioned";
   if (isRowStartElement(element)) return "Row.Start";
   if (isRowEndElement(element)) return "Row.End";

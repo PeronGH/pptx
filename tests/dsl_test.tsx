@@ -340,9 +340,14 @@ Deno.test("Chart.Bar component normalizes a bar chart leaf", () => {
             { quarter: "Q2", amount: 18 },
           ]}
           category="quarter"
-          value="amount"
           title="Pipeline"
           labels
+          series={[
+            {
+              name: "Pipeline",
+              value: "amount",
+            },
+          ]}
         />
       </Slide>
     </Presentation>,
@@ -351,8 +356,144 @@ Deno.test("Chart.Bar component normalizes a bar chart leaf", () => {
   const chart = presentation.slides[0]?.children[0];
   assert(chart && chart.kind === "chart");
   assertEquals(chart.chartType, "bar");
-  assertEquals(chart.points[0]?.category, "Q1");
-  assertEquals(chart.points[1]?.value, 18);
+  assertEquals(chart.categories[0], "Q1");
+  assertEquals(chart.series[0]?.values[1], 18);
+});
+
+Deno.test("Chart.Line component normalizes a multi-series line chart leaf", () => {
+  const presentation = normalizePresentation(
+    <Presentation>
+      <Slide>
+        <Chart.Line
+          data={[
+            { quarter: "Q1", pipeline: 12, closed: 8 },
+            { quarter: "Q2", pipeline: 18, closed: 11 },
+          ]}
+          category="quarter"
+          markers
+          series={[
+            { name: "Pipeline", value: "pipeline" },
+            { name: "Closed", value: "closed" },
+          ]}
+          valueAxis={{ title: "Value", min: 0, max: 20 }}
+        />
+      </Slide>
+    </Presentation>,
+  );
+
+  const chart = presentation.slides[0]?.children[0];
+  assert(chart && chart.kind === "chart");
+  assertEquals(chart.chartType, "line");
+  if (chart.chartType !== "line") {
+    throw new Error("Expected a line chart");
+  }
+  assertEquals(chart.series.length, 2);
+  assertEquals(chart.series[1]?.values[1], 11);
+  assertEquals(chart.markers, true);
+});
+
+Deno.test("Chart.Pie and Chart.Donut normalize circular chart leaves", () => {
+  const presentation = normalizePresentation(
+    <Presentation>
+      <Slide>
+        <Chart.Pie
+          data={[
+            { segment: "New", value: 12 },
+            { segment: "Expansion", value: 8 },
+          ]}
+          category="segment"
+          labels
+          series={[{ name: "Revenue", value: "value" }]}
+        />
+        <Chart.Donut
+          data={[
+            { segment: "Won", value: 9 },
+            { segment: "Open", value: 3 },
+          ]}
+          category="segment"
+          holeSize={60}
+          series={[{ name: "Deals", value: "value" }]}
+        />
+      </Slide>
+    </Presentation>,
+  );
+
+  const pie = presentation.slides[0]?.children[0];
+  const donut = presentation.slides[0]?.children[1];
+  assert(pie && pie.kind === "chart");
+  assert(donut && donut.kind === "chart");
+  assertEquals(pie.chartType, "pie");
+  assertEquals(donut.chartType, "donut");
+  if (donut.chartType !== "donut") {
+    throw new Error("Expected a donut chart");
+  }
+  assertEquals(donut.holeSize, 60);
+});
+
+Deno.test("generated chart XML includes line, pie, and doughnut parts", () => {
+  const pptx = generate(
+    <Presentation>
+      <Slide>
+        <Chart.Line
+          data={[
+            { quarter: "Q1", pipeline: 12, closed: 8 },
+            { quarter: "Q2", pipeline: 18, closed: 11 },
+          ]}
+          category="quarter"
+          series={[
+            { name: "Pipeline", value: "pipeline" },
+            { name: "Closed", value: "closed" },
+          ]}
+        />
+        <Chart.Pie
+          data={[
+            { segment: "New", value: 12 },
+            { segment: "Expansion", value: 8 },
+          ]}
+          category="segment"
+          series={[{ name: "Revenue", value: "value" }]}
+        />
+        <Chart.Donut
+          data={[
+            { segment: "Won", value: 9 },
+            { segment: "Open", value: 3 },
+          ]}
+          category="segment"
+          holeSize={60}
+          series={[{ name: "Deals", value: "value" }]}
+        />
+      </Slide>
+    </Presentation>,
+  );
+
+  assert(extractZipText(pptx, "ppt/charts/chart1.xml").includes("c:lineChart"));
+  assert(extractZipText(pptx, "ppt/charts/chart2.xml").includes("c:pieChart"));
+  assert(
+    extractZipText(pptx, "ppt/charts/chart3.xml").includes("c:doughnutChart"),
+  );
+});
+
+Deno.test("Chart.Donut validates holeSize range", () => {
+  assertThrows(
+    () =>
+      normalizePresentation(
+        <Presentation>
+          <Slide>
+            <Chart.Donut
+              data={[
+                { segment: "Won", value: 9 },
+                { segment: "Open", value: 3 },
+              ]}
+              category="segment"
+              holeSize={91}
+              series={[{ name: "Deals", value: "value" }]}
+            />
+          </Slide>
+        </Presentation>,
+      ),
+    Error,
+    "holeSize",
+  );
 });
 
 Deno.test("generated XML includes hyperlink relationships from inline tags", () => {

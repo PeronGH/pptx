@@ -12,10 +12,10 @@ import {
 } from "./namespaces.ts";
 import { renderRelationships } from "./relationships.ts";
 
-/** A single normalized chart point for workbook export. */
-export interface WorkbookChartPoint {
-  readonly category: string;
-  readonly value: number;
+/** A normalized chart series for workbook export. */
+export interface WorkbookChartSeries {
+  readonly name: string;
+  readonly values: ReadonlyArray<number>;
 }
 
 const NS_S = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
@@ -24,8 +24,19 @@ function encode(text: string): Uint8Array {
   return new TextEncoder().encode(text);
 }
 
-function cellRef(column: "A" | "B", row: number): string {
-  return `${column}${row}`;
+function columnName(index: number): string {
+  let value = index + 1;
+  let result = "";
+  while (value > 0) {
+    const remainder = (value - 1) % 26;
+    result = String.fromCharCode(65 + remainder) + result;
+    value = Math.floor((value - 1) / 26);
+  }
+  return result;
+}
+
+function cellRef(columnIndex: number, row: number): string {
+  return `${columnName(columnIndex)}${row}`;
 }
 
 function inlineStringCell(ref: string, value: string) {
@@ -41,33 +52,36 @@ function numberCell(ref: string, value: number) {
 }
 
 function renderWorksheet(
-  categoryHeader: string,
-  seriesName: string,
-  points: ReadonlyArray<WorkbookChartPoint>,
+  categories: ReadonlyArray<string>,
+  series: ReadonlyArray<WorkbookChartSeries>,
 ): string {
-  const rows = [
-    el(
-      "row",
-      { r: "1" },
-      inlineStringCell(cellRef("A", 1), categoryHeader),
-      inlineStringCell(cellRef("B", 1), seriesName),
+  const headerRow = el(
+    "row",
+    { r: "1" },
+    inlineStringCell(cellRef(0, 1), "Category"),
+    ...series.map((entry, index) =>
+      inlineStringCell(cellRef(index + 1, 1), entry.name)
     ),
-    ...points.map((point, index) => {
-      const row = index + 2;
-      return el(
-        "row",
-        { r: String(row) },
-        inlineStringCell(cellRef("A", row), point.category),
-        numberCell(cellRef("B", row), point.value),
-      );
-    }),
-  ];
+  );
 
+  const dataRows = categories.map((category, index) => {
+    const row = index + 2;
+    return el(
+      "row",
+      { r: String(row) },
+      inlineStringCell(cellRef(0, row), category),
+      ...series.map((entry, seriesIndex) =>
+        numberCell(cellRef(seriesIndex + 1, row), entry.values[index] ?? 0)
+      ),
+    );
+  });
+
+  const lastColumn = columnName(series.length);
   const root = el(
     "worksheet",
     { xmlns: NS_S },
-    el("dimension", { ref: `A1:B${points.length + 1}` }),
-    el("sheetData", {}, ...rows),
+    el("dimension", { ref: `A1:${lastColumn}${categories.length + 1}` }),
+    el("sheetData", {}, headerRow, ...dataRows),
   );
 
   return renderXmlDocument(root);
@@ -123,8 +137,8 @@ function renderWorkbookContentTypes(): string {
  * Create a minimal embedded `.xlsx` package for chart data.
  */
 export function createEmbeddedWorkbook(
-  seriesName: string,
-  points: ReadonlyArray<WorkbookChartPoint>,
+  categories: ReadonlyArray<string>,
+  series: ReadonlyArray<WorkbookChartSeries>,
 ): Uint8Array {
   const files: Record<string, Uint8Array> = {
     "[Content_Types].xml": encode(renderWorkbookContentTypes()),
@@ -147,9 +161,7 @@ export function createEmbeddedWorkbook(
         },
       ]),
     ),
-    "xl/worksheets/sheet1.xml": encode(
-      renderWorksheet("Category", seriesName, points),
-    ),
+    "xl/worksheets/sheet1.xml": encode(renderWorksheet(categories, series)),
   };
 
   return zipSync(files);

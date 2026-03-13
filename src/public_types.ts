@@ -23,10 +23,19 @@ import type {
   TextStyleInput,
   VerticalAlignment,
 } from "./style.ts";
-import type { ChartBarDirection, ChartValueAxis } from "./chart.ts";
+import type {
+  ChartAxis,
+  ChartBarDirection,
+  ChartLegend,
+  ChartSeries,
+  ChartValueAxis,
+} from "./chart.ts";
 
 export const Fragment = Symbol.for("@pixel/pptx.fragment");
 export const ChartBarTag = Symbol.for("@pixel/pptx.chart.bar");
+export const ChartLineTag = Symbol.for("@pixel/pptx.chart.line");
+export const ChartPieTag = Symbol.for("@pixel/pptx.chart.pie");
+export const ChartDonutTag = Symbol.for("@pixel/pptx.chart.donut");
 export const PositionedTag = Symbol.for("@pixel/pptx.positioned");
 export const RowStartTag = Symbol.for("@pixel/pptx.row.start");
 export const RowEndTag = Symbol.for("@pixel/pptx.row.end");
@@ -187,31 +196,95 @@ export interface TextTagProps {
   readonly children?: PptxChild;
 }
 
-type ChartBarSharedProps = {
+type ChartSharedProps = {
   readonly title?: string;
-  readonly seriesName?: string;
-  readonly color?: HexColor;
   readonly labels?: boolean;
-  readonly legend?: boolean;
-  readonly direction?: ChartBarDirection;
-  readonly valueAxis?: ChartValueAxis;
+  readonly legend?: ChartLegend;
   readonly children?: never;
 };
 
-type ChartBarBaseProps = LayoutProps & ChartBarSharedProps & {
+type CategoryChartBaseProps = LayoutProps & ChartSharedProps & {
   readonly data: ReadonlyArray<object>;
   readonly category: string;
+};
+
+type ChartSeriesBase = {
+  readonly name: string;
   readonly value: string;
+  readonly color?: HexColor;
+};
+
+type MultiSeriesChartBaseProps = CategoryChartBaseProps & {
+  readonly series: ReadonlyArray<ChartSeriesBase>;
+};
+
+type ChartBarBaseProps = MultiSeriesChartBaseProps & {
+  readonly direction?: ChartBarDirection;
+  readonly categoryAxis?: ChartAxis;
+  readonly valueAxis?: ChartValueAxis;
 };
 
 export type ChartBarProps<
   Row extends object,
   CategoryKey extends KeysOfType<Row, string>,
-  ValueKey extends KeysOfType<Row, number>,
-> = LayoutProps & ChartBarSharedProps & {
+> = LayoutProps & ChartSharedProps & {
   readonly data: ReadonlyArray<Row>;
   readonly category: CategoryKey;
-  readonly value: ValueKey;
+  readonly series: readonly [
+    ChartSeries<Row>,
+    ...ReadonlyArray<ChartSeries<Row>>,
+  ];
+  readonly direction?: ChartBarDirection;
+  readonly categoryAxis?: ChartAxis;
+  readonly valueAxis?: ChartValueAxis;
+};
+
+type ChartLineBaseProps = MultiSeriesChartBaseProps & {
+  readonly markers?: boolean;
+  readonly categoryAxis?: ChartAxis;
+  readonly valueAxis?: ChartValueAxis;
+};
+
+export type ChartLineProps<
+  Row extends object,
+  CategoryKey extends KeysOfType<Row, string>,
+> = LayoutProps & ChartSharedProps & {
+  readonly data: ReadonlyArray<Row>;
+  readonly category: CategoryKey;
+  readonly series: readonly [
+    ChartSeries<Row>,
+    ...ReadonlyArray<ChartSeries<Row>>,
+  ];
+  readonly markers?: boolean;
+  readonly categoryAxis?: ChartAxis;
+  readonly valueAxis?: ChartValueAxis;
+};
+
+type PieLikeChartBaseProps = CategoryChartBaseProps & {
+  readonly series: readonly [ChartSeriesBase];
+};
+
+export type ChartPieProps<
+  Row extends object,
+  CategoryKey extends KeysOfType<Row, string>,
+> = LayoutProps & ChartSharedProps & {
+  readonly data: ReadonlyArray<Row>;
+  readonly category: CategoryKey;
+  readonly series: readonly [ChartSeries<Row>];
+};
+
+type ChartDonutBaseProps = PieLikeChartBaseProps & {
+  readonly holeSize?: number;
+};
+
+export type ChartDonutProps<
+  Row extends object,
+  CategoryKey extends KeysOfType<Row, string>,
+> = LayoutProps & ChartSharedProps & {
+  readonly data: ReadonlyArray<Row>;
+  readonly category: CategoryKey;
+  readonly series: readonly [ChartSeries<Row>];
+  readonly holeSize?: number;
 };
 
 export interface FragmentProps<Child = PptxChild> {
@@ -238,6 +311,9 @@ interface InternalElementProps {
   readonly i: TextTagProps;
   readonly u: TextTagProps;
   readonly [ChartBarTag]: ChartBarBaseProps;
+  readonly [ChartLineTag]: ChartLineBaseProps;
+  readonly [ChartPieTag]: PieLikeChartBaseProps;
+  readonly [ChartDonutTag]: ChartDonutBaseProps;
   readonly [PositionedTag]: PositionedProps;
   readonly [RowStartTag]: SlotProps;
   readonly [RowEndTag]: SlotProps;
@@ -282,12 +358,40 @@ export type UnderlineElement = PptxElement<"u", TextTagProps>;
 export type ChartBarElement<
   Row extends object,
   CategoryKey extends KeysOfType<Row, string>,
-  ValueKey extends KeysOfType<Row, number>,
-> = PptxElement<typeof ChartBarTag, ChartBarProps<Row, CategoryKey, ValueKey>>;
+> = PptxElement<typeof ChartBarTag, ChartBarProps<Row, CategoryKey>>;
 export type AnyChartBarElement = PptxElement<
   typeof ChartBarTag,
   ChartBarBaseProps
 >;
+export type ChartLineElement<
+  Row extends object,
+  CategoryKey extends KeysOfType<Row, string>,
+> = PptxElement<typeof ChartLineTag, ChartLineProps<Row, CategoryKey>>;
+export type AnyChartLineElement = PptxElement<
+  typeof ChartLineTag,
+  ChartLineBaseProps
+>;
+export type ChartPieElement<
+  Row extends object,
+  CategoryKey extends KeysOfType<Row, string>,
+> = PptxElement<typeof ChartPieTag, ChartPieProps<Row, CategoryKey>>;
+export type AnyChartPieElement = PptxElement<
+  typeof ChartPieTag,
+  PieLikeChartBaseProps
+>;
+export type ChartDonutElement<
+  Row extends object,
+  CategoryKey extends KeysOfType<Row, string>,
+> = PptxElement<typeof ChartDonutTag, ChartDonutProps<Row, CategoryKey>>;
+export type AnyChartDonutElement = PptxElement<
+  typeof ChartDonutTag,
+  ChartDonutBaseProps
+>;
+export type AnyChartElement =
+  | AnyChartBarElement
+  | AnyChartLineElement
+  | AnyChartPieElement
+  | AnyChartDonutElement;
 
 export type PptxNonFragmentElement =
   | PresentationElement
@@ -313,7 +417,7 @@ export type PptxNonFragmentElement =
   | BoldElement
   | ItalicElement
   | UnderlineElement
-  | AnyChartBarElement;
+  | AnyChartElement;
 
 export type PptxNode = PptxNonFragmentElement | FragmentElement<PptxChild>;
 
@@ -336,7 +440,10 @@ export type {
   Background,
   BoxStyleInput,
   CellStyleInput,
+  ChartAxis,
   ChartBarDirection,
+  ChartLegend,
+  ChartSeries,
   ChartValueAxis,
   CropRect,
   CrossAlignment,

@@ -3,7 +3,7 @@
  */
 
 import { u } from "./st.ts";
-import type { Chart, ChartValueAxis } from "./chart.ts";
+import type { Chart } from "./chart.ts";
 import type { Emu } from "./types.ts";
 import type {
   Alignment,
@@ -160,28 +160,52 @@ function toInternalTextFit(
   return fit;
 }
 
-function toInternalChartValueAxis(
-  axis: ChartValueAxis | undefined,
-): ChartValueAxis | undefined {
-  if (!axis) return undefined;
-  return {
-    min: axis.min,
-    max: axis.max,
-  };
-}
-
 function toInternalChartDefinition(chart: Chart): ChartDefinition {
-  return {
-    type: chart.chartType,
-    title: chart.title,
-    seriesName: chart.seriesName,
-    points: chart.points,
-    color: chart.color,
-    labels: chart.labels,
-    legend: chart.legend,
-    direction: chart.direction,
-    valueAxis: toInternalChartValueAxis(chart.valueAxis),
-  };
+  switch (chart.chartType) {
+    case "bar":
+      return {
+        type: "bar",
+        title: chart.title,
+        categories: chart.categories,
+        series: chart.series,
+        labels: chart.labels,
+        legend: chart.legend,
+        direction: chart.direction,
+        categoryAxis: chart.categoryAxis,
+        valueAxis: chart.valueAxis,
+      };
+    case "line":
+      return {
+        type: "line",
+        title: chart.title,
+        categories: chart.categories,
+        series: chart.series,
+        labels: chart.labels,
+        legend: chart.legend,
+        markers: chart.markers,
+        categoryAxis: chart.categoryAxis,
+        valueAxis: chart.valueAxis,
+      };
+    case "pie":
+      return {
+        type: "pie",
+        title: chart.title,
+        categories: chart.categories,
+        series: chart.series,
+        labels: chart.labels,
+        legend: chart.legend,
+      };
+    case "donut":
+      return {
+        type: "donut",
+        title: chart.title,
+        categories: chart.categories,
+        series: chart.series,
+        labels: chart.labels,
+        legend: chart.legend,
+        holeSize: chart.holeSize,
+      };
+  }
 }
 
 function toInternalRun(run: TextRun, ctx: SlideContext): InternalRun {

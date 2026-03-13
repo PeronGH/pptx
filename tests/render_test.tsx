@@ -179,10 +179,15 @@ Deno.test("e2e: chart and table layout", async () => {
               { quarter: "Q3", value: 15 },
             ]}
             category="quarter"
-            value="value"
             title="Pipeline"
             labels
-            color={clr.hex("2678B4")}
+            series={[
+              {
+                name: "Pipeline",
+                value: "value",
+                color: clr.hex("2678B4"),
+              },
+            ]}
           />
           <Table
             basis={u.in(4.2)}
@@ -215,6 +220,62 @@ Deno.test("e2e: chart and table layout", async () => {
   assertEquals(result.slides[0]?.shape_count, 2);
   assertEquals(result.slides[0]?.shapes[0]?.is_chart, true);
   assertEquals(result.slides[0]?.shapes[1]?.is_table, true);
+});
+
+Deno.test("e2e: line, pie, and donut charts", async () => {
+  const pptx = generate(
+    <Presentation>
+      <Slide>
+        <Row gap={u.in(0.25)}>
+          <Chart.Line
+            basis={u.in(3)}
+            h={u.in(2.6)}
+            data={[
+              { quarter: "Q1", pipeline: 12, closed: 8 },
+              { quarter: "Q2", pipeline: 18, closed: 11 },
+              { quarter: "Q3", pipeline: 15, closed: 13 },
+            ]}
+            category="quarter"
+            markers
+            series={[
+              { name: "Pipeline", value: "pipeline" },
+              { name: "Closed", value: "closed" },
+            ]}
+          />
+          <Chart.Pie
+            basis={u.in(2.8)}
+            h={u.in(2.6)}
+            data={[
+              { segment: "New", value: 12 },
+              { segment: "Expansion", value: 8 },
+              { segment: "Renewal", value: 6 },
+            ]}
+            category="segment"
+            labels
+            series={[{ name: "Revenue", value: "value" }]}
+          />
+          <Chart.Donut
+            basis={u.in(2.8)}
+            h={u.in(2.6)}
+            data={[
+              { segment: "Won", value: 9 },
+              { segment: "Open", value: 3 },
+              { segment: "Lost", value: 2 },
+            ]}
+            category="segment"
+            holeSize={60}
+            series={[{ name: "Deals", value: "value" }]}
+          />
+        </Row>
+      </Slide>
+    </Presentation>,
+  );
+
+  const result = await validatePptx(pptx, 1);
+  assertEquals(result.slides[0]?.shape_count, 3);
+  assertEquals(result.slides[0]?.shapes[0]?.is_chart, true);
+  assertEquals(result.slides[0]?.shapes[1]?.is_chart, true);
+  assertEquals(result.slides[0]?.shapes[2]?.is_chart, true);
 });
 
 Deno.test("e2e: textbox gap and inline formatting", async () => {

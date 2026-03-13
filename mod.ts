@@ -100,9 +100,15 @@ export type {
 export type {
   BarChart,
   Chart as ChartNode,
+  ChartAxis,
   ChartBarDirection,
-  ChartPoint,
+  ChartLegend,
+  ChartSeries,
+  ChartSeriesData,
   ChartValueAxis,
+  DonutChart,
+  LineChart,
+  PieChart,
 } from "./src/chart.ts";
 
 export type { Paragraph, TextRun } from "./src/text.ts";
@@ -110,6 +116,9 @@ export type { Paragraph, TextRun } from "./src/text.ts";
 export type {
   AlignProps,
   ChartBarProps,
+  ChartDonutProps,
+  ChartLineProps,
+  ChartPieProps,
   ColumnProps,
   ImageProps,
   LayoutDefaults,

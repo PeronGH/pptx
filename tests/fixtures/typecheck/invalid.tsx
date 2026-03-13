@@ -53,13 +53,33 @@ void (
 );
 
 void (
-  // @ts-expect-error category must reference a string field
-  <Chart.Bar data={pipeline} category="amount" value="amount" />
+  <Chart.Bar
+    data={pipeline}
+    // @ts-expect-error category must reference a string field
+    category="amount"
+    series={[{ name: "Pipeline", value: "amount" }]}
+  />
 );
 
 void (
-  // @ts-expect-error value must reference a numeric field
-  <Chart.Bar data={pipeline} category="quarter" value="quarter" />
+  <Chart.Bar
+    data={pipeline}
+    category="quarter"
+    // @ts-expect-error value must reference a numeric field
+    series={[{ name: "Pipeline", value: "quarter" }]}
+  />
+);
+
+void (
+  <Chart.Pie
+    data={pipeline}
+    category="quarter"
+    // @ts-expect-error pie charts accept exactly one series
+    series={[
+      { name: "A", value: "amount" },
+      { name: "B", value: "amount" },
+    ]}
+  />
 );
 
 void (

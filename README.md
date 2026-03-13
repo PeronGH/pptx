@@ -112,6 +112,9 @@ Full source: [`examples/quarterly-review.tsx`](./examples/quarterly-review.tsx)
 - `<Table.Row height={...}>`
 - `<Table.Cell>`
 - `<Chart.Bar ... />`
+- `<Chart.Line ... />`
+- `<Chart.Pie ... />`
+- `<Chart.Donut ... />`
 
 ### Text JSX components
 
@@ -128,6 +131,8 @@ Full source: [`examples/quarterly-review.tsx`](./examples/quarterly-review.tsx)
 - `style` accepts either one style object or an array of style objects
 - Later style entries win, with nested objects merged structurally
 - Backgrounds, fills, lines, shadows, bullets, and image options are plain data
+- Charts use `data`, `category`, and `series=[...]`, with one or more series for
+  bar/line and exactly one series for pie/donut
 
 ### Placement model
 

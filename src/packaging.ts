@@ -298,8 +298,8 @@ export function generatePptx(options: PackageOptions): Uint8Array {
         );
         files[`ppt/embeddings/chart${chartCounter}.xlsx`] =
           createEmbeddedWorkbook(
-            chart.definition.seriesName,
-            chart.definition.points,
+            chart.definition.categories,
+            chart.definition.series,
           );
         hasEmbeddedWorkbook = true;
 

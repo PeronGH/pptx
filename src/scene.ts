@@ -69,9 +69,7 @@ export interface SceneTable extends Frame, Table {
 }
 
 /** A positioned chart scene node. */
-export interface SceneChart extends Frame, Chart {
-  readonly kind: "chart";
-}
+export type SceneChart = Frame & Chart;
 
 /** Union of all scene nodes. */
 export type SceneNode =
@@ -212,20 +210,11 @@ export function placeLeaf(
       };
     case "chart":
       return {
-        kind: "chart",
-        chartType: leaf.chartType,
-        points: leaf.points,
-        title: leaf.title,
-        seriesName: leaf.seriesName,
-        color: leaf.color,
-        labels: leaf.labels,
-        legend: leaf.legend,
-        direction: leaf.direction,
-        valueAxis: leaf.valueAxis,
         x: frame.x,
         y: frame.y,
         w: frame.w,
         h: frame.h,
+        ...leaf,
       };
   }
 }

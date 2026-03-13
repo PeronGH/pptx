@@ -155,10 +155,14 @@ export const deck = (
                   { quarter: "Q4", amount: 15 },
                 ]}
                 category="quarter"
-                value="amount"
-                seriesName="Pipeline"
+                series={[
+                  {
+                    name: "Pipeline",
+                    value: "amount",
+                    color: clr.hex("2678B4"),
+                  },
+                ]}
                 labels
-                color={clr.hex("2678B4")}
                 valueAxis={{ min: 0, max: 16 }}
               />
             </Align>
