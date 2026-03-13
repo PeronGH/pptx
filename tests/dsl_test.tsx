@@ -3,7 +3,20 @@
 import { assert } from "@std/assert/assert";
 import { assertEquals } from "@std/assert/equals";
 import { assertThrows } from "@std/assert/throws";
-import { ChartBar, clr, generate, u } from "../mod.ts";
+import {
+  Chart,
+  clr,
+  Column,
+  generate,
+  Positioned,
+  Presentation,
+  Row,
+  Shape,
+  Slide,
+  Text,
+  TextBox,
+  u,
+} from "../mod.ts";
 import { jsx } from "../src/jsx_runtime.ts";
 import { resolveSlideChildren } from "../src/layout.ts";
 import { normalizePresentation } from "../src/normalize.ts";
@@ -37,13 +50,14 @@ Deno.test("clr.hex validates and normalizes colors", () => {
 
 Deno.test("inline children normalize into one implicit paragraph", () => {
   const presentation = normalizePresentation(
-    <presentation>
-      <slide>
-        <textbox>
-          Hello <b>bold</b> <a href="https://example.com">link</a>
-        </textbox>
-      </slide>
-    </presentation>,
+    <Presentation>
+      <Slide>
+        <TextBox>
+          Hello <Text.Bold>bold</Text.Bold>{" "}
+          <Text.Link href="https://example.com">link</Text.Link>
+        </TextBox>
+      </Slide>
+    </Presentation>,
   );
 
   const textbox = presentation.slides[0]?.children[0];
@@ -59,14 +73,14 @@ Deno.test("inline children normalize into one implicit paragraph", () => {
 
 Deno.test("textbox gap applies paragraph spacing between paragraph blocks", () => {
   const presentation = normalizePresentation(
-    <presentation>
-      <slide>
-        <textbox gap={u.in(0.2)}>
-          <p>Alpha</p>
-          <p>Beta</p>
-        </textbox>
-      </slide>
-    </presentation>,
+    <Presentation>
+      <Slide>
+        <TextBox gap={u.in(0.2)}>
+          <Text.P>Alpha</Text.P>
+          <Text.P>Beta</Text.P>
+        </TextBox>
+      </Slide>
+    </Presentation>,
   );
 
   const textbox = presentation.slides[0]?.children[0];
@@ -77,26 +91,26 @@ Deno.test("textbox gap applies paragraph spacing between paragraph blocks", () =
 
 Deno.test("presentation layout defaults propagate to slides, rows, and text blocks", () => {
   const presentation = normalizePresentation(
-    <presentation
+    <Presentation
       layout={{
         slidePadding: u.in(1),
         rowGap: u.in(0.25),
         textGap: u.in(0.1),
       }}
     >
-      <slide>
-        <column>
-          <textbox h={u.in(1)}>
-            <p>Alpha</p>
-            <p>Beta</p>
-          </textbox>
-          <row h={u.in(1.5)}>
-            <textbox basis={u.in(1)}>A</textbox>
-            <textbox basis={u.in(1)}>B</textbox>
-          </row>
-        </column>
-      </slide>
-    </presentation>,
+      <Slide>
+        <Column>
+          <TextBox h={u.in(1)}>
+            <Text.P>Alpha</Text.P>
+            <Text.P>Beta</Text.P>
+          </TextBox>
+          <Row h={u.in(1.5)}>
+            <TextBox basis={u.in(1)}>A</TextBox>
+            <TextBox basis={u.in(1)}>B</TextBox>
+          </Row>
+        </Column>
+      </Slide>
+    </Presentation>,
   );
 
   const slide = presentation.slides[0];
@@ -116,16 +130,20 @@ Deno.test("presentation layout defaults propagate to slides, rows, and text bloc
   assertEquals(row.child.gap, u.in(0.25));
 });
 
-Deno.test("push=end consumes remaining space before a row child", () => {
+Deno.test("Row.End consumes remaining space before the trailing group", () => {
   const presentation = normalizePresentation(
-    <presentation>
-      <slide>
-        <row>
-          <textbox basis={u.in(2)}>Left</textbox>
-          <textbox basis={u.in(2)} push="end">Right</textbox>
-        </row>
-      </slide>
-    </presentation>,
+    <Presentation>
+      <Slide>
+        <Row>
+          <Row.Start>
+            <TextBox basis={u.in(2)}>Left</TextBox>
+          </Row.Start>
+          <Row.End>
+            <TextBox basis={u.in(2)}>Right</TextBox>
+          </Row.End>
+        </Row>
+      </Slide>
+    </Presentation>,
   );
 
   const scenes = resolveSlideChildren(presentation.slides[0]?.children ?? [], {
@@ -141,16 +159,20 @@ Deno.test("push=end consumes remaining space before a row child", () => {
   assertEquals(scenes[1]?.x, u.in(8));
 });
 
-Deno.test("push=start consumes remaining space after a row child", () => {
+Deno.test("Column.End consumes remaining space before the trailing group", () => {
   const presentation = normalizePresentation(
-    <presentation>
-      <slide>
-        <row>
-          <textbox basis={u.in(2)} push="start">Left</textbox>
-          <textbox basis={u.in(2)}>Right</textbox>
-        </row>
-      </slide>
-    </presentation>,
+    <Presentation>
+      <Slide>
+        <Column>
+          <Column.Start>
+            <TextBox h={u.in(2)}>Top</TextBox>
+          </Column.Start>
+          <Column.End>
+            <TextBox h={u.in(2)}>Bottom</TextBox>
+          </Column.End>
+        </Column>
+      </Slide>
+    </Presentation>,
   );
 
   const scenes = resolveSlideChildren(presentation.slides[0]?.children ?? [], {
@@ -161,22 +183,22 @@ Deno.test("push=start consumes remaining space after a row child", () => {
   });
 
   assertEquals(scenes.length, 2);
-  assertEquals(sceneText(scenes[0]), "Left");
-  assertEquals(sceneText(scenes[1]), "Right");
-  assertEquals(scenes[1]?.x, u.in(8));
+  assertEquals(sceneText(scenes[0]), "Top");
+  assertEquals(sceneText(scenes[1]), "Bottom");
+  assertEquals(scenes[1]?.y, u.in(5.5));
 });
 
 Deno.test("generated slide geometry keeps flex math in integer EMUs", () => {
   const pptx = generate(
-    <presentation>
-      <slide>
-        <row>
-          <shape preset="rect" grow={3.05} />
-          <shape preset="rect" grow={2.3} />
-          <shape preset="rect" grow={2.9} />
-        </row>
-      </slide>
-    </presentation>,
+    <Presentation>
+      <Slide>
+        <Row>
+          <Shape preset="rect" grow={3.05} />
+          <Shape preset="rect" grow={2.3} />
+          <Shape preset="rect" grow={2.9} />
+        </Row>
+      </Slide>
+    </Presentation>,
   );
 
   const slideXml = extractZipText(pptx, "ppt/slides/slide1.xml");
@@ -188,9 +210,9 @@ Deno.test("generated slide geometry keeps flex math in integer EMUs", () => {
 
 Deno.test("style arrays merge left to right", () => {
   const presentation = normalizePresentation(
-    <presentation>
-      <slide>
-        <textbox
+    <Presentation>
+      <Slide>
+        <TextBox
           style={[
             {
               fill: { kind: "solid", color: clr.hex("FFEECC") },
@@ -203,9 +225,9 @@ Deno.test("style arrays merge left to right", () => {
           ]}
         >
           Hello
-        </textbox>
-      </slide>
-    </presentation>,
+        </TextBox>
+      </Slide>
+    </Presentation>,
   );
 
   const textbox = presentation.slides[0]?.children[0];
@@ -216,19 +238,19 @@ Deno.test("style arrays merge left to right", () => {
   assertEquals(textbox.style?.inset, u.in(0.1));
 });
 
-Deno.test("absolute children in row resolve without consuming flow space", () => {
+Deno.test("positioned children in a row resolve without consuming flow space", () => {
   const presentation = normalizePresentation(
-    <presentation>
-      <slide>
-        <row>
-          <textbox basis={u.in(2)}>Left</textbox>
-          <textbox x={u.in(1)} y={u.in(0.5)} w={u.in(1)} h={u.in(0.5)}>
-            Overlay
-          </textbox>
-          <textbox basis={u.in(2)}>Right</textbox>
-        </row>
-      </slide>
-    </presentation>,
+    <Presentation>
+      <Slide>
+        <Row>
+          <TextBox basis={u.in(2)}>Left</TextBox>
+          <Positioned x={u.in(1)} y={u.in(0.5)} w={u.in(1)} h={u.in(0.5)}>
+            <TextBox>Overlay</TextBox>
+          </Positioned>
+          <TextBox basis={u.in(2)}>Right</TextBox>
+        </Row>
+      </Slide>
+    </Presentation>,
   );
 
   const scenes = resolveSlideChildren(presentation.slides[0]?.children ?? [], {
@@ -247,71 +269,72 @@ Deno.test("absolute children in row resolve without consuming flow space", () =>
   assertEquals(overlay.x, u.in(1));
 });
 
-Deno.test("multiple pushed children in a row are rejected", () => {
+Deno.test("row slot groups reject mixed direct flow children", () => {
   assertThrows(
     () =>
       generate(
-        <presentation>
-          <slide>
-            <row>
-              <textbox basis={u.in(2)} push="end">Left</textbox>
-              <textbox basis={u.in(2)} push="start">Right</textbox>
-            </row>
-          </slide>
-        </presentation>,
+        <Presentation>
+          <Slide>
+            <Row>
+              <TextBox basis={u.in(2)}>Left</TextBox>
+              <Row.End>
+                <TextBox basis={u.in(2)}>Right</TextBox>
+              </Row.End>
+            </Row>
+          </Slide>
+        </Presentation>,
       ),
     Error,
-    "at most one pushed child",
+    "cannot mix direct flow children with slot groups",
   );
 });
 
-Deno.test("push is rejected outside row and column for dynamic callers", () => {
+Deno.test("push is rejected for dynamic callers", () => {
   assertThrows(
     () =>
       generate(
-        <presentation>
-          <slide>
+        <Presentation>
+          <Slide>
             {jsx("textbox", {
               push: "end",
               children: "Oops",
-            } as never)}
-          </slide>
-        </presentation>,
+            } as never) as never}
+          </Slide>
+        </Presentation>,
       ),
     Error,
-    "push can only be used inside <row> or <column>",
+    "no longer accepts push",
   );
 });
 
-Deno.test("push is rejected on absolute children for dynamic callers", () => {
+Deno.test("absolute x/y props are rejected for dynamic callers", () => {
   assertThrows(
     () =>
       generate(
-        <presentation>
-          <slide>
-            <row>
+        <Presentation>
+          <Slide>
+            <Row>
               {jsx("textbox", {
                 x: u.in(1),
                 y: u.in(1),
                 w: u.in(1),
                 h: u.in(1),
-                push: "end",
                 children: "Oops",
-              } as never)}
-            </row>
-          </slide>
-        </presentation>,
+              } as never) as never}
+            </Row>
+          </Slide>
+        </Presentation>,
       ),
     Error,
-    "basis/grow/push/alignSelf/aspectRatio",
+    "wrap it in <Positioned>",
   );
 });
 
-Deno.test("ChartBar component normalizes a bar chart leaf", () => {
+Deno.test("Chart.Bar component normalizes a bar chart leaf", () => {
   const presentation = normalizePresentation(
-    <presentation>
-      <slide>
-        <ChartBar
+    <Presentation>
+      <Slide>
+        <Chart.Bar
           data={[
             { quarter: "Q1", amount: 12 },
             { quarter: "Q2", amount: 18 },
@@ -321,8 +344,8 @@ Deno.test("ChartBar component normalizes a bar chart leaf", () => {
           title="Pipeline"
           labels
         />
-      </slide>
-    </presentation>,
+      </Slide>
+    </Presentation>,
   );
 
   const chart = presentation.slides[0]?.children[0];
@@ -334,13 +357,13 @@ Deno.test("ChartBar component normalizes a bar chart leaf", () => {
 
 Deno.test("generated XML includes hyperlink relationships from inline tags", () => {
   const pptx = generate(
-    <presentation>
-      <slide>
-        <textbox>
-          Visit <a href="https://example.com">example.com</a>
-        </textbox>
-      </slide>
-    </presentation>,
+    <Presentation>
+      <Slide>
+        <TextBox>
+          Visit <Text.Link href="https://example.com">example.com</Text.Link>
+        </TextBox>
+      </Slide>
+    </Presentation>,
   );
 
   const slideXml = extractZipText(pptx, "ppt/slides/slide1.xml");

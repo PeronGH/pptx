@@ -10,31 +10,25 @@
  * @example
  * ```tsx
  * /** @jsxImportSource @pixel/pptx *\/
- * import { clr, generate, u } from "@pixel/pptx";
+ * import { Align, Presentation, Shape, Slide, Text, TextBox, clr, generate, u } from "@pixel/pptx";
  *
  * const pptx = generate(
- *   <presentation title="My Presentation">
- *     <slide
+ *   <Presentation title="My Presentation">
+ *     <Slide
  *       background={{
  *         kind: "fill",
  *         fill: { kind: "solid", color: clr.hex("F7F4EE") },
  *       }}
  *     >
- *       <shape
+ *       <Shape
  *         preset="roundRect"
- *         x={u.in(0.75)}
- *         y={u.in(0.75)}
  *         w={u.in(8.5)}
  *         h={u.in(1)}
  *         style={{ fill: { kind: "solid", color: clr.hex("17324D") } }}
  *       />
- *       <textbox
- *         x={u.in(1)}
- *         y={u.in(1)}
- *         w={u.in(8)}
- *         h={u.in(1)}
- *       >
- *         <span
+ *       <Align x="center" y="center" w={u.in(8)} h={u.in(1)}>
+ *         <TextBox>
+ *           <Text.Span
  *           style={{
  *             bold: true,
  *             fontSize: u.font(22),
@@ -42,24 +36,39 @@
  *           }}
  *         >
  *           Hello
- *         </span>
+ *         </Text.Span>
  *         , World!
- *       </textbox>
- *     </slide>
- *   </presentation>,
+ *         </TextBox>
+ *       </Align>
+ *     </Slide>
+ *   </Presentation>,
  * );
  *
  * Deno.writeFileSync("output.pptx", pptx);
  * ```
  */
 
-export { ChartBar } from "./src/chart_component.ts";
+export {
+  Align,
+  Chart,
+  Column,
+  Image,
+  Positioned,
+  Presentation,
+  Row,
+  Shape,
+  Slide,
+  Stack,
+  Table,
+  Text,
+  TextBox,
+} from "./src/jsx_components.ts";
 export { generate } from "./src/generate.ts";
 export { clr, u } from "./src/st.ts";
 
 export type { Background, BackgroundImageProps } from "./src/document.ts";
 
-export type { AlignAxis, Push } from "./src/layout.ts";
+export type { AlignAxis } from "./src/layout.ts";
 
 export type {
   Alignment,
@@ -90,7 +99,7 @@ export type {
 
 export type {
   BarChart,
-  Chart,
+  Chart as ChartNode,
   ChartBarDirection,
   ChartPoint,
   ChartValueAxis,
@@ -107,21 +116,22 @@ export type {
   LayoutProps,
   LinkProps,
   ParagraphProps,
-  PositionableProps,
+  PositionedProps,
   PptxChild,
+  PptxComponent,
   PptxElement,
-  PptxIntrinsicElements,
   PresentationProps,
   RowProps,
   ShapeProps,
   SlideProps,
+  SlotProps,
   SpanProps,
   StackProps,
+  TableCellProps,
   TableProps,
-  TdProps,
-  TextboxProps,
+  TableRowProps,
+  TextBoxProps,
   TextTagProps,
-  TrProps,
 } from "./src/public_types.ts";
 
 export type {

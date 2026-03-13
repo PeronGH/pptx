@@ -1,77 +1,77 @@
 /** @jsxImportSource @pixel/pptx */
 
-import { ChartBar, u } from "../../../mod.ts";
+import {
+  Align,
+  Chart,
+  Image,
+  Positioned,
+  Presentation,
+  Row,
+  Slide,
+  TextBox,
+  u,
+} from "../../../mod.ts";
 
 const pipeline = [
   { quarter: "Q1", amount: 12, flag: true },
 ] as const;
 
 void (
-  // @ts-expect-error Spacer is not part of the public JSX API
+  // @ts-expect-error Lowercase intrinsics are no longer part of the public JSX API
+  <presentation />
+);
+
+void (
+  // @ts-expect-error Lowercase spacer does not exist anymore
   <spacer />
 );
 
 void (
-  // @ts-expect-error Absolute placement requires x, y, w, and h together
-  <textbox x={u.in(1)} y={u.in(1)}>
+  // @ts-expect-error Absolute placement now belongs to Positioned, not TextBox props
+  <TextBox x={u.in(1)} y={u.in(1)}>
     Partial frame
-  </textbox>
+  </TextBox>
 );
 
 void (
-  <row>
-    {
-      // @ts-expect-error Absolute placement cannot also use grow/basis metadata
-
-
-        <textbox x={u.in(1)} y={u.in(1)} w={u.in(1)} h={u.in(1)} grow={1}>
-          Conflict
-        </textbox>
-
-    }
-  </row>
+  // @ts-expect-error push has been removed in favor of Row.End/Column.End slots
+  <TextBox basis={u.in(1)} push="end">
+    Wrong API
+  </TextBox>
 );
 
 void (
-  <row>
-    {
-      // @ts-expect-error Absolute placement cannot also use push
-
-
-        <textbox x={u.in(1)} y={u.in(1)} w={u.in(1)} h={u.in(1)} push="end">
-          Conflict
-        </textbox>
-
-    }
-  </row>
+  // @ts-expect-error Align still requires children
+  <Align x="center" y="center" />
 );
 
 void (
-  // @ts-expect-error <align> requires a child
-  <align x="center" y="center" />
-);
-
-void (
-  // @ts-expect-error <align> accepts exactly one child
-  <align x="center" y="center">
-    <textbox>A</textbox>
-    <textbox>B</textbox>
-  </align>
-);
-
-void (
-  // @ts-expect-error <image> is self-closing and does not accept children
-  <image data={new Uint8Array()} contentType="image/png">
+  // @ts-expect-error Image is self-closing and does not accept children
+  <Image data={new Uint8Array()} contentType="image/png">
     Wrong child
-  </image>
+  </Image>
 );
 
 void (
   // @ts-expect-error category must reference a string field
-  <ChartBar data={pipeline} category="amount" value="amount" />
+  <Chart.Bar data={pipeline} category="amount" value="amount" />
 );
 
 void (
   // @ts-expect-error value must reference a numeric field
-  <ChartBar data={pipeline} category="quarter" value="quarter" />
+  <Chart.Bar data={pipeline} category="quarter" value="quarter" />
+);
+
+void (
+  <Presentation>
+    <Slide>
+      <Row>
+        <Row.End>
+          <Positioned x={u.in(1)} y={u.in(1)} w={u.in(1)} h={u.in(1)}>
+            <TextBox>Wrong place</TextBox>
+          </Positioned>
+        </Row.End>
+      </Row>
+    </Slide>
+  </Presentation>
 );

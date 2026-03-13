@@ -47,13 +47,13 @@ Do not add:
 
 - Keep the API declarative.
 - Keep the public authoring surface JSX-first via Deno's automatic JSX runtime.
+- Keep the public authoring surface component-based; do not expose public
+  lowercase intrinsic JSX tags.
 - Do not reintroduce the old function-builder DSL publicly.
 - Keep layout inference spec-safe: infer from container geometry, flex/grow,
   defaults, and intrinsic non-text metadata, but do not add text-measurement
   heuristics that try to predict Office wrapping/autofit.
 - Prefer positionless leaves plus layout containers over absolute coordinates.
-- Use child `push` in `row`/`column` for split layouts and remaining main-axis
-  space; use text container `gap` and paragraph spacing for text flow.
 - Keep the root surface small and focused on slide-building.
 - Prefer plain typed objects for styles and other declarative data instead of
   public builder helpers.

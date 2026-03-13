@@ -1,6 +1,17 @@
 /** @jsxImportSource @pixel/pptx */
 
-import { type BoxStyle, clr, generate, type TextStyle, u } from "../mod.ts";
+import {
+  Align,
+  type BoxStyle,
+  clr,
+  generate,
+  Presentation,
+  Slide,
+  Text,
+  TextBox,
+  type TextStyle,
+  u,
+} from "../mod.ts";
 
 const styles = {
   hero: {
@@ -16,20 +27,20 @@ const styles = {
 };
 
 export const deck = (
-  <presentation title="Hello deck">
-    <slide
+  <Presentation title="Hello deck">
+    <Slide
       background={{
         kind: "fill",
         fill: { kind: "solid", color: clr.hex("F7F4EE") },
       }}
     >
-      <align x="center" y="center" w={u.in(6)} h={u.in(1.2)}>
-        <textbox style={styles.hero}>
-          <span style={styles.heroText}>Hello, world!</span>
-        </textbox>
-      </align>
-    </slide>
-  </presentation>
+      <Align x="center" y="center" w={u.in(6)} h={u.in(1.2)}>
+        <TextBox style={styles.hero}>
+          <Text.Span style={styles.heroText}>Hello, world!</Text.Span>
+        </TextBox>
+      </Align>
+    </Slide>
+  </Presentation>
 );
 
 if (import.meta.main) {

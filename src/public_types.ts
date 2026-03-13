@@ -1,9 +1,9 @@
 /**
- * Public JSX runtime node and intrinsic prop types.
+ * Public JSX runtime node and component prop types.
  */
 
 import type { Background } from "./document.ts";
-import type { AlignAxis, Push } from "./layout.ts";
+import type { AlignAxis } from "./layout.ts";
 import type { Emu, HexColor } from "./types.ts";
 import type {
   BoxStyleInput,
@@ -27,6 +27,11 @@ import type { ChartBarDirection, ChartValueAxis } from "./chart.ts";
 
 export const Fragment = Symbol.for("@pixel/pptx.fragment");
 export const ChartBarTag = Symbol.for("@pixel/pptx.chart.bar");
+export const PositionedTag = Symbol.for("@pixel/pptx.positioned");
+export const RowStartTag = Symbol.for("@pixel/pptx.row.start");
+export const RowEndTag = Symbol.for("@pixel/pptx.row.end");
+export const ColumnStartTag = Symbol.for("@pixel/pptx.column.start");
+export const ColumnEndTag = Symbol.for("@pixel/pptx.column.end");
 
 type KeysOfType<T, Value> = Extract<
   {
@@ -57,41 +62,27 @@ export interface LayoutDefaults {
   readonly textGap?: Emu;
 }
 
-/** Shared row/col child sizing props. */
+/** Shared row/column child sizing props. */
 export interface LayoutProps {
   readonly basis?: Emu;
   readonly grow?: number;
-  readonly push?: Push;
   readonly alignSelf?: CrossAlignment;
   readonly aspectRatio?: number;
   readonly w?: Emu;
   readonly h?: Emu;
 }
 
-type FlowPositionableProps = LayoutProps & {
-  readonly x?: never;
-  readonly y?: never;
-};
+export interface SlotProps {
+  readonly children?: PptxChild;
+}
 
-/** Absolute placement props for non-align nodes. */
-export interface AbsoluteFrameProps {
+export interface PositionedProps {
   readonly x: Emu;
   readonly y: Emu;
   readonly w: Emu;
   readonly h: Emu;
+  readonly children: PptxChild;
 }
-
-type AbsolutePositionableProps = AbsoluteFrameProps & {
-  readonly basis?: never;
-  readonly grow?: never;
-  readonly push?: never;
-  readonly alignSelf?: never;
-  readonly aspectRatio?: never;
-};
-
-export type PositionableProps =
-  | FlowPositionableProps
-  | AbsolutePositionableProps;
 
 export interface PresentationProps {
   readonly title?: string;
@@ -108,7 +99,7 @@ export interface SlideProps {
   readonly children?: PptxChild;
 }
 
-type RowOwnProps = {
+export type RowProps = LayoutProps & {
   readonly gap?: Emu;
   readonly padding?: Emu | Insets;
   readonly justify?: MainAlignment;
@@ -116,9 +107,7 @@ type RowOwnProps = {
   readonly children?: PptxChild;
 };
 
-export type RowProps = PositionableProps & RowOwnProps;
-
-type ColumnOwnProps = {
+export type ColumnProps = LayoutProps & {
   readonly gap?: Emu;
   readonly padding?: Emu | Insets;
   readonly justify?: MainAlignment;
@@ -126,40 +115,32 @@ type ColumnOwnProps = {
   readonly children?: PptxChild;
 };
 
-export type ColumnProps = PositionableProps & ColumnOwnProps;
-
-type StackOwnProps = {
+export type StackProps = LayoutProps & {
   readonly padding?: Emu | Insets;
   readonly children?: PptxChild;
 };
 
-export type StackProps = PositionableProps & StackOwnProps;
-
-export interface AlignProps extends LayoutProps {
+export type AlignProps = LayoutProps & {
   readonly x: AlignAxis;
   readonly y: AlignAxis;
   readonly padding?: Emu | Insets;
-  readonly children: PptxNode;
-}
+  readonly children: PptxChild;
+};
 
-type TextboxOwnProps = {
+export type TextBoxProps = LayoutProps & {
   readonly style?: BoxStyleInput;
   readonly gap?: Emu;
   readonly children?: PptxChild;
 };
 
-export type TextboxProps = PositionableProps & TextboxOwnProps;
-
-type ShapeOwnProps = {
+export type ShapeProps = LayoutProps & {
   readonly preset: string;
   readonly style?: BoxStyleInput;
   readonly gap?: Emu;
   readonly children?: PptxChild;
 };
 
-export type ShapeProps = PositionableProps & ShapeOwnProps;
-
-type ImageOwnProps = {
+export type ImageProps = LayoutProps & {
   readonly data: Uint8Array;
   readonly contentType: string;
   readonly description?: string;
@@ -169,21 +150,17 @@ type ImageOwnProps = {
   readonly children?: never;
 };
 
-export type ImageProps = PositionableProps & ImageOwnProps;
-
-type TableOwnProps = {
+export type TableProps = LayoutProps & {
   readonly cols: ReadonlyArray<Emu>;
   readonly children?: PptxChild;
 };
 
-export type TableProps = PositionableProps & TableOwnProps;
-
-export interface TrProps {
+export interface TableRowProps {
   readonly height: Emu;
   readonly children?: PptxChild;
 }
 
-export interface TdProps {
+export interface TableCellProps {
   readonly style?: CellStyleInput;
   readonly gap?: Emu;
   readonly children?: PptxChild;
@@ -221,7 +198,7 @@ type ChartBarSharedProps = {
   readonly children?: never;
 };
 
-type ChartBarBaseProps = PositionableProps & ChartBarSharedProps & {
+type ChartBarBaseProps = LayoutProps & ChartBarSharedProps & {
   readonly data: ReadonlyArray<object>;
   readonly category: string;
   readonly value: string;
@@ -231,7 +208,7 @@ export type ChartBarProps<
   Row extends object,
   CategoryKey extends KeysOfType<Row, string>,
   ValueKey extends KeysOfType<Row, number>,
-> = PositionableProps & ChartBarSharedProps & {
+> = LayoutProps & ChartBarSharedProps & {
   readonly data: ReadonlyArray<Row>;
   readonly category: CategoryKey;
   readonly value: ValueKey;
@@ -240,6 +217,35 @@ export type ChartBarProps<
 export interface FragmentProps<Child = PptxChild> {
   readonly children?: Child;
 }
+
+interface InternalElementProps {
+  readonly presentation: PresentationProps;
+  readonly slide: SlideProps;
+  readonly row: RowProps;
+  readonly column: ColumnProps;
+  readonly stack: StackProps;
+  readonly align: AlignProps;
+  readonly textbox: TextBoxProps;
+  readonly shape: ShapeProps;
+  readonly image: ImageProps;
+  readonly table: TableProps;
+  readonly tr: TableRowProps;
+  readonly td: TableCellProps;
+  readonly p: ParagraphProps;
+  readonly span: SpanProps;
+  readonly a: LinkProps;
+  readonly b: TextTagProps;
+  readonly i: TextTagProps;
+  readonly u: TextTagProps;
+  readonly [ChartBarTag]: ChartBarBaseProps;
+  readonly [PositionedTag]: PositionedProps;
+  readonly [RowStartTag]: SlotProps;
+  readonly [RowEndTag]: SlotProps;
+  readonly [ColumnStartTag]: SlotProps;
+  readonly [ColumnEndTag]: SlotProps;
+}
+
+export type InternalTag = keyof InternalElementProps;
 
 export interface FragmentElement<Child = PptxChild>
   extends PptxElement<typeof Fragment, FragmentProps<Child>> {}
@@ -253,12 +259,20 @@ export type RowElement = PptxElement<"row", RowProps>;
 export type ColumnElement = PptxElement<"column", ColumnProps>;
 export type StackElement = PptxElement<"stack", StackProps>;
 export type AlignElement = PptxElement<"align", AlignProps>;
-export type TextboxElement = PptxElement<"textbox", TextboxProps>;
+export type PositionedElement = PptxElement<
+  typeof PositionedTag,
+  PositionedProps
+>;
+export type RowStartElement = PptxElement<typeof RowStartTag, SlotProps>;
+export type RowEndElement = PptxElement<typeof RowEndTag, SlotProps>;
+export type ColumnStartElement = PptxElement<typeof ColumnStartTag, SlotProps>;
+export type ColumnEndElement = PptxElement<typeof ColumnEndTag, SlotProps>;
+export type TextBoxElement = PptxElement<"textbox", TextBoxProps>;
 export type ShapeElement = PptxElement<"shape", ShapeProps>;
 export type ImageElement = PptxElement<"image", ImageProps>;
 export type TableElement = PptxElement<"table", TableProps>;
-export type TrElement = PptxElement<"tr", TrProps>;
-export type TdElement = PptxElement<"td", TdProps>;
+export type TableRowElement = PptxElement<"tr", TableRowProps>;
+export type TableCellElement = PptxElement<"td", TableCellProps>;
 export type ParagraphElement = PptxElement<"p", ParagraphProps>;
 export type SpanElement = PptxElement<"span", SpanProps>;
 export type LinkElement = PptxElement<"a", LinkProps>;
@@ -275,24 +289,6 @@ export type AnyChartBarElement = PptxElement<
   ChartBarBaseProps
 >;
 
-export type InlineElement =
-  | SpanElement
-  | LinkElement
-  | BoldElement
-  | ItalicElement
-  | UnderlineElement;
-
-export type SlideNodeElement =
-  | RowElement
-  | ColumnElement
-  | StackElement
-  | AlignElement
-  | TextboxElement
-  | ShapeElement
-  | ImageElement
-  | TableElement
-  | AnyChartBarElement;
-
 export type PptxNonFragmentElement =
   | PresentationElement
   | SlideElement
@@ -300,12 +296,17 @@ export type PptxNonFragmentElement =
   | ColumnElement
   | StackElement
   | AlignElement
-  | TextboxElement
+  | PositionedElement
+  | RowStartElement
+  | RowEndElement
+  | ColumnStartElement
+  | ColumnEndElement
+  | TextBoxElement
   | ShapeElement
   | ImageElement
   | TableElement
-  | TrElement
-  | TdElement
+  | TableRowElement
+  | TableCellElement
   | ParagraphElement
   | SpanElement
   | LinkElement
@@ -330,27 +331,6 @@ export type PptxComponent<
   Element extends PptxNode = PptxNode,
 > = (props: Props) => Element;
 
-export interface PptxIntrinsicElements {
-  readonly presentation: PresentationProps;
-  readonly slide: SlideProps;
-  readonly row: RowProps;
-  readonly column: ColumnProps;
-  readonly stack: StackProps;
-  readonly align: AlignProps;
-  readonly textbox: TextboxProps;
-  readonly shape: ShapeProps;
-  readonly image: ImageProps;
-  readonly table: TableProps;
-  readonly tr: TrProps;
-  readonly td: TdProps;
-  readonly p: ParagraphProps;
-  readonly span: SpanProps;
-  readonly a: LinkProps;
-  readonly b: TextTagProps;
-  readonly i: TextTagProps;
-  readonly u: TextTagProps;
-}
-
 export type {
   AlignAxis,
   Background,
@@ -366,7 +346,6 @@ export type {
   LineStyle,
   MainAlignment,
   ParagraphStyleInput,
-  Push,
   Shadow,
   StyleInput,
   TextFit,

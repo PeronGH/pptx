@@ -3,12 +3,23 @@
 import { assert } from "@std/assert/assert";
 import { assertEquals } from "@std/assert/equals";
 import {
+  Align,
   type BoxStyle,
   type CellStyle,
-  ChartBar,
+  Chart,
   clr,
   generate,
+  Image,
   type ParagraphStyle,
+  Positioned,
+  Presentation,
+  Row,
+  Shape,
+  Slide,
+  Stack,
+  Table,
+  Text,
+  TextBox,
   type TextStyle,
   u,
 } from "../mod.ts";
@@ -52,32 +63,32 @@ const styles = {
 
 Deno.test("e2e: slide background and stack overlay", async () => {
   const pptx = generate(
-    <presentation>
-      <slide
+    <Presentation>
+      <Slide
         background={{
           kind: "fill",
           fill: { kind: "solid", color: clr.hex("F7F4EE") },
         }}
       >
-        <stack>
-          <shape
-            preset="rect"
+        <Stack>
+          <Positioned
             x={u.in(0.6)}
             y={u.in(0.6)}
             w={u.in(8.8)}
             h={u.in(1)}
-            style={styles.heroBar}
-          />
-          <align x="center" y="start" w={u.in(6)} h={u.in(1)}>
-            <textbox style={{ verticalAlign: "middle" }}>
-              <p style={{ align: "center" }}>
-                <span style={styles.heroTitle}>Hero Title</span>
-              </p>
-            </textbox>
-          </align>
-        </stack>
-      </slide>
-    </presentation>,
+          >
+            <Shape preset="rect" style={styles.heroBar} />
+          </Positioned>
+          <Align x="center" y="start" w={u.in(6)} h={u.in(1)}>
+            <TextBox style={{ verticalAlign: "middle" }}>
+              <Text.P style={{ align: "center" }}>
+                <Text.Span style={styles.heroTitle}>Hero Title</Text.Span>
+              </Text.P>
+            </TextBox>
+          </Align>
+        </Stack>
+      </Slide>
+    </Presentation>,
   );
 
   const result = await validatePptx(pptx, 1);
@@ -87,8 +98,8 @@ Deno.test("e2e: slide background and stack overlay", async () => {
 
 Deno.test("e2e: slide background image", async () => {
   const pptx = generate(
-    <presentation>
-      <slide
+    <Presentation>
+      <Slide
         background={{
           kind: "image",
           data: createTestBmp(8, 4),
@@ -96,23 +107,26 @@ Deno.test("e2e: slide background image", async () => {
           fit: "cover",
         }}
       >
-        <textbox
+        <Positioned
           x={u.in(1)}
           y={u.in(1)}
           w={u.in(5)}
           h={u.in(1)}
-          style={{
-            fill: {
-              kind: "solid",
-              color: clr.hex("FFFFFF"),
-              alpha: u.pct(80),
-            },
-          }}
         >
-          On top of background
-        </textbox>
-      </slide>
-    </presentation>,
+          <TextBox
+            style={{
+              fill: {
+                kind: "solid",
+                color: clr.hex("FFFFFF"),
+                alpha: u.pct(80),
+              },
+            }}
+          >
+            On top of background
+          </TextBox>
+        </Positioned>
+      </Slide>
+    </Presentation>,
   );
 
   const result = await validatePptx(pptx, 1);
@@ -123,28 +137,26 @@ Deno.test("e2e: slide background image", async () => {
 Deno.test("e2e: image fits", async () => {
   const bmp = createTestBmp(4, 2);
   const pptx = generate(
-    <presentation>
-      <slide>
-        <image
+    <Presentation>
+      <Slide>
+        <Positioned
           x={u.in(1)}
           y={u.in(1)}
           w={u.in(4)}
           h={u.in(4)}
-          data={bmp}
-          contentType="image/bmp"
-          fit="contain"
-        />
-        <image
+        >
+          <Image data={bmp} contentType="image/bmp" fit="contain" />
+        </Positioned>
+        <Positioned
           x={u.in(5.5)}
           y={u.in(1)}
           w={u.in(2)}
           h={u.in(2)}
-          data={bmp}
-          contentType="image/bmp"
-          fit="cover"
-        />
-      </slide>
-    </presentation>,
+        >
+          <Image data={bmp} contentType="image/bmp" fit="cover" />
+        </Positioned>
+      </Slide>
+    </Presentation>,
   );
 
   const result = await validatePptx(pptx, 1);
@@ -155,10 +167,10 @@ Deno.test("e2e: image fits", async () => {
 
 Deno.test("e2e: chart and table layout", async () => {
   const pptx = generate(
-    <presentation>
-      <slide>
-        <row gap={u.in(0.3)}>
-          <ChartBar
+    <Presentation>
+      <Slide>
+        <Row gap={u.in(0.3)}>
+          <Chart.Bar
             basis={u.in(4.8)}
             h={u.in(3)}
             data={[
@@ -172,31 +184,31 @@ Deno.test("e2e: chart and table layout", async () => {
             labels
             color={clr.hex("2678B4")}
           />
-          <table
+          <Table
             basis={u.in(4.2)}
             h={u.in(2)}
             cols={[u.in(1.4), u.in(1.4), u.in(1.4)]}
           >
-            <tr height={u.in(0.5)}>
-              <td style={styles.metricCell}>
-                <span style={styles.metricText}>Metric</span>
-              </td>
-              <td style={styles.metricCell}>
-                <span style={styles.metricText}>Owner</span>
-              </td>
-              <td style={styles.metricCell}>
-                <span style={styles.metricText}>Status</span>
-              </td>
-            </tr>
-            <tr height={u.in(0.5)}>
-              <td>Revenue</td>
-              <td>Alex</td>
-              <td>On track</td>
-            </tr>
-          </table>
-        </row>
-      </slide>
-    </presentation>,
+            <Table.Row height={u.in(0.5)}>
+              <Table.Cell style={styles.metricCell}>
+                <Text.Span style={styles.metricText}>Metric</Text.Span>
+              </Table.Cell>
+              <Table.Cell style={styles.metricCell}>
+                <Text.Span style={styles.metricText}>Owner</Text.Span>
+              </Table.Cell>
+              <Table.Cell style={styles.metricCell}>
+                <Text.Span style={styles.metricText}>Status</Text.Span>
+              </Table.Cell>
+            </Table.Row>
+            <Table.Row height={u.in(0.5)}>
+              <Table.Cell>Revenue</Table.Cell>
+              <Table.Cell>Alex</Table.Cell>
+              <Table.Cell>On track</Table.Cell>
+            </Table.Row>
+          </Table>
+        </Row>
+      </Slide>
+    </Presentation>,
   );
 
   const result = await validatePptx(pptx, 1);
@@ -207,35 +219,36 @@ Deno.test("e2e: chart and table layout", async () => {
 
 Deno.test("e2e: textbox gap and inline formatting", async () => {
   const pptx = generate(
-    <presentation>
-      <slide>
-        <textbox
+    <Presentation>
+      <Slide>
+        <Positioned
           x={u.in(1)}
           y={u.in(1)}
           w={u.in(6)}
           h={u.in(2.2)}
-          gap={u.in(0.12)}
-          style={styles.noteCard}
         >
-          <p>
-            <span style={styles.heroTitle}>Q2 Strategy</span>
-          </p>
-          <p style={styles.bullets}>
-            <span style={{ fontColor: clr.hex("17324D") }}>
-              Ship the pricing refresh
-            </span>
-          </p>
-          <p style={styles.bullets}>
-            <span style={{ fontColor: clr.hex("17324D") }}>
-              Expand onboarding capacity
-            </span>
-          </p>
-          <p>
-            Memo: <a href="https://example.com">example.com</a>
-          </p>
-        </textbox>
-      </slide>
-    </presentation>,
+          <TextBox gap={u.in(0.12)} style={styles.noteCard}>
+            <Text.P>
+              <Text.Span style={styles.heroTitle}>Q2 Strategy</Text.Span>
+            </Text.P>
+            <Text.P style={styles.bullets}>
+              <Text.Span style={{ fontColor: clr.hex("17324D") }}>
+                Ship the pricing refresh
+              </Text.Span>
+            </Text.P>
+            <Text.P style={styles.bullets}>
+              <Text.Span style={{ fontColor: clr.hex("17324D") }}>
+                Expand onboarding capacity
+              </Text.Span>
+            </Text.P>
+            <Text.P>
+              Memo:{" "}
+              <Text.Link href="https://example.com">example.com</Text.Link>
+            </Text.P>
+          </TextBox>
+        </Positioned>
+      </Slide>
+    </Presentation>,
   );
 
   const result = await validatePptx(pptx, 1);

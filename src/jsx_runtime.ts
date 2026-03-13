@@ -3,17 +3,16 @@
  */
 
 import type {
-  FragmentElement,
   FragmentProps,
   PptxComponent,
   PptxElement,
   PptxElementType,
-  PptxIntrinsicElements,
   PptxNode,
 } from "./public_types.ts";
 
 export { Fragment } from "./public_types.ts";
 export type {
+  AlignProps,
   ChartBarProps,
   ColumnProps,
   ImageProps,
@@ -21,25 +20,23 @@ export type {
   LayoutProps,
   LinkProps,
   ParagraphProps,
-  PositionableProps,
+  PositionedProps,
   PptxComponent,
   PptxElement,
-  PptxIntrinsicElements,
   PresentationProps,
-  Push,
   RowProps,
   ShapeProps,
   SlideProps,
+  SlotProps,
   SpanProps,
   StackProps,
+  TableCellProps,
   TableProps,
-  TdProps,
-  TextboxProps,
+  TableRowProps,
+  TextBoxProps,
   TextTagProps,
-  TrProps,
 } from "./public_types.ts";
 
-type IntrinsicTag = keyof PptxIntrinsicElements;
 type Component<Props extends object, Element extends PptxNode> = PptxComponent<
   Props,
   Element
@@ -57,34 +54,19 @@ function createElement<Type extends PptxElementType, Props extends object>(
   };
 }
 
-export function jsx<Tag extends IntrinsicTag>(
-  type: Tag,
-  props: PptxIntrinsicElements[Tag],
-  key?: string | number,
-): PptxElement<Tag, PptxIntrinsicElements[Tag]>;
 export function jsx(
-  type: typeof import("./public_types.ts").Fragment,
-  props: FragmentProps,
-  key?: string | number,
-): FragmentElement;
-export function jsx<Props extends object, Element extends PptxNode>(
-  type: Component<Props, Element>,
-  props: Props,
-  key?: string | number,
-): Element;
-export function jsx<Props extends object, Element extends PptxNode>(
   type:
-    | IntrinsicTag
+    | PptxElementType
     | typeof import("./public_types.ts").Fragment
-    | Component<Props, Element>,
-  props: PptxIntrinsicElements[IntrinsicTag] | FragmentProps | Props,
+    | Component<object, PptxNode>,
+  props: FragmentProps | Record<PropertyKey, unknown>,
   key?: string | number,
 ): PptxNode {
   if (typeof type === "function") {
-    return type(props as Props);
+    return type(props);
   }
   return createElement(
-    type,
+    type as PptxElementType,
     props as Record<PropertyKey, unknown>,
     key ?? null,
   ) as PptxNode;
@@ -102,5 +84,7 @@ export namespace JSX {
   export interface IntrinsicAttributes {
     key?: string | number;
   }
-  export interface IntrinsicElements extends PptxIntrinsicElements {}
+  export interface IntrinsicElements {
+    readonly [tagName: string]: never;
+  }
 }

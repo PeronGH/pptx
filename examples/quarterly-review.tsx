@@ -1,12 +1,22 @@
 /** @jsxImportSource @pixel/pptx */
 
 import {
+  Align,
   type BoxStyle,
   type CellStyle,
-  ChartBar,
+  Chart,
   clr,
+  Column,
   generate,
   type ParagraphStyle,
+  Presentation,
+  Row,
+  Shape,
+  Slide,
+  Stack,
+  Table,
+  Text,
+  TextBox,
   type TextStyle,
   u,
 } from "../mod.ts";
@@ -74,14 +84,14 @@ const styles = {
 };
 
 export const deck = (
-  <presentation
+  <Presentation
     title="Quarterly Review"
     layout={{
       rowGap: u.in(0.3),
       columnGap: u.in(0.35),
     }}
   >
-    <slide
+    <Slide
       background={{
         kind: "fill",
         fill: {
@@ -102,42 +112,42 @@ export const deck = (
         },
       }}
     >
-      <column>
-        <shape preset="roundRect" h={u.in(1.25)} style={styles.heroBar}>
-          <p>
-            <span style={styles.heroTitle}>Quarterly Review</span>
-          </p>
-          <p>
-            <span style={styles.heroSubtitle}>
+      <Column>
+        <Shape preset="roundRect" h={u.in(1.25)} style={styles.heroBar}>
+          <Text.P>
+            <Text.Span style={styles.heroTitle}>Quarterly Review</Text.Span>
+          </Text.P>
+          <Text.P>
+            <Text.Span style={styles.heroSubtitle}>
               Q2 snapshot: growth is ahead of plan
-            </span>
-          </p>
-        </shape>
+            </Text.Span>
+          </Text.P>
+        </Shape>
 
-        <row align="start">
-          <stack grow={3.05}>
-            <shape preset="roundRect" style={styles.card} />
-            <align
+        <Row align="start">
+          <Stack grow={3.05}>
+            <Shape preset="roundRect" style={styles.card} />
+            <Align
               x="center"
               y="start"
               padding={{ top: u.in(0.18) }}
               w={u.in(2.75)}
               h={u.in(0.32)}
             >
-              <textbox>
-                <p style={{ align: "center" }}>
-                  <span style={styles.cardTitle}>Pipeline</span>
-                </p>
-              </textbox>
-            </align>
-            <align
+              <TextBox>
+                <Text.P style={{ align: "center" }}>
+                  <Text.Span style={styles.cardTitle}>Pipeline</Text.Span>
+                </Text.P>
+              </TextBox>
+            </Align>
+            <Align
               x="center"
               y="start"
               padding={{ top: u.in(0.55) }}
               w={u.in(2.75)}
               h={u.in(3.35)}
             >
-              <ChartBar
+              <Chart.Bar
                 data={[
                   { quarter: "Q1", amount: 8 },
                   { quarter: "Q2", amount: 12 },
@@ -151,84 +161,90 @@ export const deck = (
                 color={clr.hex("2678B4")}
                 valueAxis={{ min: 0, max: 16 }}
               />
-            </align>
-          </stack>
+            </Align>
+          </Stack>
 
-          <stack grow={2.3}>
-            <shape preset="roundRect" style={styles.card} />
-            <align
+          <Stack grow={2.3}>
+            <Shape preset="roundRect" style={styles.card} />
+            <Align
               x="center"
               y="start"
               padding={{ top: u.in(0.2) }}
               w={u.in(1.98)}
               h={u.in(3.2)}
             >
-              <table cols={[u.in(1.15), u.in(0.85)]}>
-                <tr height={u.in(0.44)}>
-                  <td style={styles.headCell}>
-                    <span style={styles.headText}>Metric</span>
-                  </td>
-                  <td style={styles.headCell}>
-                    <span style={styles.headText}>Value</span>
-                  </td>
-                </tr>
-                <tr height={u.in(0.44)}>
-                  <td style={styles.cell}>
-                    <span style={styles.metricText}>Revenue</span>
-                  </td>
-                  <td style={styles.cell}>
-                    <span style={styles.metricText}>$1.2M</span>
-                  </td>
-                </tr>
-                <tr height={u.in(0.44)}>
-                  <td style={styles.cell}>
-                    <span style={styles.metricText}>Growth</span>
-                  </td>
-                  <td style={styles.cell}>
-                    <span style={styles.metricText}>15%</span>
-                  </td>
-                </tr>
-                <tr height={u.in(0.44)}>
-                  <td style={styles.cell}>
-                    <span style={styles.metricText}>NPS</span>
-                  </td>
-                  <td style={styles.cell}>
-                    <span style={styles.metricText}>61</span>
-                  </td>
-                </tr>
-              </table>
-            </align>
-          </stack>
+              <Table cols={[u.in(1.15), u.in(0.85)]}>
+                <Table.Row height={u.in(0.44)}>
+                  <Table.Cell style={styles.headCell}>
+                    <Text.Span style={styles.headText}>Metric</Text.Span>
+                  </Table.Cell>
+                  <Table.Cell style={styles.headCell}>
+                    <Text.Span style={styles.headText}>Value</Text.Span>
+                  </Table.Cell>
+                </Table.Row>
+                <Table.Row height={u.in(0.44)}>
+                  <Table.Cell style={styles.cell}>
+                    <Text.Span style={styles.metricText}>Revenue</Text.Span>
+                  </Table.Cell>
+                  <Table.Cell style={styles.cell}>
+                    <Text.Span style={styles.metricText}>$1.2M</Text.Span>
+                  </Table.Cell>
+                </Table.Row>
+                <Table.Row height={u.in(0.44)}>
+                  <Table.Cell style={styles.cell}>
+                    <Text.Span style={styles.metricText}>Growth</Text.Span>
+                  </Table.Cell>
+                  <Table.Cell style={styles.cell}>
+                    <Text.Span style={styles.metricText}>15%</Text.Span>
+                  </Table.Cell>
+                </Table.Row>
+                <Table.Row height={u.in(0.44)}>
+                  <Table.Cell style={styles.cell}>
+                    <Text.Span style={styles.metricText}>NPS</Text.Span>
+                  </Table.Cell>
+                  <Table.Cell style={styles.cell}>
+                    <Text.Span style={styles.metricText}>61</Text.Span>
+                  </Table.Cell>
+                </Table.Row>
+              </Table>
+            </Align>
+          </Stack>
 
-          <stack grow={2.9}>
-            <shape preset="roundRect" style={styles.card} />
-            <align
+          <Stack grow={2.9}>
+            <Shape preset="roundRect" style={styles.card} />
+            <Align
               x="center"
               y="start"
               padding={{ top: u.in(0.2) }}
               w={u.in(2.58)}
               h={u.in(3)}
             >
-              <textbox gap={u.in(0.08)}>
-                <p>
-                  <span style={styles.cardTitle}>Notes</span>
-                </p>
-                <p style={styles.bullet}>
-                  <span style={styles.body}>Highlights and next steps</span>
-                </p>
-                <p style={styles.bullet}>
-                  <span style={styles.body}>Review pricing experiments</span>
-                </p>
-                <p style={styles.bullet}>
-                  <span style={styles.body}>Expand onboarding capacity</span>
-                </p>
-              </textbox>
-            </align>
-          </stack>
-        </row>
-      </column>
-    </slide>
-  </presentation>
+              <TextBox gap={u.in(0.08)}>
+                <Text.P>
+                  <Text.Span style={styles.cardTitle}>Notes</Text.Span>
+                </Text.P>
+                <Text.P style={styles.bullet}>
+                  <Text.Span style={styles.body}>
+                    Highlights and next steps
+                  </Text.Span>
+                </Text.P>
+                <Text.P style={styles.bullet}>
+                  <Text.Span style={styles.body}>
+                    Review pricing experiments
+                  </Text.Span>
+                </Text.P>
+                <Text.P style={styles.bullet}>
+                  <Text.Span style={styles.body}>
+                    Expand onboarding capacity
+                  </Text.Span>
+                </Text.P>
+              </TextBox>
+            </Align>
+          </Stack>
+        </Row>
+      </Column>
+    </Slide>
+  </Presentation>
 );
 
 if (import.meta.main) {

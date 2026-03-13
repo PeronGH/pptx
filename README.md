@@ -25,7 +25,16 @@ Configure Deno to use `@pixel/pptx` as the JSX import source:
 ```tsx
 /** @jsxImportSource @pixel/pptx */
 
-import { clr, generate, u } from "@pixel/pptx";
+import {
+  Align,
+  clr,
+  generate,
+  Presentation,
+  Slide,
+  Text,
+  TextBox,
+  u,
+} from "@pixel/pptx";
 
 const styles = {
   hero: {
@@ -41,20 +50,20 @@ const styles = {
 };
 
 const deck = (
-  <presentation title="Hello deck">
-    <slide
+  <Presentation title="Hello deck">
+    <Slide
       background={{
         kind: "fill",
         fill: { kind: "solid", color: clr.hex("F7F4EE") },
       }}
     >
-      <align x="center" y="center" w={u.in(6)} h={u.in(1.2)}>
-        <textbox style={styles.hero}>
-          <span style={styles.heroText}>Hello, world!</span>
-        </textbox>
-      </align>
-    </slide>
-  </presentation>
+      <Align x="center" y="center" w={u.in(6)} h={u.in(1.2)}>
+        <TextBox style={styles.hero}>
+          <Text.Span style={styles.heroText}>Hello, world!</Text.Span>
+        </TextBox>
+      </Align>
+    </Slide>
+  </Presentation>
 );
 
 Deno.writeFileSync("hello.pptx", generate(deck));
@@ -74,37 +83,44 @@ Full source: [`examples/quarterly-review.tsx`](./examples/quarterly-review.tsx)
 
 ### Core exports
 
-- `generate(<presentation>...</presentation>)`
+- `generate(<Presentation>...</Presentation>)`
 - `u.*` for units: `in`, `cm`, `pt`, `emu`, `font`, `pct`
 - `clr.hex(...)` for validated OOXML colors
 - Inherited layout defaults through `presentation layout={...}` and
   `slide layout={...}`
 
-### Structural JSX tags
+### Structural JSX components
 
-- `<presentation>`
-- `<slide>`
-- `<row>`
-- `<column>`
-- `<stack>`
-- `<align>`
+- `<Presentation>`
+- `<Slide>`
+- `<Row>`
+- `<Row.Start>`
+- `<Row.End>`
+- `<Column>`
+- `<Column.Start>`
+- `<Column.End>`
+- `<Stack>`
+- `<Align>`
+- `<Positioned>`
 
-### Content JSX tags
+### Content JSX components
 
-- `<textbox>`
-- `<shape preset="...">`
-- `<image ... />`
-- `<table cols=[...]>`
-- `<tr height={...}>`
-- `<td>`
-- `<ChartBar ... />`
+- `<TextBox>`
+- `<Shape preset="...">`
+- `<Image ... />`
+- `<Table cols=[...]>`
+- `<Table.Row height={...}>`
+- `<Table.Cell>`
+- `<Chart.Bar ... />`
 
-### Text JSX tags
+### Text JSX components
 
 - Raw string and number children create text directly
-- `<p>` creates an explicit paragraph
-- `gap={...}` on `textbox`, `shape`, and `td` inserts paragraph-block spacing
-- Inline tags: `<span>`, `<a href="...">`, `<b>`, `<i>`, `<u>`
+- `<Text.P>` creates an explicit paragraph
+- `gap={...}` on `TextBox`, `Shape`, and `Table.Cell` inserts paragraph-block
+  spacing
+- Inline components: `<Text.Span>`, `<Text.Link href="...">`, `<Text.Bold>`,
+  `<Text.Italic>`, `<Text.Underline>`
 
 ### Styling model
 
@@ -116,13 +132,14 @@ Full source: [`examples/quarterly-review.tsx`](./examples/quarterly-review.tsx)
 ### Placement model
 
 - `basis`, `grow`, `alignSelf`, `aspectRatio`, `w`, and `h` apply directly to
-  children inside `<row>` and `<column>`
-- `push="start"` or `push="end"` consumes remaining main-axis space around a
-  single row/column child
-- Only one pushed child is valid per `<row>` or `<column>`
-- `x`, `y`, `w`, and `h` switch a node into parent-relative absolute placement
-- Absolute children inside `<row>` and `<column>` do not consume flow space
-- `<align>` remains the explicit single-child alignment wrapper
+  children inside `<Row>` and `<Column>`
+- `<Row.Start>/<Row.End>` and `<Column.Start>/<Column.End>` express split
+  layouts without spacer or push props
+- `<Positioned x y w h>` is the explicit parent-relative absolute placement
+  wrapper
+- `<Positioned>` children inside `<Row>` and `<Column>` do not consume flow
+  space
+- `<Align>` remains the explicit single-child alignment wrapper
 - `presentation layout={...}` and `slide layout={...}` provide inherited
   defaults for slide padding, row/column gap, stack padding, and text gap
 

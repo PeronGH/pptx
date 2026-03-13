@@ -28,13 +28,18 @@ import type { Paragraph, TextRun } from "./text.ts";
 import {
   type AnyChartBarElement,
   ChartBarTag,
+  ColumnEndTag,
+  ColumnStartTag,
   Fragment,
+  type InternalTag,
   type LayoutDefaults,
   type LayoutProps,
-  type PositionableProps,
+  PositionedTag,
   type PptxChild,
   type PptxElement,
-  type PptxIntrinsicElements,
+  type PptxNonFragmentElement,
+  RowEndTag,
+  RowStartTag,
 } from "./public_types.ts";
 import {
   mergeParagraphStyles,
@@ -47,10 +52,9 @@ import {
 } from "./style.ts";
 import type { Emu } from "./types.ts";
 
-type IntrinsicTag = keyof PptxIntrinsicElements;
-type TaggedElement<Tag extends IntrinsicTag> = PptxElement<
-  Tag,
-  PptxIntrinsicElements[Tag]
+type TaggedElement<Tag extends InternalTag> = Extract<
+  PptxNonFragmentElement,
+  { readonly type: Tag }
 >;
 
 function invalidTree(message: string): never {
@@ -60,7 +64,15 @@ function invalidTree(message: string): never {
 }
 
 function invalidPushContext(tag: string): never {
-  invalidTree(`<${tag}> push can only be used inside <row> or <column>`);
+  invalidTree(
+    `<${tag}> no longer accepts push; use <Row.End> or <Column.End> instead`,
+  );
+}
+
+function invalidPositionedContext(tag: string): never {
+  invalidTree(
+    `<${tag}> no longer accepts absolute x/y/w/h props; wrap it in <Positioned> instead`,
+  );
 }
 
 function isElement(value: unknown): value is PptxElement {
@@ -74,19 +86,49 @@ function isChartBarElement(
   return element.type === ChartBarTag;
 }
 
-function isTag<Tag extends IntrinsicTag>(
+function isPositionedElement(
+  element: PptxElement,
+): element is TaggedElement<typeof PositionedTag> {
+  return element.type === PositionedTag;
+}
+
+function isRowStartElement(
+  element: PptxElement,
+): element is TaggedElement<typeof RowStartTag> {
+  return element.type === RowStartTag;
+}
+
+function isRowEndElement(
+  element: PptxElement,
+): element is TaggedElement<typeof RowEndTag> {
+  return element.type === RowEndTag;
+}
+
+function isColumnStartElement(
+  element: PptxElement,
+): element is TaggedElement<typeof ColumnStartTag> {
+  return element.type === ColumnStartTag;
+}
+
+function isColumnEndElement(
+  element: PptxElement,
+): element is TaggedElement<typeof ColumnEndTag> {
+  return element.type === ColumnEndTag;
+}
+
+function isTag<Tag extends InternalTag>(
   element: PptxElement,
   tag: Tag,
 ): element is TaggedElement<Tag> {
   return element.type === tag;
 }
 
-function expectTag<Tag extends IntrinsicTag>(
+function expectTag<Tag extends InternalTag>(
   element: PptxElement,
   tag: Tag,
 ): TaggedElement<Tag> {
   if (!isTag(element, tag)) {
-    invalidTree(`Expected <${tag}>, found <${String(element.type)}>`);
+    invalidTree(`Expected <${String(tag)}>, found <${String(element.type)}>`);
   }
   return element;
 }
@@ -422,18 +464,71 @@ function normalizeTextBlocks(
   return withResolvedTextParagraphs(paragraphs, gap);
 }
 
-function isAbsoluteFrame(
-  value: PositionableProps,
-): value is PositionableProps & {
-  readonly x: Emu;
-  readonly y: Emu;
-  readonly w: Emu;
-  readonly h: Emu;
-} {
-  return value.x !== undefined || value.y !== undefined;
+function dynamicPushOf(
+  element: PptxElement,
+): LayoutItemProps["push"] | undefined {
+  const props = element.props as Record<PropertyKey, unknown>;
+  if (props.push === "start" || props.push === "end") {
+    return props.push;
+  }
+  return undefined;
 }
 
-function pushOf(element: PptxElement): LayoutItemProps["push"] | undefined {
+function hasDynamicAbsolutePlacement(element: PptxElement): boolean {
+  const props = element.props as Record<PropertyKey, unknown>;
+  return typeof props.x === "number" || typeof props.y === "number";
+}
+
+function hasFlowLayoutProps(props: LayoutProps): boolean {
+  return props.basis !== undefined || props.grow !== undefined ||
+    props.w !== undefined || props.h !== undefined ||
+    props.alignSelf !== undefined || props.aspectRatio !== undefined;
+}
+
+function invalidPositionedChild(tag: string): never {
+  invalidTree(
+    `<Positioned> child <${tag}> cannot also use basis/grow/w/h/alignSelf/aspectRatio`,
+  );
+}
+
+function normalizePositionedElement(
+  element: TaggedElement<typeof PositionedTag>,
+  defaults: LayoutDefaults,
+): Positioned {
+  const children = nonIgnorableChildren(element.props.children);
+  if (children.length !== 1) {
+    invalidTree("<Positioned> requires exactly one child");
+  }
+  const childElement = expectElement(children[0], "Positioned");
+  const props = layoutPropsOf(childElement);
+  if (hasFlowLayoutProps(props)) {
+    invalidPositionedChild(
+      isChartBarElement(childElement) ? "Chart.Bar" : String(childElement.type),
+    );
+  }
+  const child = normalizeBaseNode(childElement, defaults);
+  return {
+    kind: "positioned",
+    x: element.props.x,
+    y: element.props.y,
+    w: element.props.w,
+    h: element.props.h,
+    child,
+  };
+}
+
+function isFlowLayoutElement(
+  element: PptxElement,
+): element is
+  | TaggedElement<"row">
+  | TaggedElement<"column">
+  | TaggedElement<"stack">
+  | TaggedElement<"align">
+  | TaggedElement<"textbox">
+  | TaggedElement<"shape">
+  | TaggedElement<"image">
+  | TaggedElement<"table">
+  | AnyChartBarElement {
   if (
     isTag(element, "row") || isTag(element, "column") ||
     isTag(element, "stack") || isTag(element, "align") ||
@@ -441,39 +536,14 @@ function pushOf(element: PptxElement): LayoutItemProps["push"] | undefined {
     isTag(element, "image") || isTag(element, "table") ||
     isChartBarElement(element)
   ) {
-    return element.props.push;
+    return true;
   }
-  return undefined;
-}
-
-function toPositioned(
-  tag: string,
-  props: PositionableProps,
-  child: LayoutNode,
-): LayoutNode | Positioned {
-  if (!isAbsoluteFrame(props)) return child;
-  if (
-    props.x === undefined || props.y === undefined ||
-    props.w === undefined || props.h === undefined
-  ) {
-    invalidTree(
-      `<${tag}> absolute placement requires x, y, w, and h together`,
-    );
-  }
-  return {
-    kind: "positioned",
-    x: props.x,
-    y: props.y,
-    w: props.w,
-    h: props.h,
-    child,
-  };
+  return false;
 }
 
 function flowLayoutProps(props: LayoutProps): LayoutItemProps | undefined {
   if (
     props.basis === undefined && props.grow === undefined &&
-    props.push === undefined &&
     props.w === undefined && props.h === undefined &&
     props.alignSelf === undefined && props.aspectRatio === undefined
   ) {
@@ -482,18 +552,11 @@ function flowLayoutProps(props: LayoutProps): LayoutItemProps | undefined {
   return {
     basis: props.basis,
     grow: props.grow,
-    push: props.push,
     w: props.w,
     h: props.h,
     alignSelf: props.alignSelf,
     aspectRatio: props.aspectRatio,
   };
-}
-
-function hasAbsoluteFlowConflict(props: LayoutProps): boolean {
-  return props.basis !== undefined || props.grow !== undefined ||
-    props.push !== undefined ||
-    props.alignSelf !== undefined || props.aspectRatio !== undefined;
 }
 
 function layoutPropsOf(element: PptxElement): LayoutProps {
@@ -527,6 +590,41 @@ function normalizeChart(props: AnyChartBarElement["props"]): BarChart {
     direction: props.direction ?? "column",
     valueAxis: props.valueAxis,
   };
+}
+
+function normalizeAxisFlowItem(
+  element: PptxElement,
+  parentTag: "row" | "col",
+  defaults: LayoutDefaults,
+): LayoutItem {
+  const node = normalizeNode(element, defaults);
+  if (node.kind === "positioned") {
+    invalidTree(
+      `<${parentTag}> flow groups cannot contain <Positioned>; place positioned children directly under <${parentTag}>`,
+    );
+  }
+  return {
+    kind: "item",
+    child: node,
+    ...(flowLayoutProps(layoutPropsOf(element)) ?? {}),
+  };
+}
+
+function normalizeAxisSlotChildren(
+  children: PptxChild,
+  parentTag: "row" | "col",
+  defaults: LayoutDefaults,
+): ReadonlyArray<LayoutItem> {
+  return nonIgnorableChildren(children).map((child) => {
+    const element = expectElement(child, `${parentTag} slot`);
+    if (
+      isRowStartElement(element) || isRowEndElement(element) ||
+      isColumnStartElement(element) || isColumnEndElement(element)
+    ) {
+      invalidTree(`<${parentTag}> slots cannot nest other layout slots`);
+    }
+    return normalizeAxisFlowItem(element, parentTag, defaults);
+  });
 }
 
 function normalizeTableCell(
@@ -663,44 +761,32 @@ function normalizeBaseNode(
 }
 
 function elementDisplayTag(element: PptxElement): string {
-  return isChartBarElement(element) ? "ChartBar" : String(element.type);
+  if (isChartBarElement(element)) return "Chart.Bar";
+  if (isPositionedElement(element)) return "Positioned";
+  if (isRowStartElement(element)) return "Row.Start";
+  if (isRowEndElement(element)) return "Row.End";
+  if (isColumnStartElement(element)) return "Column.Start";
+  if (isColumnEndElement(element)) return "Column.End";
+  return String(element.type);
 }
 
 function normalizeNode(
   element: PptxElement,
   defaults: LayoutDefaults,
-  allowPush = false,
 ): ResolvableNode {
-  if (!allowPush && pushOf(element) !== undefined) {
+  if (dynamicPushOf(element) !== undefined) {
     invalidPushContext(elementDisplayTag(element));
   }
-  if (isTag(element, "align")) {
-    return normalizeBaseNode(element, defaults);
+  if (isPositionedElement(element)) {
+    return normalizePositionedElement(element, defaults);
   }
-  const base = normalizeBaseNode(element, defaults);
-  if (isTag(element, "row")) return toPositioned("row", element.props, base);
-  if (isTag(element, "column")) {
-    return toPositioned("column", element.props, base);
+  if (
+    isFlowLayoutElement(element) && !isTag(element, "align") &&
+    hasDynamicAbsolutePlacement(element)
+  ) {
+    invalidPositionedContext(elementDisplayTag(element));
   }
-  if (isTag(element, "stack")) {
-    return toPositioned("stack", element.props, base);
-  }
-  if (isTag(element, "textbox")) {
-    return toPositioned("textbox", element.props, base);
-  }
-  if (isTag(element, "shape")) {
-    return toPositioned("shape", element.props, base);
-  }
-  if (isTag(element, "image")) {
-    return toPositioned("image", element.props, base);
-  }
-  if (isTag(element, "table")) {
-    return toPositioned("table", element.props, base);
-  }
-  if (isChartBarElement(element)) {
-    return toPositioned("ChartBar", element.props, base);
-  }
-  return base;
+  return normalizeBaseNode(element, defaults);
 }
 
 function normalizeAxisChildren(
@@ -708,24 +794,94 @@ function normalizeAxisChildren(
   parentTag: "row" | "col",
   defaults: LayoutDefaults,
 ): ReadonlyArray<LayoutItem | Positioned> {
-  return nonIgnorableChildren(children).map((child) => {
+  const normalized: Array<LayoutItem | Positioned> = [];
+  let sawDirectFlow = false;
+  let sawSlot = false;
+  let sawStart = false;
+  let sawEnd = false;
+
+  for (const child of nonIgnorableChildren(children)) {
     const element = expectElement(child, parentTag);
-    const node = normalizeNode(element, defaults, true);
-    const props = layoutPropsOf(element);
-    if (node.kind === "positioned") {
-      if (hasAbsoluteFlowConflict(props)) {
+    if (isPositionedElement(element)) {
+      normalized.push(normalizePositionedElement(element, defaults));
+      continue;
+    }
+
+    const isStart = parentTag === "row"
+      ? isRowStartElement(element)
+      : isColumnStartElement(element);
+    const isEnd = parentTag === "row"
+      ? isRowEndElement(element)
+      : isColumnEndElement(element);
+
+    if (
+      isRowStartElement(element) || isRowEndElement(element) ||
+      isColumnStartElement(element) || isColumnEndElement(element)
+    ) {
+      if (!isStart && !isEnd) {
         invalidTree(
-          `Absolute children in <${parentTag}> cannot also use basis/grow/push/alignSelf/aspectRatio`,
+          `<${parentTag}> only accepts its own slot components (${
+            parentTag === "row"
+              ? "<Row.Start>/<Row.End>"
+              : "<Column.Start>/<Column.End>"
+          })`,
         );
       }
-      return node;
+      if (sawDirectFlow) {
+        invalidTree(
+          `<${parentTag}> cannot mix direct flow children with slot groups`,
+        );
+      }
+      sawSlot = true;
+      if (isStart) {
+        if (sawStart) {
+          invalidTree(
+            `<${parentTag}> accepts at most one ${
+              parentTag === "row" ? "<Row.Start>" : "<Column.Start>"
+            }`,
+          );
+        }
+        sawStart = true;
+        normalized.push(...normalizeAxisSlotChildren(
+          element.props.children,
+          parentTag,
+          defaults,
+        ));
+        continue;
+      }
+      if (sawEnd) {
+        invalidTree(
+          `<${parentTag}> accepts at most one ${
+            parentTag === "row" ? "<Row.End>" : "<Column.End>"
+          }`,
+        );
+      }
+      sawEnd = true;
+      const endItems = [...normalizeAxisSlotChildren(
+        element.props.children,
+        parentTag,
+        defaults,
+      )];
+      if (endItems.length > 0) {
+        const first = endItems[0];
+        if (first) {
+          endItems[0] = { ...first, push: "end" };
+        }
+      }
+      normalized.push(...endItems);
+      continue;
     }
-    return {
-      kind: "item",
-      child: node,
-      ...(flowLayoutProps(props) ?? {}),
-    } satisfies LayoutItem;
-  });
+
+    if (sawSlot) {
+      invalidTree(
+        `<${parentTag}> cannot mix direct flow children with slot groups`,
+      );
+    }
+    sawDirectFlow = true;
+    normalized.push(normalizeAxisFlowItem(element, parentTag, defaults));
+  }
+
+  return normalized;
 }
 
 function normalizeStackChildren(
