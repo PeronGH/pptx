@@ -28,6 +28,8 @@ Do not add:
 ## Design constraints
 
 - Keep the library Deno-native and JSR-publishable.
+- Push correctness into the type system as far as practical so invalid states
+  are hard to represent and runtime failures stay exceptional.
 - Do not build XML with string concatenation.
 - Generate relationship IDs from the content graph.
 - Do not add external theme support.
@@ -71,6 +73,9 @@ deno publish --dry-run
 
 - Every PPTX-producing test must validate ZIP, OPC structure, `python-pptx`
   round-trip, and LibreOffice conversion.
+- Any intentional runtime throw, assertion, or type/lint suppression must carry
+  a brief justification explaining why the invariant cannot be enforced
+  statically or at the validation boundary.
 - Use `scripts/python3` for Python validation and `scripts/libreoffice` for
   LibreOffice invocation.
 - If `python-pptx`, `lxml`, LibreOffice, or rasterizer tools are missing, stop
