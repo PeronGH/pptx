@@ -1,17 +1,7 @@
 # @pixel/pptx
 
-Deno library for generating PPTX files with a declarative layout DSL that lowers
-to absolute scene nodes and then to OOXML.
-
-The public API keeps slide-building primitives at the root and groups helper
-constructors into short namespaces:
-
-- Root DSL: `presentation`, `slide`, `row`, `col`, `stack`, `align`, `item`
-- Root leaves: `textbox`, `shape`, `image`, `table`, `tr`, `td`
-- Chart constructors: `chart.*`
-- Scene escape hatch: `scene.*`
-- Helper namespaces: `bg.*`, `fill.*`, `tx.*`, `sty.*`, `u.*`, `clr.*`
-- Output: `generate()`
+Deno library for generating PPTX files with a JSX-first layout DSL that lowers
+to layout, scene, and OOXML.
 
 ## Install
 
@@ -19,122 +9,115 @@ constructors into short namespaces:
 deno add @pixel/pptx
 ```
 
+Configure Deno to use `@pixel/pptx` as the JSX import source:
+
+```json
+{
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "@pixel/pptx"
+  }
+}
+```
+
 ## Minimal Example
 
-```ts
-import {
-  align,
-  bg,
-  clr,
-  fill,
-  generate,
-  p,
-  presentation,
-  slide,
-  sty,
-  textbox,
-  tx,
-  u,
-} from "@pixel/pptx";
+```tsx
+/** @jsxImportSource @pixel/pptx */
 
-const styles = sty.create({
-  hero: sty.box({
-    fill: fill.solid(clr.hex("1F4E79")),
+import { clr, generate, u } from "@pixel/pptx";
+
+const styles = {
+  hero: {
+    fill: { kind: "solid", color: clr.hex("1F4E79") },
     verticalAlign: "middle",
     inset: u.in(0.18),
-  }),
-  heroText: sty.text({
+  },
+  heroText: {
     fontSize: u.font(28),
     fontColor: clr.hex("FFFFFF"),
     bold: true,
-  }),
-});
+  },
+};
 
-const deck = presentation(
-  { title: "Hello deck" },
-  slide(
-    {
-      background: bg.fill(
-        fill.solid(clr.hex("F7F4EE")),
-      ),
-    },
-    align(
-      { x: "center", y: "center", w: u.in(6), h: u.in(1.2) },
-      textbox(
-        { style: styles.hero },
-        p(tx.bold("Hello, world!", { style: styles.heroText })),
-      ),
-    ),
-  ),
+const deck = (
+  <presentation title="Hello deck">
+    <slide
+      background={{
+        kind: "fill",
+        fill: { kind: "solid", color: clr.hex("F7F4EE") },
+      }}
+    >
+      <align x="center" y="center" w={u.in(6)} h={u.in(1.2)}>
+        <textbox style={styles.hero}>
+          <span style={styles.heroText}>Hello, world!</span>
+        </textbox>
+      </align>
+    </slide>
+  </presentation>
 );
 
 Deno.writeFileSync("hello.pptx", generate(deck));
 ```
 
-Preview rendered from [`examples/minimal.ts`](./examples/minimal.ts).
+Preview rendered from [`examples/minimal.tsx`](./examples/minimal.tsx).
 
 ![Minimal example slide](./assets/minimal.webp)
 
 ## Showcase
 
-Full source: [`examples/quarterly-review.ts`](./examples/quarterly-review.ts)
+Full source: [`examples/quarterly-review.tsx`](./examples/quarterly-review.tsx)
 
 ![Quarterly review slide](./assets/quarterly-review.webp)
 
 ## Public API
 
-### Root builders
+### Core exports
 
-| Export                                   | Description                                         |
-| ---------------------------------------- | --------------------------------------------------- |
-| `generate(presentation)`                 | Generate a PPTX as `Uint8Array`                     |
-| `presentation(options?, ...slides)`      | Create a presentation                               |
-| `slide(props?, ...children)`             | Create a slide from layout roots and/or scene nodes |
-| `p(options?, ...runs)`                   | Create a paragraph                                  |
-| `row(props?, ...children)`               | Horizontal layout container                         |
-| `col(props?, ...children)`               | Vertical layout container                           |
-| `stack(props?, ...children)`             | Overlay container                                   |
-| `align(props, child)`                    | Align a child within a frame                        |
-| `item(props?, child)`                    | Layout wrapper for basis/grow/alignment             |
-| `textbox(options?, ...paragraphs)`       | Positionless text box leaf                          |
-| `shape(preset, options?, ...paragraphs)` | Positionless preset shape leaf                      |
-| `image(props)`                           | Positionless image leaf                             |
-| `table({ cols }, ...rows)`               | Positionless table leaf with proportional columns   |
-| `tr(height, ...cells)`                   | Table row                                           |
-| `td(options?, ...paragraphs)`            | Table cell                                          |
-| `chart.bar(options)`                     | Positionless categorical bar/column chart leaf      |
-| `scene.textbox(...)`                     | Absolute-position text box                          |
-| `scene.shape(...)`                       | Absolute-position shape                             |
-| `scene.image(...)`                       | Absolute-position image                             |
-| `scene.table(...)`                       | Absolute-position table                             |
+- `generate(<presentation>...</presentation>)`
+- `u.*` for units: `in`, `cm`, `pt`, `emu`, `font`, `pct`
+- `clr.hex(...)` for validated OOXML colors
 
-### Helper namespaces
+### Structural JSX tags
 
-| Namespace    | Members                                                   |
-| ------------ | --------------------------------------------------------- |
-| `bg`         | `fill`, `image`                                           |
-| `fill`       | `solid`, `grad`, `stop`, `none`                           |
-| `tx`         | `run`, `bold`, `italic`, `bi`, `underline`, `link`        |
-| `sty`        | `create`, `box`, `text`, `para`, `cell`, `line`, `shadow` |
-| `sty.bullet` | `char`, `num`, `none`                                     |
-| `u`          | `in`, `cm`, `pt`, `emu`, `pct`, `font`                    |
-| `clr`        | `hex`                                                     |
-| `chart`      | `bar`                                                     |
+- `<presentation>`
+- `<slide>`
+- `<row>`
+- `<column>`
+- `<stack>`
+- `<align>`
 
-### Style/data model
+### Content JSX tags
 
-- `slide()` accepts `background?: Background`
-- `sty.create(...)` returns named reusable style values with category-safe
-  typing
-- Nodes and text accept styles explicitly through `style`
-- `sty.box(...)` covers `fill`, `line`, `verticalAlign`, `inset`, `fit`,
-  `shadow`
-- `sty.cell(...)` covers `fill`, `line`, `padding`, `verticalAlign`
-- `table({ cols })` preserves column proportions and fits them to the resolved
-  table frame
-- `chart.bar(...)` takes row-object data with string category keys and number
-  value keys
-- `image(...)` and `scene.image(...)` support `fit`, `crop`, `alpha`
+- `<textbox>`
+- `<shape preset="...">`
+- `<image ... />`
+- `<table cols=[...]>`
+- `<tr height={...}>`
+- `<td>`
+- `<chart kind="bar" ... />`
+
+### Text JSX tags
+
+- Raw string and number children create text directly
+- `<p>` creates an explicit paragraph
+- `<spacer size={...} />` inserts vertical paragraph spacing
+- Inline tags: `<span>`, `<a href="...">`, `<b>`, `<i>`, `<u>`
+
+### Styling model
+
+- Style props are plain typed objects, not special builder tokens
+- `style` accepts either one style object or an array of style objects
+- Later style entries win, with nested objects merged structurally
+- Backgrounds, fills, lines, shadows, bullets, and image options are plain data
+
+### Placement model
+
+- `basis`, `grow`, `alignSelf`, `aspectRatio`, `w`, and `h` apply directly to
+  children inside `<row>` and `<column>`
+- `x`, `y`, `w`, and `h` switch a node into parent-relative absolute placement
+- Absolute children inside `<row>` and `<column>` do not consume flow space
+- `<align>` remains the explicit single-child alignment wrapper
 
 ## Validation
 

@@ -18,6 +18,8 @@ import type { Paragraph, TextRun } from "./text.ts";
 import type { Background, Presentation } from "./document.ts";
 import { resolveImageFit } from "./image_fit.ts";
 import { resolveSlideChildren } from "./layout.ts";
+import { normalizePresentation } from "./normalize.ts";
+import type { PptxElement } from "./public_types.ts";
 import type { Frame, SceneNode } from "./scene.ts";
 import type { TableCell, TableRow } from "./nodes.ts";
 import type {
@@ -399,8 +401,9 @@ function mimeToExtension(mime: string): string {
   }
 }
 
-/** Generate a PPTX file from the public presentation model. */
-export function generate(presentation: Presentation): Uint8Array {
+/** Generate a PPTX file from a JSX-authored presentation. */
+export function generate(root: PptxElement): Uint8Array {
+  const presentation: Presentation = normalizePresentation(root);
   const slideWidth = presentation.options.slideWidth ?? u.in(10);
   const slideHeight = presentation.options.slideHeight ?? u.in(7.5);
   const slideFrame = {

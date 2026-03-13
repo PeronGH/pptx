@@ -1,12 +1,12 @@
 /**
- * Flex-like layout containers and resolution into scene nodes.
+ * Layout containers and resolution into scene nodes.
  */
 
 import type { Emu } from "./types.ts";
 import type { CrossAlignment, Insets, MainAlignment } from "./style.ts";
 import type { LeafNode } from "./nodes.ts";
 import type { Frame, SceneNode } from "./scene.ts";
-import { isSceneNode, placeLeaf } from "./scene.ts";
+import { placeLeaf } from "./scene.ts";
 
 /** Layout metadata applied to a child within a row or column. */
 export interface LayoutItemProps {
@@ -49,25 +49,25 @@ export interface LayoutItem {
 /** A horizontal flex-like container. */
 export interface Row extends ContainerProps {
   readonly kind: "row";
-  readonly children: ReadonlyArray<LayoutItem>;
+  readonly children: ReadonlyArray<RowChild>;
 }
 
 /** A vertical flex-like container. */
 export interface Col extends ContainerProps {
   readonly kind: "col";
-  readonly children: ReadonlyArray<LayoutItem>;
+  readonly children: ReadonlyArray<ColChild>;
 }
 
 /** An overlay stack container. */
 export interface Stack extends StackProps {
   readonly kind: "stack";
-  readonly children: ReadonlyArray<StackChild>;
+  readonly children: ReadonlyArray<ResolvableNode>;
 }
 
 /** Align a child within its parent frame. */
 export interface Align {
   readonly kind: "align";
-  readonly child: LayoutNode;
+  readonly child: ResolvableNode;
   readonly x: AlignAxis;
   readonly y: AlignAxis;
   readonly padding?: Emu | Insets;
@@ -76,18 +76,30 @@ export interface Align {
   readonly aspectRatio?: number;
 }
 
+/** Parent-relative absolute placement. */
+export interface Positioned {
+  readonly kind: "positioned";
+  readonly x: Emu;
+  readonly y: Emu;
+  readonly w: Emu;
+  readonly h: Emu;
+  readonly child: LayoutNode;
+}
+
 /** Any layout-resolvable node. */
 export type LayoutNode = LeafNode | Row | Col | Stack | Align;
 
-/** A top-level slide child. */
-export type SlideChild = SceneNode | Row | Col | Stack | Align;
+/** Any node that can resolve into scene nodes. */
+export type ResolvableNode = LayoutNode | Positioned;
 
-type RowChild = LayoutItem | LayoutNode;
-type ColChild = LayoutItem | LayoutNode;
-type StackChild = LayoutNode | SceneNode;
+/** A top-level slide child. */
+export type SlideChild = ResolvableNode;
+
+type RowChild = LayoutItem | Positioned;
+type ColChild = LayoutItem | Positioned;
 
 function isContainerProps(
-  value: ContainerProps | RowChild,
+  value: ContainerProps | LayoutItem | Positioned | LayoutNode,
 ): value is ContainerProps {
   return typeof value === "object" && value !== null && !("kind" in value);
 }
@@ -100,11 +112,6 @@ function isLayoutItemProps(
 
 function isLayoutItem(value: LayoutNode | LayoutItem): value is LayoutItem {
   return value.kind === "item";
-}
-
-function asItem(value: LayoutNode | LayoutItem): LayoutItem {
-  if (isLayoutItem(value)) return value;
-  return { kind: "item", child: value };
 }
 
 /** Create a layout item wrapper. */
@@ -121,16 +128,36 @@ export function item(
   return { kind: "item", child: first };
 }
 
+/** Create a parent-relative absolute node. */
+export function positioned(
+  frame: Omit<Positioned, "kind" | "child">,
+  child: LayoutNode,
+): Positioned {
+  return { kind: "positioned", child, ...frame };
+}
+
+function asRowChild(value: LayoutNode | LayoutItem | Positioned): RowChild {
+  if (value.kind === "positioned") return value;
+  if (isLayoutItem(value)) return value;
+  return { kind: "item", child: value };
+}
+
+function asColChild(value: LayoutNode | LayoutItem | Positioned): ColChild {
+  if (value.kind === "positioned") return value;
+  if (isLayoutItem(value)) return value;
+  return { kind: "item", child: value };
+}
+
 /** Create a horizontal flex-like container. */
 export function row(
-  first?: ContainerProps | RowChild,
-  ...rest: ReadonlyArray<RowChild>
+  first?: ContainerProps | LayoutNode | LayoutItem | Positioned,
+  ...rest: ReadonlyArray<LayoutNode | LayoutItem | Positioned>
 ): Row {
   if (first === undefined) return { kind: "row", children: [] };
   if (isContainerProps(first)) {
     return {
       kind: "row",
-      children: rest.map(asItem),
+      children: rest.map(asRowChild),
       gap: first.gap,
       padding: first.padding,
       justify: first.justify,
@@ -139,20 +166,20 @@ export function row(
   }
   return {
     kind: "row",
-    children: [asItem(first), ...rest.map(asItem)],
+    children: [asRowChild(first), ...rest.map(asRowChild)],
   };
 }
 
 /** Create a vertical flex-like container. */
 export function col(
-  first?: ContainerProps | ColChild,
-  ...rest: ReadonlyArray<ColChild>
+  first?: ContainerProps | LayoutNode | LayoutItem | Positioned,
+  ...rest: ReadonlyArray<LayoutNode | LayoutItem | Positioned>
 ): Col {
   if (first === undefined) return { kind: "col", children: [] };
   if (isContainerProps(first)) {
     return {
       kind: "col",
-      children: rest.map(asItem),
+      children: rest.map(asColChild),
       gap: first.gap,
       padding: first.padding,
       justify: first.justify,
@@ -161,14 +188,14 @@ export function col(
   }
   return {
     kind: "col",
-    children: [asItem(first), ...rest.map(asItem)],
+    children: [asColChild(first), ...rest.map(asColChild)],
   };
 }
 
 /** Create an overlay stack container. */
 export function stack(
-  first?: StackProps | StackChild,
-  ...rest: ReadonlyArray<StackChild>
+  first?: StackProps | ResolvableNode,
+  ...rest: ReadonlyArray<ResolvableNode>
 ): Stack {
   if (first === undefined) return { kind: "stack", children: [] };
   if (
@@ -191,7 +218,7 @@ export function stack(
 /** Align a child within its parent frame. */
 export function align(
   props: Omit<Align, "kind" | "child">,
-  child: LayoutNode,
+  child: ResolvableNode,
 ): Align {
   return { kind: "align", child, ...props };
 }
@@ -204,10 +231,12 @@ interface ResolvedInsets {
 }
 
 function zeroEmu(): Emu {
-  return 0 as Emu;
+  return asEmu(0);
 }
 
 function asEmu(value: number): Emu {
+  // `Emu` is a branded number, so layout math converts plain numeric
+  // arithmetic back into the branded type at this single boundary.
   return value as Emu;
 }
 
@@ -236,12 +265,31 @@ function toInsets(padding: Emu | Insets | undefined): ResolvedInsets {
   };
 }
 
-function resolveSlideChild(
-  child: SlideChild,
+function insetFrame(frame: Frame, padding: Emu | Insets | undefined): Frame {
+  const insets = toInsets(padding);
+  return {
+    x: asEmu(frame.x + insets.left),
+    y: asEmu(frame.y + insets.top),
+    w: asEmu(Math.max(0, frame.w - insets.left - insets.right)),
+    h: asEmu(Math.max(0, frame.h - insets.top - insets.bottom)),
+  };
+}
+
+function positionedFrame(positionedNode: Positioned, frame: Frame): Frame {
+  return {
+    x: asEmu(frame.x + positionedNode.x),
+    y: asEmu(frame.y + positionedNode.y),
+    w: positionedNode.w,
+    h: positionedNode.h,
+  };
+}
+
+function resolveResolvableNode(
+  child: ResolvableNode,
   frame: Frame,
 ): ReadonlyArray<SceneNode> {
-  if (isSceneNode(child)) {
-    return [child];
+  if (child.kind === "positioned") {
+    return resolveLayoutNode(child.child, positionedFrame(child, frame));
   }
   return resolveLayoutNode(child, frame);
 }
@@ -251,7 +299,7 @@ export function resolveSlideChildren(
   children: ReadonlyArray<SlideChild>,
   frame: Frame,
 ): ReadonlyArray<SceneNode> {
-  return children.flatMap((child) => resolveSlideChild(child, frame));
+  return children.flatMap((child) => resolveResolvableNode(child, frame));
 }
 
 function resolveLayoutNode(
@@ -276,23 +324,13 @@ function resolveLayoutNode(
   }
 }
 
-function insetFrame(frame: Frame, padding: Emu | Insets | undefined): Frame {
-  const insets = toInsets(padding);
-  return {
-    x: asEmu(frame.x + insets.left),
-    y: asEmu(frame.y + insets.top),
-    w: asEmu(Math.max(0, frame.w - insets.left - insets.right)),
-    h: asEmu(Math.max(0, frame.h - insets.top - insets.bottom)),
-  };
-}
-
 function resolveStack(
   stackNode: Stack,
   frame: Frame,
 ): ReadonlyArray<SceneNode> {
   const inner = insetFrame(frame, stackNode.padding);
   return stackNode.children.flatMap((child) =>
-    isSceneNode(child) ? [child] : resolveLayoutNode(child, inner)
+    resolveResolvableNode(child, inner)
   );
 }
 
@@ -320,7 +358,7 @@ function resolveAlign(node: Align, frame: Frame): ReadonlyArray<SceneNode> {
     w: width ?? inner.w,
     h: height ?? inner.h,
   };
-  return resolveLayoutNode(node.child, rect);
+  return resolveResolvableNode(node.child, rect);
 }
 
 function alignAxis(
@@ -344,26 +382,23 @@ function resolveAxisContainer(
   container: Row | Col,
   frame: Frame,
 ): ReadonlyArray<SceneNode> {
-  const padding = toInsets(container.padding);
-  const inner: Frame = {
-    x: asEmu(frame.x + padding.left),
-    y: asEmu(frame.y + padding.top),
-    w: asEmu(Math.max(0, frame.w - padding.left - padding.right)),
-    h: asEmu(Math.max(0, frame.h - padding.top - padding.bottom)),
-  };
-
-  const items = container.children;
-  if (items.length === 0) return [];
+  const inner = insetFrame(frame, container.padding);
+  if (container.children.length === 0) return [];
 
   const gap = Number(container.gap ?? zeroEmu());
-  const gapCount = items.length > 1 ? items.length - 1 : 0;
+  const flowItems = container.children.filter((child): child is LayoutItem =>
+    child.kind !== "positioned"
+  );
+  const gapCount = flowItems.length > 1 ? flowItems.length - 1 : 0;
   const mainAvailable = Math.max(
     0,
     Number(axis === "row" ? inner.w : inner.h) - gap * gapCount,
   );
 
-  const bases = items.map((layoutItem) => Number(itemBasis(layoutItem, axis)));
-  const grows = items.map((layoutItem, index) => {
+  const bases = flowItems.map((layoutItem) =>
+    Number(itemBasis(layoutItem, axis))
+  );
+  const grows = flowItems.map((layoutItem, index) => {
     if (layoutItem.grow !== undefined) return layoutItem.grow;
     return bases[index] === 0 ? 1 : 0;
   });
@@ -372,7 +407,7 @@ function resolveAxisContainer(
   const remaining = Math.max(0, mainAvailable - fixedMain);
   const totalGrow = grows.reduce((sum, value) => sum + value, 0);
 
-  const sizes = items.map((_, index) =>
+  const sizes = flowItems.map((_, index) =>
     resolveMainSize(
       bases[index] ?? zeroEmu(),
       grows[index] ?? 0,
@@ -400,8 +435,8 @@ function resolveAxisContainer(
         cursor += freeSpace;
         break;
       case "space-between":
-        if (items.length > 1) {
-          interGap = gap + freeSpace / (items.length - 1);
+        if (flowItems.length > 1) {
+          interGap = gap + freeSpace / (flowItems.length - 1);
         }
         break;
       case "start":
@@ -409,8 +444,8 @@ function resolveAxisContainer(
     }
   }
 
-  const scenes: SceneNode[] = [];
-  for (const [index, layoutItem] of items.entries()) {
+  const flowFrames: Frame[] = [];
+  for (const [index, layoutItem] of flowItems.entries()) {
     const main = sizes[index] ?? 0;
     const rect = axis === "row"
       ? createRowItemFrame(layoutItem, inner, asEmu(cursor), asEmu(main), align)
@@ -421,8 +456,22 @@ function resolveAxisContainer(
         asEmu(main),
         align,
       );
-    scenes.push(...resolveLayoutNode(layoutItem.child, rect));
+    flowFrames.push(rect);
     cursor += main + interGap;
+  }
+
+  const scenes: SceneNode[] = [];
+  let flowIndex = 0;
+  for (const child of container.children) {
+    if (child.kind === "positioned") {
+      scenes.push(...resolveResolvableNode(child, inner));
+      continue;
+    }
+    const rect = flowFrames[flowIndex];
+    flowIndex += 1;
+    if (rect) {
+      scenes.push(...resolveLayoutNode(child.child, rect));
+    }
   }
 
   return scenes;
@@ -522,13 +571,12 @@ function createColItemFrame(
 }
 
 function resolveCrossSize(
-  mainSize: Emu,
-  explicit: Emu | undefined,
+  main: Emu,
+  explicitCross: Emu | undefined,
   aspectRatio: number | undefined,
   axis: "row" | "col",
 ): Emu | undefined {
-  if (explicit !== undefined) return explicit;
-  if (aspectRatio === undefined || aspectRatio <= 0) return undefined;
-  if (axis === "row") return (mainSize / aspectRatio) as Emu;
-  return (mainSize * aspectRatio) as Emu;
+  if (explicitCross !== undefined) return explicitCross;
+  if (aspectRatio === undefined) return undefined;
+  return axis === "row" ? asEmu(main / aspectRatio) : asEmu(main * aspectRatio);
 }

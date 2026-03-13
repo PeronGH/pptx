@@ -1,182 +1,128 @@
 /**
  * @module pptx
  *
- * A correct, well-typed Deno library for generating PPTX files.
+ * A JSX-first Deno library for generating PPTX files.
  *
- * Describe a presentation declaratively using composable functions,
- * then generate a valid Office Open XML package. Output opens in
- * LibreOffice Impress and round-trips through python-pptx.
+ * Author slides with intrinsic JSX tags, then generate a valid
+ * Office Open XML package. Output opens in LibreOffice Impress
+ * and round-trips through python-pptx.
  *
  * @example
- * ```ts
- * import {
- *   bg,
- *   clr,
- *   fill,
- *   generate,
- *   p,
- *   presentation,
- *   scene,
- *   slide,
- *   sty,
- *   tx,
- *   u,
- * } from "@pixel/pptx";
+ * ```tsx
+ * /** @jsxImportSource @pixel/pptx *\/
+ * import { clr, generate, u } from "@pixel/pptx";
  *
- * const styles = sty.create({
- *   heroBar: sty.box({ fill: fill.solid(clr.hex("17324D")) }),
- *   title: sty.text({
- *     fontSize: u.font(22),
- *     fontColor: clr.hex("FFFFFF"),
- *     bold: true,
- *   }),
- * });
- *
- * const pptx = generate(presentation(
- *   { title: "My Presentation" },
- *   slide(
- *     {
- *       background: bg.fill(
- *         fill.grad(
- *           90,
- *           fill.stop(u.pct(0), clr.hex("FFFFFF")),
- *           fill.stop(u.pct(100), clr.hex("EAF2FF")),
- *         ),
- *       ),
- *     },
- *     scene.shape("rect", {
- *       x: u.in(0.75),
- *       y: u.in(0.75),
- *       w: u.in(8.5),
- *       h: u.in(1),
- *       style: styles.heroBar,
- *     }),
- *     scene.textbox({ x: u.in(1), y: u.in(1), w: u.in(8), h: u.in(1) },
- *       p(tx.bold("Hello", { style: styles.title }), ", World!"),
- *     ),
- *   ),
- * ));
+ * const pptx = generate(
+ *   <presentation title="My Presentation">
+ *     <slide
+ *       background={{
+ *         kind: "fill",
+ *         fill: { kind: "solid", color: clr.hex("F7F4EE") },
+ *       }}
+ *     >
+ *       <shape
+ *         preset="roundRect"
+ *         x={u.in(0.75)}
+ *         y={u.in(0.75)}
+ *         w={u.in(8.5)}
+ *         h={u.in(1)}
+ *         style={{ fill: { kind: "solid", color: clr.hex("17324D") } }}
+ *       />
+ *       <textbox
+ *         x={u.in(1)}
+ *         y={u.in(1)}
+ *         w={u.in(8)}
+ *         h={u.in(1)}
+ *       >
+ *         <span
+ *           style={{
+ *             bold: true,
+ *             fontSize: u.font(22),
+ *             fontColor: clr.hex("FFFFFF"),
+ *           }}
+ *         >
+ *           Hello
+ *         </span>
+ *         , World!
+ *       </textbox>
+ *     </slide>
+ *   </presentation>,
+ * );
  *
  * Deno.writeFileSync("output.pptx", pptx);
  * ```
  */
 
-export {
-  align,
-  bg,
-  chart,
-  clr,
-  col,
-  fill,
-  generate,
-  image,
-  item,
-  p,
-  presentation,
-  row,
-  scene,
-  shape,
-  slide,
-  stack,
-  sty,
-  table,
-  td,
-  textbox,
-  tr,
-  tx,
-  u,
-} from "./src/api.ts";
+export { generate } from "./src/generate.ts";
+export { clr, u } from "./src/st.ts";
 
-// Types
+export type { Background, BackgroundImageProps } from "./src/document.ts";
+
+export type { AlignAxis } from "./src/layout.ts";
+
 export type {
-  Align,
-  AlignAxis,
   Alignment,
-  Background,
-  BackgroundImageProps,
-  BarChart,
-  BarChartOptions,
   BoxStyle,
-  BoxStyleFragment,
   BoxStyleInput,
-  BoxStyleSource,
-  BoxStyleValue,
   Bullet,
   CellStyle,
-  CellStyleFragment,
   CellStyleInput,
-  CellStyleSource,
-  CellStyleValue,
+  CropRect,
+  CrossAlignment,
+  Fill,
+  GradientStop,
+  ImageFit,
+  Insets,
+  LineDash,
+  LineStyle,
+  MainAlignment,
+  ParagraphStyle,
+  ParagraphStyleInput,
+  Shadow,
+  Spacing,
+  StyleInput,
+  TextFit,
+  TextStyle,
+  TextStyleInput,
+  VerticalAlignment,
+} from "./src/style.ts";
+
+export type {
+  BarChart,
   Chart,
   ChartBarDirection,
   ChartPoint,
   ChartValueAxis,
-  Col,
-  ContainerProps,
-  CropRect,
-  CrossAlignment,
-  Fill,
-  Frame,
-  GradientStop,
-  Image,
-  ImageFit,
-  ImageProps,
-  Insets,
-  LayoutItem,
-  LayoutItemProps,
-  LayoutNode,
-  LeafNode,
-  LineDash,
-  LineStyle,
-  MainAlignment,
-  Paragraph,
-  ParagraphContent,
-  ParagraphOptions,
-  ParagraphStyle,
-  ParagraphStyleFragment,
-  ParagraphStyleInput,
-  ParagraphStyleSource,
-  ParagraphStyleValue,
-  Presentation,
-  PresentationOptions,
-  Row,
-  SceneImage,
-  SceneImageProps,
-  SceneNode,
-  SceneShape,
-  SceneShapeProps,
-  SceneTable,
-  SceneTableProps,
-  SceneTextBox,
-  SceneTextBoxProps,
-  Shadow,
-  Shape,
-  Slide,
-  SlideChild,
-  SlideProps,
-  Spacing,
-  Stack,
-  StackProps,
-  Table,
-  TableCell,
-  TableCellOptions,
-  TableProps,
-  TableRow,
-  TextBox,
-  TextBoxOptions,
-  TextContent,
-  TextFit,
-  TextRun,
-  TextRunOptions,
-  TextStyle,
-  TextStyleFragment,
-  TextStyleInput,
-  TextStyleSource,
-  TextStyleValue,
-  VerticalAlignment,
-} from "./src/api.ts";
+} from "./src/chart.ts";
 
-// Branded value types
+export type { Paragraph, TextRun } from "./src/text.ts";
+
+export type {
+  AlignProps,
+  ChartProps,
+  ColumnProps,
+  ImageProps,
+  LayoutProps,
+  LinkProps,
+  ParagraphProps,
+  PositionableProps,
+  PptxChild,
+  PptxElement,
+  PptxIntrinsicElements,
+  PresentationProps,
+  RowProps,
+  ShapeProps,
+  SlideProps,
+  SpacerProps,
+  SpanProps,
+  StackProps,
+  TableProps,
+  TdProps,
+  TextboxProps,
+  TextTagProps,
+  TrProps,
+} from "./src/public_types.ts";
+
 export type {
   Emu,
   HexColor,

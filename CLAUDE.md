@@ -44,11 +44,17 @@ Do not add:
 ## Public API
 
 - Keep the API declarative.
+- Keep the public authoring surface JSX-first via Deno's automatic JSX runtime.
+- Do not reintroduce the old function-builder DSL publicly.
 - Prefer positionless leaves plus layout containers over absolute coordinates.
+- Use lowercase intrinsic tags for authoring; prefer `column` over `col` in the
+  public JSX surface.
 - Keep the root surface small and focused on slide-building.
-- Prefer short helper namespaces such as `bg.*`, `fill.*`, `tx.*`, `sty.*`,
-  `u.*`, and `clr.*`.
-- Keep one canonical way to access helper constructors.
+- Keep `u.*` and `clr.*` as the scalar helper namespaces; prefer plain typed
+  objects for styles and other declarative data instead of public builder
+  helpers.
+- Keep the JSX runtime contract at the package root with `./jsx-runtime` and
+  `./jsx-dev-runtime`.
 - Break the API freely when the abstraction is wrong.
 
 ## Validation
