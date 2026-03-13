@@ -205,7 +205,7 @@ Deno.test("e2e: chart and table layout", async () => {
   assertEquals(result.slides[0]?.shapes[1]?.is_table, true);
 });
 
-Deno.test("e2e: textbox spacer and inline formatting", async () => {
+Deno.test("e2e: textbox gap and inline formatting", async () => {
   const pptx = generate(
     <presentation>
       <slide>
@@ -214,12 +214,12 @@ Deno.test("e2e: textbox spacer and inline formatting", async () => {
           y={u.in(1)}
           w={u.in(6)}
           h={u.in(2.2)}
+          gap={u.in(0.12)}
           style={styles.noteCard}
         >
           <p>
             <span style={styles.heroTitle}>Q2 Strategy</span>
           </p>
-          <spacer size={u.in(0.12)} />
           <p style={styles.bullets}>
             <span style={{ fontColor: clr.hex("17324D") }}>
               Ship the pricing refresh

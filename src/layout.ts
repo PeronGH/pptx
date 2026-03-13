@@ -46,6 +46,14 @@ export interface LayoutItem {
   readonly aspectRatio?: number;
 }
 
+/** A flexible spacer in a row or column. */
+export interface Spacer {
+  readonly kind: "spacer";
+  readonly grow: number;
+  readonly min?: Emu;
+  readonly max?: Emu;
+}
+
 /** A horizontal flex-like container. */
 export interface Row extends ContainerProps {
   readonly kind: "row";
@@ -95,11 +103,11 @@ export type ResolvableNode = LayoutNode | Positioned;
 /** A top-level slide child. */
 export type SlideChild = ResolvableNode;
 
-type RowChild = LayoutItem | Positioned;
-type ColChild = LayoutItem | Positioned;
+type RowChild = LayoutItem | Positioned | Spacer;
+type ColChild = LayoutItem | Positioned | Spacer;
 
 function isContainerProps(
-  value: ContainerProps | LayoutItem | Positioned | LayoutNode,
+  value: ContainerProps | LayoutItem | Positioned | LayoutNode | Spacer,
 ): value is ContainerProps {
   return typeof value === "object" && value !== null && !("kind" in value);
 }
@@ -136,22 +144,42 @@ export function positioned(
   return { kind: "positioned", child, ...frame };
 }
 
-function asRowChild(value: LayoutNode | LayoutItem | Positioned): RowChild {
+/** Create a flex spacer for row/column layout. */
+export function spacer(
+  options?: Omit<Spacer, "kind" | "grow"> & {
+    readonly grow?: number;
+  },
+): Spacer {
+  return {
+    kind: "spacer",
+    grow: options?.grow ?? 1,
+    min: options?.min,
+    max: options?.max,
+  };
+}
+
+function asRowChild(
+  value: LayoutNode | LayoutItem | Positioned | Spacer,
+): RowChild {
   if (value.kind === "positioned") return value;
+  if (value.kind === "spacer") return value;
   if (isLayoutItem(value)) return value;
   return { kind: "item", child: value };
 }
 
-function asColChild(value: LayoutNode | LayoutItem | Positioned): ColChild {
+function asColChild(
+  value: LayoutNode | LayoutItem | Positioned | Spacer,
+): ColChild {
   if (value.kind === "positioned") return value;
+  if (value.kind === "spacer") return value;
   if (isLayoutItem(value)) return value;
   return { kind: "item", child: value };
 }
 
 /** Create a horizontal flex-like container. */
 export function row(
-  first?: ContainerProps | LayoutNode | LayoutItem | Positioned,
-  ...rest: ReadonlyArray<LayoutNode | LayoutItem | Positioned>
+  first?: ContainerProps | LayoutNode | LayoutItem | Positioned | Spacer,
+  ...rest: ReadonlyArray<LayoutNode | LayoutItem | Positioned | Spacer>
 ): Row {
   if (first === undefined) return { kind: "row", children: [] };
   if (isContainerProps(first)) {
@@ -172,8 +200,8 @@ export function row(
 
 /** Create a vertical flex-like container. */
 export function col(
-  first?: ContainerProps | LayoutNode | LayoutItem | Positioned,
-  ...rest: ReadonlyArray<LayoutNode | LayoutItem | Positioned>
+  first?: ContainerProps | LayoutNode | LayoutItem | Positioned | Spacer,
+  ...rest: ReadonlyArray<LayoutNode | LayoutItem | Positioned | Spacer>
 ): Col {
   if (first === undefined) return { kind: "col", children: [] };
   if (isContainerProps(first)) {
@@ -237,7 +265,9 @@ function zeroEmu(): Emu {
 function asEmu(value: number): Emu {
   // `Emu` is a branded number, so layout math converts plain numeric
   // arithmetic back into the branded type at this single boundary.
-  return value as Emu;
+  // OOXML coordinates and extents are integer-valued, and PowerPoint rejects
+  // fractional EMUs even when other consumers tolerate them.
+  return Math.round(value) as Emu;
 }
 
 function toInsets(padding: Emu | Insets | undefined): ResolvedInsets {
@@ -386,9 +416,10 @@ function resolveAxisContainer(
   if (container.children.length === 0) return [];
 
   const gap = Number(container.gap ?? zeroEmu());
-  const flowItems = container.children.filter((child): child is LayoutItem =>
-    child.kind !== "positioned"
-  );
+  const flowItems = container.children.filter((
+    child,
+  ): child is LayoutItem | Spacer => child.kind !== "positioned");
+
   const gapCount = flowItems.length > 1 ? flowItems.length - 1 : 0;
   const mainAvailable = Math.max(
     0,
@@ -399,23 +430,20 @@ function resolveAxisContainer(
     Number(itemBasis(layoutItem, axis))
   );
   const grows = flowItems.map((layoutItem, index) => {
+    if (layoutItem.kind === "spacer") return layoutItem.grow;
     if (layoutItem.grow !== undefined) return layoutItem.grow;
     return bases[index] === 0 ? 1 : 0;
   });
 
-  const fixedMain = bases.reduce((sum, value) => sum + value, 0);
-  const remaining = Math.max(0, mainAvailable - fixedMain);
-  const totalGrow = grows.reduce((sum, value) => sum + value, 0);
-
-  const sizes = flowItems.map((_, index) =>
-    resolveMainSize(
-      bases[index] ?? zeroEmu(),
-      grows[index] ?? 0,
-      remaining,
-      totalGrow,
-    )
+  const maxes = flowItems.map((item) =>
+    item.kind === "spacer"
+      ? Number(item.max ?? Number.POSITIVE_INFINITY)
+      : undefined
   );
 
+  const sizes = resolveMainSizes(bases, grows, maxes, mainAvailable);
+
+  const totalGrow = grows.reduce((sum, value) => sum + value, 0);
   const freeSpace = Math.max(
     0,
     mainAvailable - sizes.reduce((sum, value) => sum + value, 0),
@@ -444,10 +472,12 @@ function resolveAxisContainer(
     }
   }
 
-  const flowFrames: Frame[] = [];
+  const flowFrames: Array<Frame | undefined> = [];
   for (const [index, layoutItem] of flowItems.entries()) {
     const main = sizes[index] ?? 0;
-    const rect = axis === "row"
+    const rect = layoutItem.kind === "spacer"
+      ? undefined
+      : axis === "row"
       ? createRowItemFrame(layoutItem, inner, asEmu(cursor), asEmu(main), align)
       : createColItemFrame(
         layoutItem,
@@ -467,6 +497,10 @@ function resolveAxisContainer(
       scenes.push(...resolveResolvableNode(child, inner));
       continue;
     }
+    if (child.kind === "spacer") {
+      flowIndex += 1;
+      continue;
+    }
     const rect = flowFrames[flowIndex];
     flowIndex += 1;
     if (rect) {
@@ -477,17 +511,52 @@ function resolveAxisContainer(
   return scenes;
 }
 
-function resolveMainSize(
-  basis: number,
-  grow: number,
-  remaining: number,
-  totalGrow: number,
-): number {
-  if (grow <= 0 || totalGrow <= 0) return basis;
-  return basis + (remaining * grow / totalGrow);
+function resolveMainSizes(
+  bases: ReadonlyArray<number>,
+  grows: ReadonlyArray<number>,
+  maxes: ReadonlyArray<number | undefined>,
+  mainAvailable: number,
+): ReadonlyArray<number> {
+  const sizes = [...bases];
+  let remaining = Math.max(
+    0,
+    mainAvailable - bases.reduce((sum, value) => sum + value, 0),
+  );
+  let active = grows.map((grow, index) => ({ grow, index })).filter((item) =>
+    item.grow > 0
+  );
+
+  while (remaining > 0 && active.length > 0) {
+    const totalGrow = active.reduce((sum, item) => sum + item.grow, 0);
+    let clamped = false;
+
+    for (const item of active) {
+      const proposed = sizes[item.index]! + (remaining * item.grow / totalGrow);
+      const max = maxes[item.index];
+      if (max !== undefined && proposed > max) {
+        remaining -= max - sizes[item.index]!;
+        sizes[item.index] = max;
+        item.grow = 0;
+        clamped = true;
+      }
+    }
+
+    if (!clamped) {
+      for (const item of active) {
+        sizes[item.index] = sizes[item.index]! +
+          (remaining * item.grow / totalGrow);
+      }
+      remaining = 0;
+    }
+
+    active = active.filter((item) => item.grow > 0);
+  }
+
+  return sizes;
 }
 
-function itemBasis(item: LayoutItem, axis: "row" | "col"): Emu {
+function itemBasis(item: LayoutItem | Spacer, axis: "row" | "col"): Emu {
+  if (item.kind === "spacer") return item.min ?? zeroEmu();
   if (item.basis !== undefined) return item.basis;
   if (axis === "row") return item.w ?? zeroEmu();
   return item.h ?? zeroEmu();

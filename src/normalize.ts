@@ -14,6 +14,7 @@ import type {
   ResolvableNode,
   Row,
   SlideChild,
+  Spacer,
   Stack,
 } from "./layout.ts";
 import type {
@@ -28,6 +29,7 @@ import type { Paragraph, TextRun } from "./text.ts";
 import {
   type ChartProps,
   Fragment,
+  type LayoutDefaults,
   type LayoutProps,
   type PositionableProps,
   type PptxChild,
@@ -44,10 +46,6 @@ import {
   type TextStyle,
 } from "./style.ts";
 import type { Emu } from "./types.ts";
-
-type TextBlock =
-  | { readonly kind: "paragraph"; readonly paragraph: Paragraph }
-  | { readonly kind: "spacer"; readonly size: Emu };
 
 type IntrinsicTag = keyof PptxIntrinsicElements;
 type TaggedElement<Tag extends IntrinsicTag> = PptxElement<
@@ -113,11 +111,62 @@ function expectElement(
 function asEmu(value: number): Emu {
   // `Emu` is a branded number, so normalization only needs a single
   // cast at the arithmetic boundary where raw numeric math becomes EMU-typed.
-  return value as Emu;
+  // PowerPoint expects integer EMUs, so normalize any intermediate math.
+  return Math.round(value) as Emu;
 }
 
 function addEmu(left: Emu | undefined, right: Emu): Emu {
   return asEmu((left ?? 0) + right);
+}
+
+function mergeInsetValue(
+  base: Emu | {
+    readonly top?: Emu;
+    readonly right?: Emu;
+    readonly bottom?: Emu;
+    readonly left?: Emu;
+  } | undefined,
+  next: Emu | {
+    readonly top?: Emu;
+    readonly right?: Emu;
+    readonly bottom?: Emu;
+    readonly left?: Emu;
+  } | undefined,
+): Emu | {
+  readonly top?: Emu;
+  readonly right?: Emu;
+  readonly bottom?: Emu;
+  readonly left?: Emu;
+} | undefined {
+  if (next === undefined) {
+    if (typeof base === "number" || base === undefined) return base;
+    return { ...base };
+  }
+  if (
+    typeof next === "number" || typeof base === "number" || base === undefined
+  ) {
+    if (typeof next === "number") return next;
+    return { ...next };
+  }
+  return {
+    top: next.top ?? base.top,
+    right: next.right ?? base.right,
+    bottom: next.bottom ?? base.bottom,
+    left: next.left ?? base.left,
+  };
+}
+
+function mergeLayoutDefaults(
+  base: LayoutDefaults | undefined,
+  next: LayoutDefaults | undefined,
+): LayoutDefaults {
+  return {
+    slidePadding: mergeInsetValue(base?.slidePadding, next?.slidePadding),
+    rowGap: next?.rowGap ?? base?.rowGap,
+    columnGap: next?.columnGap ?? base?.columnGap,
+    stackPadding: mergeInsetValue(base?.stackPadding, next?.stackPadding),
+    textGap: next?.textGap ?? base?.textGap,
+  };
 }
 
 function withSpacingBefore(paragraph: Paragraph, before: Emu): Paragraph {
@@ -130,49 +179,64 @@ function withSpacingBefore(paragraph: Paragraph, before: Emu): Paragraph {
   };
 }
 
-function withSpacingAfter(paragraph: Paragraph, after: Emu): Paragraph {
-  const spacing = {
-    after: addEmu(paragraph.style?.spacing?.after, after),
-  };
+function applyTextGap(
+  paragraphs: ReadonlyArray<Paragraph>,
+  gap: Emu | undefined,
+): ReadonlyArray<Paragraph> {
+  if (gap === undefined || paragraphs.length < 2) return paragraphs;
+  return paragraphs.map((paragraph, index) => {
+    if (index === 0) return paragraph;
+    return withSpacingBefore(paragraph, gap);
+  });
+}
+
+function spacerIsLayoutOnly(parentTag: string): never {
+  throw new Error(
+    `<spacer> is layout-only and cannot be used inside <${parentTag}>; use the container's gap prop instead`,
+  );
+}
+
+function textGap(
+  localGap: Emu | undefined,
+  defaults: LayoutDefaults,
+): Emu | undefined {
+  return localGap ?? defaults.textGap;
+}
+
+function withResolvedSlideProps(
+  background: Slide["props"]["background"],
+  defaults: LayoutDefaults,
+): Slide["props"] {
   return {
-    ...paragraph,
-    style: mergeParagraphStyles(paragraph.style, { spacing }),
+    background,
+    contentPadding: defaults.slidePadding,
   };
 }
 
-function applySpacers(
-  blocks: ReadonlyArray<TextBlock>,
+function withResolvedContainerGap(
+  localGap: Emu | undefined,
+  defaults: LayoutDefaults,
+  axis: "row" | "column",
+): Emu | undefined {
+  if (localGap !== undefined) return localGap;
+  return axis === "row" ? defaults.rowGap : defaults.columnGap;
+}
+
+function withResolvedStackPadding(
+  localPadding: Stack["padding"],
+  defaults: LayoutDefaults,
+): Stack["padding"] {
+  return localPadding ?? defaults.stackPadding;
+}
+
+function withResolvedTextParagraphs(
+  paragraphs: ReadonlyArray<Paragraph>,
+  gap: Emu | undefined,
 ): ReadonlyArray<Paragraph> {
-  const paragraphs: Paragraph[] = [];
-  let pendingBefore: Emu | undefined;
-
-  for (const block of blocks) {
-    if (block.kind === "spacer") {
-      pendingBefore = addEmu(pendingBefore, block.size);
-      continue;
-    }
-
-    let paragraph = block.paragraph;
-    if (pendingBefore !== undefined) {
-      paragraph = withSpacingBefore(paragraph, pendingBefore);
-      pendingBefore = undefined;
-    }
-    paragraphs.push(paragraph);
+  if (paragraphs.length === 0) {
+    return [];
   }
-
-  if (pendingBefore !== undefined) {
-    if (paragraphs.length === 0) {
-      paragraphs.push({
-        runs: [],
-        style: { spacing: { before: pendingBefore } },
-      });
-    } else {
-      const last = paragraphs[paragraphs.length - 1]!;
-      paragraphs[paragraphs.length - 1] = withSpacingAfter(last, pendingBefore);
-    }
-  }
-
-  return paragraphs;
+  return applyTextGap(paragraphs, gap);
 }
 
 function isInlineTag(tag: unknown): tag is "span" | "a" | "b" | "i" | "u" {
@@ -304,17 +368,15 @@ function normalizeParagraphElement(element: PptxElement): Paragraph {
 function normalizeTextBlocks(
   children: PptxChild,
   parentTag: string,
+  gap: Emu | undefined,
 ): ReadonlyArray<Paragraph> {
-  const blocks: TextBlock[] = [];
+  const paragraphs: Paragraph[] = [];
   let inlineBuffer: PptxChild[] = [];
 
   const flushInlineBuffer = () => {
     if (inlineBuffer.length === 0) return;
-    blocks.push({
-      kind: "paragraph",
-      paragraph: {
-        runs: normalizeInlineChildren(inlineBuffer),
-      },
+    paragraphs.push({
+      runs: normalizeInlineChildren(inlineBuffer),
     });
     inlineBuffer = [];
   };
@@ -328,20 +390,12 @@ function normalizeTextBlocks(
     const element = expectElement(child, parentTag);
     if (element.type === "p") {
       flushInlineBuffer();
-      blocks.push({
-        kind: "paragraph",
-        paragraph: normalizeParagraphElement(element),
-      });
+      paragraphs.push(normalizeParagraphElement(element));
       continue;
     }
 
     if (element.type === "spacer") {
-      flushInlineBuffer();
-      blocks.push({
-        kind: "spacer",
-        size: expectTag(element, "spacer").props.size,
-      });
-      continue;
+      spacerIsLayoutOnly(parentTag);
     }
 
     if (isInlineTag(element.type)) {
@@ -350,14 +404,14 @@ function normalizeTextBlocks(
     }
 
     throw new Error(
-      `<${parentTag}> only accepts text, inline tags, <p>, and <spacer>; found <${
+      `<${parentTag}> only accepts text, inline tags, and <p>; found <${
         String(element.type)
       }>`,
     );
   }
 
   flushInlineBuffer();
-  return applySpacers(blocks);
+  return withResolvedTextParagraphs(paragraphs, gap);
 }
 
 function isAbsoluteFrame(
@@ -466,53 +520,66 @@ function normalizeChart(props: ChartProps): BarChart {
   };
 }
 
-function normalizeTableCell(element: PptxElement): TableCell {
+function normalizeTableCell(
+  element: PptxElement,
+  defaults: LayoutDefaults,
+): TableCell {
   const cell = expectTag(element, "td");
   const props = cell.props;
   return {
     style: resolveCellStyle(props.style),
-    paragraphs: normalizeTextBlocks(props.children, "td"),
+    paragraphs: normalizeTextBlocks(
+      props.children,
+      "td",
+      textGap(props.gap, defaults),
+    ),
   };
 }
 
-function normalizeTableRow(element: PptxElement): TableRow {
+function normalizeTableRow(
+  element: PptxElement,
+  defaults: LayoutDefaults,
+): TableRow {
   const row = expectTag(element, "tr");
   const props = row.props;
   const cells = nonIgnorableChildren(props.children).map((child) =>
-    normalizeTableCell(expectElement(child, "tr"))
+    normalizeTableCell(expectElement(child, "tr"), defaults)
   );
   return { height: props.height, cells };
 }
 
-function normalizeBaseNode(element: PptxElement): LayoutNode {
+function normalizeBaseNode(
+  element: PptxElement,
+  defaults: LayoutDefaults,
+): LayoutNode {
   if (isTag(element, "row")) {
     const props = element.props;
     return {
       kind: "row",
-      gap: props.gap,
+      gap: withResolvedContainerGap(props.gap, defaults, "row"),
       padding: props.padding,
       justify: props.justify,
       align: props.align,
-      children: normalizeAxisChildren(props.children, "row"),
+      children: normalizeAxisChildren(props.children, "row", defaults),
     } satisfies Row;
   }
   if (isTag(element, "column")) {
     const props = element.props;
     return {
       kind: "col",
-      gap: props.gap,
+      gap: withResolvedContainerGap(props.gap, defaults, "column"),
       padding: props.padding,
       justify: props.justify,
       align: props.align,
-      children: normalizeAxisChildren(props.children, "col"),
+      children: normalizeAxisChildren(props.children, "col", defaults),
     } satisfies Col;
   }
   if (isTag(element, "stack")) {
     const props = element.props;
     return {
       kind: "stack",
-      padding: props.padding,
-      children: normalizeStackChildren(props.children),
+      padding: withResolvedStackPadding(props.padding, defaults),
+      children: normalizeStackChildren(props.children, defaults),
     } satisfies Stack;
   }
   if (isTag(element, "align")) {
@@ -529,7 +596,7 @@ function normalizeBaseNode(element: PptxElement): LayoutNode {
       w: props.w,
       h: props.h,
       aspectRatio: props.aspectRatio,
-      child: normalizeNode(expectElement(children[0], "align")),
+      child: normalizeNode(expectElement(children[0], "align"), defaults),
     } satisfies Align;
   }
   if (isTag(element, "textbox")) {
@@ -537,7 +604,11 @@ function normalizeBaseNode(element: PptxElement): LayoutNode {
     return {
       kind: "textbox",
       style: resolveBoxStyle(props.style),
-      paragraphs: normalizeTextBlocks(props.children, "textbox"),
+      paragraphs: normalizeTextBlocks(
+        props.children,
+        "textbox",
+        textGap(props.gap, defaults),
+      ),
     } satisfies LeafTextBox;
   }
   if (isTag(element, "shape")) {
@@ -546,7 +617,11 @@ function normalizeBaseNode(element: PptxElement): LayoutNode {
       kind: "shape",
       preset: props.preset,
       style: resolveBoxStyle(props.style),
-      paragraphs: normalizeTextBlocks(props.children, "shape"),
+      paragraphs: normalizeTextBlocks(
+        props.children,
+        "shape",
+        textGap(props.gap, defaults),
+      ),
     } satisfies LeafShape;
   }
   if (isTag(element, "image")) {
@@ -564,7 +639,7 @@ function normalizeBaseNode(element: PptxElement): LayoutNode {
   if (isTag(element, "table")) {
     const props = element.props;
     const rows = nonIgnorableChildren(props.children).map((child) =>
-      normalizeTableRow(expectElement(child, "table"))
+      normalizeTableRow(expectElement(child, "table"), defaults)
     );
     return {
       kind: "table",
@@ -578,11 +653,14 @@ function normalizeBaseNode(element: PptxElement): LayoutNode {
   throw new Error(`Unexpected element <${String(element.type)}> in slide tree`);
 }
 
-function normalizeNode(element: PptxElement): ResolvableNode {
+function normalizeNode(
+  element: PptxElement,
+  defaults: LayoutDefaults,
+): ResolvableNode {
   if (isTag(element, "align")) {
-    return normalizeBaseNode(element);
+    return normalizeBaseNode(element, defaults);
   }
-  const base = normalizeBaseNode(element);
+  const base = normalizeBaseNode(element, defaults);
   if (isTag(element, "row")) return toPositioned("row", element.props, base);
   if (isTag(element, "column")) {
     return toPositioned("column", element.props, base);
@@ -611,10 +689,19 @@ function normalizeNode(element: PptxElement): ResolvableNode {
 function normalizeAxisChildren(
   children: PptxChild,
   parentTag: "row" | "col",
-): ReadonlyArray<LayoutItem | Positioned> {
+  defaults: LayoutDefaults,
+): ReadonlyArray<LayoutItem | Positioned | Spacer> {
   return nonIgnorableChildren(children).map((child) => {
     const element = expectElement(child, parentTag);
-    const node = normalizeNode(element);
+    if (isTag(element, "spacer")) {
+      return {
+        kind: "spacer",
+        grow: element.props.grow ?? 1,
+        min: element.props.min,
+        max: element.props.max,
+      };
+    }
+    const node = normalizeNode(element, defaults);
     const props = layoutPropsOf(element);
     if (node.kind === "positioned") {
       if (hasAbsoluteFlowConflict(props)) {
@@ -634,26 +721,32 @@ function normalizeAxisChildren(
 
 function normalizeStackChildren(
   children: PptxChild,
+  defaults: LayoutDefaults,
 ): ReadonlyArray<ResolvableNode> {
   return nonIgnorableChildren(children).map((child) =>
-    normalizeNode(expectElement(child, "stack"))
+    normalizeNode(expectElement(child, "stack"), defaults)
   );
 }
 
 function normalizeSlideChildren(
   children: PptxChild,
+  defaults: LayoutDefaults,
 ): ReadonlyArray<SlideChild> {
   return nonIgnorableChildren(children).map((child) =>
-    normalizeNode(expectElement(child, "slide"))
+    normalizeNode(expectElement(child, "slide"), defaults)
   );
 }
 
-function normalizeSlide(element: PptxElement): Slide {
+function normalizeSlide(
+  element: PptxElement,
+  inheritedDefaults: LayoutDefaults,
+): Slide {
   const slide = expectTag(element, "slide");
   const props = slide.props;
+  const defaults = mergeLayoutDefaults(inheritedDefaults, props.layout);
   return {
-    props: { background: props.background },
-    children: normalizeSlideChildren(props.children),
+    props: withResolvedSlideProps(props.background, defaults),
+    children: normalizeSlideChildren(props.children, defaults),
   };
 }
 
@@ -664,8 +757,9 @@ export function normalizePresentation(root: unknown): Presentation {
   }
 
   const props = root.props;
+  const defaults = mergeLayoutDefaults(undefined, props.layout);
   const slides = nonIgnorableChildren(props.children).map((child) =>
-    normalizeSlide(expectElement(child, "presentation"))
+    normalizeSlide(expectElement(child, "presentation"), defaults)
   );
 
   return {

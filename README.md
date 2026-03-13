@@ -77,6 +77,8 @@ Full source: [`examples/quarterly-review.tsx`](./examples/quarterly-review.tsx)
 - `generate(<presentation>...</presentation>)`
 - `u.*` for units: `in`, `cm`, `pt`, `emu`, `font`, `pct`
 - `clr.hex(...)` for validated OOXML colors
+- Inherited layout defaults through `presentation layout={...}` and
+  `slide layout={...}`
 
 ### Structural JSX tags
 
@@ -101,7 +103,8 @@ Full source: [`examples/quarterly-review.tsx`](./examples/quarterly-review.tsx)
 
 - Raw string and number children create text directly
 - `<p>` creates an explicit paragraph
-- `<spacer size={...} />` inserts vertical paragraph spacing
+- `gap={...}` on `textbox`, `shape`, and `td` inserts paragraph-block spacing
+- `<spacer />` is a flex spacer for `row` and `column`
 - Inline tags: `<span>`, `<a href="...">`, `<b>`, `<i>`, `<u>`
 
 ### Styling model
@@ -118,6 +121,8 @@ Full source: [`examples/quarterly-review.tsx`](./examples/quarterly-review.tsx)
 - `x`, `y`, `w`, and `h` switch a node into parent-relative absolute placement
 - Absolute children inside `<row>` and `<column>` do not consume flow space
 - `<align>` remains the explicit single-child alignment wrapper
+- `presentation layout={...}` and `slide layout={...}` provide inherited
+  defaults for slide padding, row/column gap, stack padding, and text gap
 
 ## Validation
 

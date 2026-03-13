@@ -15,6 +15,7 @@ export type {
   ChartProps,
   ColumnProps,
   ImageProps,
+  LayoutDefaults,
   LayoutProps,
   LinkProps,
   ParagraphProps,

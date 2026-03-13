@@ -56,13 +56,12 @@ Deno.test("inline children normalize into one implicit paragraph", () => {
   );
 });
 
-Deno.test("spacer applies paragraph spacing without adding a fake paragraph", () => {
+Deno.test("textbox gap applies paragraph spacing between paragraph blocks", () => {
   const presentation = normalizePresentation(
     <presentation>
       <slide>
-        <textbox>
+        <textbox gap={u.in(0.2)}>
           <p>Alpha</p>
-          <spacer size={u.in(0.2)} />
           <p>Beta</p>
         </textbox>
       </slide>
@@ -73,6 +72,110 @@ Deno.test("spacer applies paragraph spacing without adding a fake paragraph", ()
   assert(textbox && textbox.kind === "textbox");
   assertEquals(textbox.paragraphs.length, 2);
   assertEquals(textbox.paragraphs[1]?.style?.spacing?.before, u.in(0.2));
+});
+
+Deno.test("presentation layout defaults propagate to slides, rows, and text blocks", () => {
+  const presentation = normalizePresentation(
+    <presentation
+      layout={{
+        slidePadding: u.in(1),
+        rowGap: u.in(0.25),
+        textGap: u.in(0.1),
+      }}
+    >
+      <slide>
+        <column>
+          <textbox h={u.in(1)}>
+            <p>Alpha</p>
+            <p>Beta</p>
+          </textbox>
+          <row h={u.in(1.5)}>
+            <textbox basis={u.in(1)}>A</textbox>
+            <textbox basis={u.in(1)}>B</textbox>
+          </row>
+        </column>
+      </slide>
+    </presentation>,
+  );
+
+  const slide = presentation.slides[0];
+  assertEquals(slide?.props.contentPadding, u.in(1));
+
+  const column = slide?.children[0];
+  assert(column && column.kind === "col");
+
+  const textbox = column.children[0];
+  assert(
+    textbox && textbox.kind === "item" && textbox.child.kind === "textbox",
+  );
+  assertEquals(textbox.child.paragraphs[1]?.style?.spacing?.before, u.in(0.1));
+
+  const row = column.children[1];
+  assert(row && row.kind === "item" && row.child.kind === "row");
+  assertEquals(row.child.gap, u.in(0.25));
+});
+
+Deno.test("spacer consumes remaining space in a row", () => {
+  const presentation = normalizePresentation(
+    <presentation>
+      <slide>
+        <row>
+          <textbox basis={u.in(2)}>Left</textbox>
+          <spacer />
+          <textbox basis={u.in(2)}>Right</textbox>
+        </row>
+      </slide>
+    </presentation>,
+  );
+
+  const scenes = resolveSlideChildren(presentation.slides[0]?.children ?? [], {
+    x: u.emu(0),
+    y: u.emu(0),
+    w: u.in(10),
+    h: u.in(7.5),
+  });
+
+  assertEquals(scenes.length, 2);
+  assertEquals(sceneText(scenes[0]), "Left");
+  assertEquals(sceneText(scenes[1]), "Right");
+  assertEquals(scenes[1]?.x, u.in(8));
+});
+
+Deno.test("generated slide geometry keeps flex math in integer EMUs", () => {
+  const pptx = generate(
+    <presentation>
+      <slide>
+        <row>
+          <shape preset="rect" grow={3.05} />
+          <shape preset="rect" grow={2.3} />
+          <shape preset="rect" grow={2.9} />
+        </row>
+      </slide>
+    </presentation>,
+  );
+
+  const slideXml = extractZipText(pptx, "ppt/slides/slide1.xml");
+  assertEquals(
+    /\b(?:x|y|cx|cy)="\d+\.\d+"/.test(slideXml),
+    false,
+  );
+});
+
+Deno.test("spacer is rejected in text context", () => {
+  assertThrows(
+    () =>
+      normalizePresentation(
+        <presentation>
+          <slide>
+            <textbox>
+              <spacer />
+            </textbox>
+          </slide>
+        </presentation>,
+      ),
+    Error,
+    "layout-only",
+  );
 });
 
 Deno.test("style arrays merge left to right", () => {

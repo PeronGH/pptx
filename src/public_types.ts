@@ -47,6 +47,15 @@ export type PptxChild =
   | undefined
   | ReadonlyArray<PptxChild>;
 
+/** Inherited layout defaults for JSX authoring. */
+export interface LayoutDefaults {
+  readonly slidePadding?: Emu | Insets;
+  readonly rowGap?: Emu;
+  readonly columnGap?: Emu;
+  readonly stackPadding?: Emu | Insets;
+  readonly textGap?: Emu;
+}
+
 /** Shared row/col child sizing props. */
 export interface LayoutProps {
   readonly basis?: Emu;
@@ -72,11 +81,13 @@ export interface PresentationProps {
   readonly creator?: string;
   readonly slideWidth?: Emu;
   readonly slideHeight?: Emu;
+  readonly layout?: LayoutDefaults;
   readonly children?: PptxChild;
 }
 
 export interface SlideProps {
   readonly background?: Background;
+  readonly layout?: LayoutDefaults;
   readonly children?: PptxChild;
 }
 
@@ -110,12 +121,14 @@ export interface AlignProps extends LayoutProps {
 
 export interface TextboxProps extends PositionableProps {
   readonly style?: BoxStyleInput;
+  readonly gap?: Emu;
   readonly children?: PptxChild;
 }
 
 export interface ShapeProps extends PositionableProps {
   readonly preset: string;
   readonly style?: BoxStyleInput;
+  readonly gap?: Emu;
   readonly children?: PptxChild;
 }
 
@@ -141,6 +154,7 @@ export interface TrProps {
 
 export interface TdProps {
   readonly style?: CellStyleInput;
+  readonly gap?: Emu;
   readonly children?: PptxChild;
 }
 
@@ -165,7 +179,9 @@ export interface ParagraphProps {
 }
 
 export interface SpacerProps {
-  readonly size: Emu;
+  readonly grow?: number;
+  readonly min?: Emu;
+  readonly max?: Emu;
   readonly children?: never;
 }
 

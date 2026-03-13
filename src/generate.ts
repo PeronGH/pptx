@@ -62,6 +62,13 @@ const VALIGN_MAP: Record<VerticalAlignment, InternalVAlign> = {
   bottom: "b",
 };
 
+function asEmu(value: number): Emu {
+  // `Emu` is a branded number, so generator math converts numeric frame
+  // calculations back into the branded type at this single boundary.
+  // OOXML coordinate/extents are integer-valued and PowerPoint is strict here.
+  return Math.round(value) as Emu;
+}
+
 /** Context for assembling a slide's resources and relationships. */
 interface SlideContext {
   readonly relGen: RelationshipIdGenerator;
@@ -114,6 +121,23 @@ function toInternalInsets(
     right: inset.right,
     bottom: inset.bottom,
     left: inset.left,
+  };
+}
+
+function insetFrame(frame: Frame, padding: Emu | Insets | undefined): Frame {
+  const insets = toInternalInsets(padding);
+  if (!insets) return frame;
+  return {
+    x: asEmu(frame.x + (insets.left ?? 0)),
+    y: asEmu(frame.y + (insets.top ?? 0)),
+    w: asEmu(Math.max(
+      0,
+      frame.w - (insets.left ?? 0) - (insets.right ?? 0),
+    )),
+    h: asEmu(Math.max(
+      0,
+      frame.h - (insets.top ?? 0) - (insets.bottom ?? 0),
+    )),
   };
 }
 
@@ -414,7 +438,8 @@ export function generate(root: PptxElement): Uint8Array {
   };
 
   const slides = presentation.slides.map((slide) => {
-    const sceneNodes = resolveSlideChildren(slide.children, slideFrame);
+    const contentFrame = insetFrame(slideFrame, slide.props.contentPadding);
+    const sceneNodes = resolveSlideChildren(slide.children, contentFrame);
     const ctx = createSlideContext();
     const backgroundPicture = backgroundToPicture(
       slide.props.background,

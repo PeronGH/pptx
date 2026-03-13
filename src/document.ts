@@ -3,7 +3,7 @@
  */
 
 import type { Emu } from "./types.ts";
-import type { CropRect, Fill, ImageFit } from "./style.ts";
+import type { CropRect, Fill, ImageFit, Insets } from "./style.ts";
 import type { SlideChild } from "./layout.ts";
 
 /** Slide background image properties. */
@@ -24,6 +24,7 @@ export type Background =
 /** Slide-level props. */
 export interface SlideProps {
   readonly background?: Background;
+  readonly contentPadding?: Emu | Insets;
 }
 
 /** A slide containing layout roots and/or absolute scene nodes. */

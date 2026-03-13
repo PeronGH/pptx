@@ -73,7 +73,13 @@ const styles = {
 };
 
 export const deck = (
-  <presentation title="Quarterly Review">
+  <presentation
+    title="Quarterly Review"
+    layout={{
+      rowGap: u.in(0.3),
+      columnGap: u.in(0.35),
+    }}
+  >
     <slide
       background={{
         kind: "fill",
@@ -86,16 +92,16 @@ export const deck = (
           ],
         },
       }}
-    >
-      <column
-        padding={{
+      layout={{
+        slidePadding: {
           top: u.in(0.55),
           right: u.in(0.55),
           bottom: u.in(0.6),
           left: u.in(0.55),
-        }}
-        gap={u.in(0.35)}
-      >
+        },
+      }}
+    >
+      <column>
         <shape preset="roundRect" h={u.in(1.25)} style={styles.heroBar}>
           <p>
             <span style={styles.heroTitle}>Quarterly Review</span>
@@ -107,8 +113,8 @@ export const deck = (
           </p>
         </shape>
 
-        <row gap={u.in(0.3)} align="start" h={u.in(4.45)}>
-          <stack basis={u.in(3.05)} h={u.in(4.45)}>
+        <row align="start">
+          <stack grow={3.05}>
             <shape preset="roundRect" style={styles.card} />
             <align
               x="center"
@@ -148,7 +154,7 @@ export const deck = (
             </align>
           </stack>
 
-          <stack basis={u.in(2.3)} h={u.in(4.45)}>
+          <stack grow={2.3}>
             <shape preset="roundRect" style={styles.card} />
             <align
               x="center"
@@ -194,7 +200,7 @@ export const deck = (
             </align>
           </stack>
 
-          <stack basis={u.in(2.9)} h={u.in(4.45)}>
+          <stack grow={2.9}>
             <shape preset="roundRect" style={styles.card} />
             <align
               x="center"
@@ -203,11 +209,10 @@ export const deck = (
               w={u.in(2.58)}
               h={u.in(3)}
             >
-              <textbox>
+              <textbox gap={u.in(0.08)}>
                 <p>
                   <span style={styles.cardTitle}>Notes</span>
                 </p>
-                <spacer size={u.in(0.08)} />
                 <p style={styles.bullet}>
                   <span style={styles.body}>Highlights and next steps</span>
                 </p>
