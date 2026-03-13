@@ -104,8 +104,6 @@ Full source: [`examples/quarterly-review.tsx`](./examples/quarterly-review.tsx)
 - Raw string and number children create text directly
 - `<p>` creates an explicit paragraph
 - `gap={...}` on `textbox`, `shape`, and `td` inserts paragraph-block spacing
-- `<spacer />` is a flex spacer for `row` and `column`, and TypeScript rejects
-  it outside layout containers
 - Inline tags: `<span>`, `<a href="...">`, `<b>`, `<i>`, `<u>`
 
 ### Styling model
@@ -119,6 +117,9 @@ Full source: [`examples/quarterly-review.tsx`](./examples/quarterly-review.tsx)
 
 - `basis`, `grow`, `alignSelf`, `aspectRatio`, `w`, and `h` apply directly to
   children inside `<row>` and `<column>`
+- `push="start"` or `push="end"` consumes remaining main-axis space around a
+  single row/column child
+- Only one pushed child is valid per `<row>` or `<column>`
 - `x`, `y`, `w`, and `h` switch a node into parent-relative absolute placement
 - Absolute children inside `<row>` and `<column>` do not consume flow space
 - `<align>` remains the explicit single-child alignment wrapper

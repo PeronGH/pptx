@@ -14,7 +14,6 @@ import type {
   ResolvableNode,
   Row,
   SlideChild,
-  Spacer,
   Stack,
 } from "./layout.ts";
 import type {
@@ -58,6 +57,10 @@ function invalidTree(message: string): never {
   // Runtime validation remains for dynamic or plain-JS callers that can bypass
   // the JSX type graph. Typed TypeScript callers should fail before execution.
   throw new Error(message);
+}
+
+function invalidPushContext(tag: string): never {
+  invalidTree(`<${tag}> push can only be used inside <row> or <column>`);
 }
 
 function isElement(value: unknown): value is PptxElement {
@@ -203,12 +206,6 @@ function applyTextGap(
     if (index === 0) return paragraph;
     return withSpacingBefore(paragraph, gap);
   });
-}
-
-function spacerIsLayoutOnly(parentTag: string): never {
-  invalidTree(
-    `<spacer> is layout-only and cannot be used inside <${parentTag}>; use the container's gap prop instead`,
-  );
 }
 
 function textGap(
@@ -409,10 +406,6 @@ function normalizeTextBlocks(
       continue;
     }
 
-    if (element.type === "spacer") {
-      spacerIsLayoutOnly(parentTag);
-    }
-
     if (isInlineTag(element.type)) {
       inlineBuffer.push(element as PptxChild);
       continue;
@@ -438,6 +431,19 @@ function isAbsoluteFrame(
   readonly h: Emu;
 } {
   return value.x !== undefined || value.y !== undefined;
+}
+
+function pushOf(element: PptxElement): LayoutItemProps["push"] | undefined {
+  if (
+    isTag(element, "row") || isTag(element, "column") ||
+    isTag(element, "stack") || isTag(element, "align") ||
+    isTag(element, "textbox") || isTag(element, "shape") ||
+    isTag(element, "image") || isTag(element, "table") ||
+    isChartBarElement(element)
+  ) {
+    return element.props.push;
+  }
+  return undefined;
 }
 
 function toPositioned(
@@ -467,6 +473,7 @@ function toPositioned(
 function flowLayoutProps(props: LayoutProps): LayoutItemProps | undefined {
   if (
     props.basis === undefined && props.grow === undefined &&
+    props.push === undefined &&
     props.w === undefined && props.h === undefined &&
     props.alignSelf === undefined && props.aspectRatio === undefined
   ) {
@@ -475,6 +482,7 @@ function flowLayoutProps(props: LayoutProps): LayoutItemProps | undefined {
   return {
     basis: props.basis,
     grow: props.grow,
+    push: props.push,
     w: props.w,
     h: props.h,
     alignSelf: props.alignSelf,
@@ -484,6 +492,7 @@ function flowLayoutProps(props: LayoutProps): LayoutItemProps | undefined {
 
 function hasAbsoluteFlowConflict(props: LayoutProps): boolean {
   return props.basis !== undefined || props.grow !== undefined ||
+    props.push !== undefined ||
     props.alignSelf !== undefined || props.aspectRatio !== undefined;
 }
 
@@ -653,10 +662,18 @@ function normalizeBaseNode(
   invalidTree(`Unexpected element <${String(element.type)}> in slide tree`);
 }
 
+function elementDisplayTag(element: PptxElement): string {
+  return isChartBarElement(element) ? "ChartBar" : String(element.type);
+}
+
 function normalizeNode(
   element: PptxElement,
   defaults: LayoutDefaults,
+  allowPush = false,
 ): ResolvableNode {
+  if (!allowPush && pushOf(element) !== undefined) {
+    invalidPushContext(elementDisplayTag(element));
+  }
   if (isTag(element, "align")) {
     return normalizeBaseNode(element, defaults);
   }
@@ -690,23 +707,15 @@ function normalizeAxisChildren(
   children: PptxChild,
   parentTag: "row" | "col",
   defaults: LayoutDefaults,
-): ReadonlyArray<LayoutItem | Positioned | Spacer> {
+): ReadonlyArray<LayoutItem | Positioned> {
   return nonIgnorableChildren(children).map((child) => {
     const element = expectElement(child, parentTag);
-    if (isTag(element, "spacer")) {
-      return {
-        kind: "spacer",
-        grow: element.props.grow ?? 1,
-        min: element.props.min,
-        max: element.props.max,
-      };
-    }
-    const node = normalizeNode(element, defaults);
+    const node = normalizeNode(element, defaults, true);
     const props = layoutPropsOf(element);
     if (node.kind === "positioned") {
       if (hasAbsoluteFlowConflict(props)) {
         invalidTree(
-          `Absolute children in <${parentTag}> cannot also use basis/grow/alignSelf/aspectRatio`,
+          `Absolute children in <${parentTag}> cannot also use basis/grow/push/alignSelf/aspectRatio`,
         );
       }
       return node;

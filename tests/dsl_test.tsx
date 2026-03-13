@@ -4,6 +4,7 @@ import { assert } from "@std/assert/assert";
 import { assertEquals } from "@std/assert/equals";
 import { assertThrows } from "@std/assert/throws";
 import { ChartBar, clr, generate, u } from "../mod.ts";
+import { jsx } from "../src/jsx_runtime.ts";
 import { resolveSlideChildren } from "../src/layout.ts";
 import { normalizePresentation } from "../src/normalize.ts";
 import type { SceneTextBox } from "../src/scene.ts";
@@ -115,13 +116,37 @@ Deno.test("presentation layout defaults propagate to slides, rows, and text bloc
   assertEquals(row.child.gap, u.in(0.25));
 });
 
-Deno.test("spacer consumes remaining space in a row", () => {
+Deno.test("push=end consumes remaining space before a row child", () => {
   const presentation = normalizePresentation(
     <presentation>
       <slide>
         <row>
           <textbox basis={u.in(2)}>Left</textbox>
-          <spacer />
+          <textbox basis={u.in(2)} push="end">Right</textbox>
+        </row>
+      </slide>
+    </presentation>,
+  );
+
+  const scenes = resolveSlideChildren(presentation.slides[0]?.children ?? [], {
+    x: u.emu(0),
+    y: u.emu(0),
+    w: u.in(10),
+    h: u.in(7.5),
+  });
+
+  assertEquals(scenes.length, 2);
+  assertEquals(sceneText(scenes[0]), "Left");
+  assertEquals(sceneText(scenes[1]), "Right");
+  assertEquals(scenes[1]?.x, u.in(8));
+});
+
+Deno.test("push=start consumes remaining space after a row child", () => {
+  const presentation = normalizePresentation(
+    <presentation>
+      <slide>
+        <row>
+          <textbox basis={u.in(2)} push="start">Left</textbox>
           <textbox basis={u.in(2)}>Right</textbox>
         </row>
       </slide>
@@ -220,6 +245,66 @@ Deno.test("absolute children in row resolve without consuming flow space", () =>
   const overlay = scenes[1];
   assert(overlay);
   assertEquals(overlay.x, u.in(1));
+});
+
+Deno.test("multiple pushed children in a row are rejected", () => {
+  assertThrows(
+    () =>
+      generate(
+        <presentation>
+          <slide>
+            <row>
+              <textbox basis={u.in(2)} push="end">Left</textbox>
+              <textbox basis={u.in(2)} push="start">Right</textbox>
+            </row>
+          </slide>
+        </presentation>,
+      ),
+    Error,
+    "at most one pushed child",
+  );
+});
+
+Deno.test("push is rejected outside row and column for dynamic callers", () => {
+  assertThrows(
+    () =>
+      generate(
+        <presentation>
+          <slide>
+            {jsx("textbox", {
+              push: "end",
+              children: "Oops",
+            } as never)}
+          </slide>
+        </presentation>,
+      ),
+    Error,
+    "push can only be used inside <row> or <column>",
+  );
+});
+
+Deno.test("push is rejected on absolute children for dynamic callers", () => {
+  assertThrows(
+    () =>
+      generate(
+        <presentation>
+          <slide>
+            <row>
+              {jsx("textbox", {
+                x: u.in(1),
+                y: u.in(1),
+                w: u.in(1),
+                h: u.in(1),
+                push: "end",
+                children: "Oops",
+              } as never)}
+            </row>
+          </slide>
+        </presentation>,
+      ),
+    Error,
+    "basis/grow/push/alignSelf/aspectRatio",
+  );
 });
 
 Deno.test("ChartBar component normalizes a bar chart leaf", () => {

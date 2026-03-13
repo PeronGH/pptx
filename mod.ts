@@ -59,7 +59,7 @@ export { clr, u } from "./src/st.ts";
 
 export type { Background, BackgroundImageProps } from "./src/document.ts";
 
-export type { AlignAxis } from "./src/layout.ts";
+export type { AlignAxis, Push } from "./src/layout.ts";
 
 export type {
   Alignment,
@@ -115,7 +115,6 @@ export type {
   RowProps,
   ShapeProps,
   SlideProps,
-  SpacerProps,
   SpanProps,
   StackProps,
   TableProps,

@@ -3,7 +3,7 @@
  */
 
 import type { Background } from "./document.ts";
-import type { AlignAxis } from "./layout.ts";
+import type { AlignAxis, Push } from "./layout.ts";
 import type { Emu, HexColor } from "./types.ts";
 import type {
   BoxStyleInput,
@@ -61,6 +61,7 @@ export interface LayoutDefaults {
 export interface LayoutProps {
   readonly basis?: Emu;
   readonly grow?: number;
+  readonly push?: Push;
   readonly alignSelf?: CrossAlignment;
   readonly aspectRatio?: number;
   readonly w?: Emu;
@@ -83,6 +84,7 @@ export interface AbsoluteFrameProps {
 type AbsolutePositionableProps = AbsoluteFrameProps & {
   readonly basis?: never;
   readonly grow?: never;
+  readonly push?: never;
   readonly alignSelf?: never;
   readonly aspectRatio?: never;
 };
@@ -192,13 +194,6 @@ export interface ParagraphProps {
   readonly children?: PptxChild;
 }
 
-export interface SpacerProps {
-  readonly grow?: number;
-  readonly min?: Emu;
-  readonly max?: Emu;
-  readonly children?: never;
-}
-
 export interface SpanProps {
   readonly style?: TextStyleInput;
   readonly children?: PptxChild;
@@ -265,7 +260,6 @@ export type TableElement = PptxElement<"table", TableProps>;
 export type TrElement = PptxElement<"tr", TrProps>;
 export type TdElement = PptxElement<"td", TdProps>;
 export type ParagraphElement = PptxElement<"p", ParagraphProps>;
-export type SpacerElement = PptxElement<"spacer", SpacerProps>;
 export type SpanElement = PptxElement<"span", SpanProps>;
 export type LinkElement = PptxElement<"a", LinkProps>;
 export type BoldElement = PptxElement<"b", TextTagProps>;
@@ -313,7 +307,6 @@ export type PptxNonFragmentElement =
   | TrElement
   | TdElement
   | ParagraphElement
-  | SpacerElement
   | SpanElement
   | LinkElement
   | BoldElement
@@ -351,7 +344,6 @@ export interface PptxIntrinsicElements {
   readonly tr: TrProps;
   readonly td: TdProps;
   readonly p: ParagraphProps;
-  readonly spacer: SpacerProps;
   readonly span: SpanProps;
   readonly a: LinkProps;
   readonly b: TextTagProps;
@@ -374,6 +366,7 @@ export type {
   LineStyle,
   MainAlignment,
   ParagraphStyleInput,
+  Push,
   Shadow,
   StyleInput,
   TextFit,

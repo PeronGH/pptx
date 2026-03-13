@@ -8,10 +8,13 @@ import type { LeafNode } from "./nodes.ts";
 import type { Frame, SceneNode } from "./scene.ts";
 import { placeLeaf } from "./scene.ts";
 
+export type Push = "start" | "end";
+
 /** Layout metadata applied to a child within a row or column. */
 export interface LayoutItemProps {
   readonly basis?: Emu;
   readonly grow?: number;
+  readonly push?: Push;
   readonly w?: Emu;
   readonly h?: Emu;
   readonly alignSelf?: CrossAlignment;
@@ -40,18 +43,11 @@ export interface LayoutItem {
   readonly child: LayoutNode;
   readonly basis?: Emu;
   readonly grow?: number;
+  readonly push?: Push;
   readonly w?: Emu;
   readonly h?: Emu;
   readonly alignSelf?: CrossAlignment;
   readonly aspectRatio?: number;
-}
-
-/** A flexible spacer in a row or column. */
-export interface Spacer {
-  readonly kind: "spacer";
-  readonly grow: number;
-  readonly min?: Emu;
-  readonly max?: Emu;
 }
 
 /** A horizontal flex-like container. */
@@ -103,11 +99,11 @@ export type ResolvableNode = LayoutNode | Positioned;
 /** A top-level slide child. */
 export type SlideChild = ResolvableNode;
 
-type RowChild = LayoutItem | Positioned | Spacer;
-type ColChild = LayoutItem | Positioned | Spacer;
+type RowChild = LayoutItem | Positioned;
+type ColChild = LayoutItem | Positioned;
 
 function isContainerProps(
-  value: ContainerProps | LayoutItem | Positioned | LayoutNode | Spacer,
+  value: ContainerProps | LayoutItem | Positioned | LayoutNode,
 ): value is ContainerProps {
   return typeof value === "object" && value !== null && !("kind" in value);
 }
@@ -155,42 +151,26 @@ export function positioned(
   return { kind: "positioned", child, ...frame };
 }
 
-/** Create a flex spacer for row/column layout. */
-export function spacer(
-  options?: Omit<Spacer, "kind" | "grow"> & {
-    readonly grow?: number;
-  },
-): Spacer {
-  return {
-    kind: "spacer",
-    grow: options?.grow ?? 1,
-    min: options?.min,
-    max: options?.max,
-  };
-}
-
 function asRowChild(
-  value: LayoutNode | LayoutItem | Positioned | Spacer,
+  value: LayoutNode | LayoutItem | Positioned,
 ): RowChild {
   if (value.kind === "positioned") return value;
-  if (value.kind === "spacer") return value;
   if (isLayoutItem(value)) return value;
   return { kind: "item", child: value };
 }
 
 function asColChild(
-  value: LayoutNode | LayoutItem | Positioned | Spacer,
+  value: LayoutNode | LayoutItem | Positioned,
 ): ColChild {
   if (value.kind === "positioned") return value;
-  if (value.kind === "spacer") return value;
   if (isLayoutItem(value)) return value;
   return { kind: "item", child: value };
 }
 
 /** Create a horizontal flex-like container. */
 export function row(
-  first?: ContainerProps | LayoutNode | LayoutItem | Positioned | Spacer,
-  ...rest: ReadonlyArray<LayoutNode | LayoutItem | Positioned | Spacer>
+  first?: ContainerProps | LayoutNode | LayoutItem | Positioned,
+  ...rest: ReadonlyArray<LayoutNode | LayoutItem | Positioned>
 ): Row {
   if (first === undefined) return { kind: "row", children: [] };
   if (isContainerProps(first)) {
@@ -211,8 +191,8 @@ export function row(
 
 /** Create a vertical flex-like container. */
 export function col(
-  first?: ContainerProps | LayoutNode | LayoutItem | Positioned | Spacer,
-  ...rest: ReadonlyArray<LayoutNode | LayoutItem | Positioned | Spacer>
+  first?: ContainerProps | LayoutNode | LayoutItem | Positioned,
+  ...rest: ReadonlyArray<LayoutNode | LayoutItem | Positioned>
 ): Col {
   if (first === undefined) return { kind: "col", children: [] };
   if (isContainerProps(first)) {
@@ -429,7 +409,7 @@ function resolveAxisContainer(
   const gap = Number(container.gap ?? zeroEmu());
   const flowItems = container.children.filter((
     child,
-  ): child is LayoutItem | Spacer => child.kind !== "positioned");
+  ): child is LayoutItem => child.kind !== "positioned");
 
   const gapCount = flowItems.length > 1 ? flowItems.length - 1 : 0;
   const mainAvailable = Math.max(
@@ -441,18 +421,12 @@ function resolveAxisContainer(
     Number(itemBasis(layoutItem, axis))
   );
   const grows = flowItems.map((layoutItem, index) => {
-    if (layoutItem.kind === "spacer") return layoutItem.grow;
     if (layoutItem.grow !== undefined) return layoutItem.grow;
     return bases[index] === 0 ? 1 : 0;
   });
 
-  const maxes = flowItems.map((item) =>
-    item.kind === "spacer"
-      ? Number(item.max ?? Number.POSITIVE_INFINITY)
-      : undefined
-  );
-
-  const sizes = resolveMainSizes(bases, grows, maxes, mainAvailable);
+  const sizes = resolveMainSizes(bases, grows, mainAvailable);
+  const pushAnchor = resolvePushAnchor(axis, flowItems);
 
   const totalGrow = grows.reduce((sum, value) => sum + value, 0);
   const freeSpace = Math.max(
@@ -465,7 +439,7 @@ function resolveAxisContainer(
   let cursor = Number(axis === "row" ? inner.x : inner.y);
   let interGap = gap;
 
-  if (totalGrow === 0) {
+  if (!pushAnchor && totalGrow === 0) {
     switch (justify) {
       case "center":
         cursor += freeSpace / 2;
@@ -485,10 +459,11 @@ function resolveAxisContainer(
 
   const flowFrames: Array<Frame | undefined> = [];
   for (const [index, layoutItem] of flowItems.entries()) {
+    if (pushAnchor?.index === index && pushAnchor.mode === "end") {
+      cursor += freeSpace;
+    }
     const main = sizes[index] ?? 0;
-    const rect = layoutItem.kind === "spacer"
-      ? undefined
-      : axis === "row"
+    const rect = axis === "row"
       ? createRowItemFrame(layoutItem, inner, asEmu(cursor), asEmu(main), align)
       : createColItemFrame(
         layoutItem,
@@ -499,6 +474,9 @@ function resolveAxisContainer(
       );
     flowFrames.push(rect);
     cursor += main + interGap;
+    if (pushAnchor?.index === index && pushAnchor.mode === "start") {
+      cursor += freeSpace;
+    }
   }
 
   const scenes: SceneNode[] = [];
@@ -506,10 +484,6 @@ function resolveAxisContainer(
   for (const child of container.children) {
     if (child.kind === "positioned") {
       scenes.push(...resolveResolvableNode(child, inner));
-      continue;
-    }
-    if (child.kind === "spacer") {
-      flowIndex += 1;
       continue;
     }
     const rect = flowFrames[flowIndex];
@@ -525,49 +499,39 @@ function resolveAxisContainer(
 function resolveMainSizes(
   bases: ReadonlyArray<number>,
   grows: ReadonlyArray<number>,
-  maxes: ReadonlyArray<number | undefined>,
   mainAvailable: number,
 ): ReadonlyArray<number> {
   const sizes = [...bases];
-  let remaining = Math.max(
+  const remaining = Math.max(
     0,
     mainAvailable - bases.reduce((sum, value) => sum + value, 0),
   );
-  let active = grows.map((grow, index) => ({ grow, index })).filter((item) =>
-    item.grow > 0
-  );
-
-  while (remaining > 0 && active.length > 0) {
-    const totalGrow = active.reduce((sum, item) => sum + item.grow, 0);
-    let clamped = false;
-
-    for (const item of active) {
-      const proposed = sizes[item.index]! + (remaining * item.grow / totalGrow);
-      const max = maxes[item.index];
-      if (max !== undefined && proposed > max) {
-        remaining -= max - sizes[item.index]!;
-        sizes[item.index] = max;
-        item.grow = 0;
-        clamped = true;
-      }
-    }
-
-    if (!clamped) {
-      for (const item of active) {
-        sizes[item.index] = sizes[item.index]! +
-          (remaining * item.grow / totalGrow);
-      }
-      remaining = 0;
-    }
-
-    active = active.filter((item) => item.grow > 0);
+  const totalGrow = grows.reduce((sum, value) => sum + value, 0);
+  if (remaining === 0 || totalGrow === 0) {
+    return sizes;
   }
 
+  for (const [index, grow] of grows.entries()) {
+    if (grow <= 0) continue;
+    sizes[index] = sizes[index]! + (remaining * grow / totalGrow);
+  }
   return sizes;
 }
 
-function itemBasis(item: LayoutItem | Spacer, axis: "row" | "col"): Emu {
-  if (item.kind === "spacer") return item.min ?? zeroEmu();
+function resolvePushAnchor(
+  axis: "row" | "col",
+  flowItems: ReadonlyArray<LayoutItem>,
+): { readonly index: number; readonly mode: Push } | undefined {
+  const pushedItems = flowItems.flatMap((item, index) =>
+    item.push === undefined ? [] : [{ index, mode: item.push }]
+  );
+  if (pushedItems.length > 1) {
+    invalidLayout(`<${axis}> accepts at most one pushed child`);
+  }
+  return pushedItems[0];
+}
+
+function itemBasis(item: LayoutItem, axis: "row" | "col"): Emu {
   if (item.basis !== undefined) return item.basis;
   if (axis === "row") return item.w ?? zeroEmu();
   return item.h ?? zeroEmu();

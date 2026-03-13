@@ -7,6 +7,11 @@ const pipeline = [
 ] as const;
 
 void (
+  // @ts-expect-error Spacer is not part of the public JSX API
+  <spacer />
+);
+
+void (
   // @ts-expect-error Absolute placement requires x, y, w, and h together
   <textbox x={u.in(1)} y={u.in(1)}>
     Partial frame
@@ -20,6 +25,20 @@ void (
 
 
         <textbox x={u.in(1)} y={u.in(1)} w={u.in(1)} h={u.in(1)} grow={1}>
+          Conflict
+        </textbox>
+
+    }
+  </row>
+);
+
+void (
+  <row>
+    {
+      // @ts-expect-error Absolute placement cannot also use push
+
+
+        <textbox x={u.in(1)} y={u.in(1)} w={u.in(1)} h={u.in(1)} push="end">
           Conflict
         </textbox>
 

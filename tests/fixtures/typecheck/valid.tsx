@@ -12,10 +12,10 @@ const deck = (
     <slide>
       <row>
         <textbox basis={u.in(2)}>Left</textbox>
-        <spacer min={u.in(0.25)} />
         <ChartBar
           basis={u.in(3)}
           h={u.in(2)}
+          push="end"
           data={pipeline}
           category="quarter"
           value="amount"

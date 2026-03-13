@@ -52,8 +52,8 @@ Do not add:
   defaults, and intrinsic non-text metadata, but do not add text-measurement
   heuristics that try to predict Office wrapping/autofit.
 - Prefer positionless leaves plus layout containers over absolute coordinates.
-- Treat `Spacer` as layout-only. Use text container `gap` and paragraph spacing
-  for text flow instead of reusing `Spacer` inside text content.
+- Use child `push` in `row`/`column` for split layouts and remaining main-axis
+  space; use text container `gap` and paragraph spacing for text flow.
 - Keep the root surface small and focused on slide-building.
 - Prefer plain typed objects for styles and other declarative data instead of
   public builder helpers.
