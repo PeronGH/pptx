@@ -14,7 +14,7 @@ import {
 const heroStyle = {
   fill: { kind: "solid", color: clr.hex("1F4E79") },
   verticalAlign: "middle",
-  inset: u.in(0.18),
+  padding: u.in(0.18),
   fontSize: u.font(28),
   fontColor: clr.hex("FFFFFF"),
   bold: true,

@@ -23,7 +23,7 @@ import {
 const styles = {
   heroBar: {
     fill: { kind: "solid", color: clr.hex("1F4E79") },
-    inset: {
+    padding: {
       top: u.in(0.18),
       right: u.in(0.28),
       bottom: u.in(0.18),
@@ -41,7 +41,7 @@ const styles = {
   } satisfies TextStyle,
   card: {
     fill: { kind: "solid", color: clr.hex("FFFFFF") },
-    inset: u.in(0.14),
+    padding: u.in(0.14),
     shadow: {
       color: clr.hex("000000"),
       blur: u.emu(12000),

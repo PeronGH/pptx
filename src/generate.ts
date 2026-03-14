@@ -110,17 +110,17 @@ function toInternalLine(line: LineStyle): InternalLine {
 }
 
 function toInternalInsets(
-  inset: Emu | Insets | undefined,
+  padding: Emu | Insets | undefined,
 ): InternalInsets | undefined {
-  if (inset === undefined) return undefined;
-  if (typeof inset === "number") {
-    return { top: inset, right: inset, bottom: inset, left: inset };
+  if (padding === undefined) return undefined;
+  if (typeof padding === "number") {
+    return { top: padding, right: padding, bottom: padding, left: padding };
   }
   return {
-    top: inset.top,
-    right: inset.right,
-    bottom: inset.bottom,
-    left: inset.left,
+    top: padding.top,
+    right: padding.right,
+    bottom: padding.bottom,
+    left: padding.left,
   };
 }
 
@@ -314,7 +314,7 @@ function toInternalShape(
         verticalAlignment: node.style?.verticalAlign
           ? VALIGN_MAP[node.style.verticalAlign]
           : undefined,
-        inset: toInternalInsets(node.style?.inset),
+        padding: toInternalInsets(node.style?.padding),
         fit: toInternalTextFit(node.style?.fit),
         shadow: toInternalShadow(node.style?.shadow),
       };
@@ -334,7 +334,7 @@ function toInternalShape(
         verticalAlignment: node.style?.verticalAlign
           ? VALIGN_MAP[node.style.verticalAlign]
           : undefined,
-        inset: toInternalInsets(node.style?.inset),
+        padding: toInternalInsets(node.style?.padding),
         fit: toInternalTextFit(node.style?.fit),
         shadow: toInternalShadow(node.style?.shadow),
       };

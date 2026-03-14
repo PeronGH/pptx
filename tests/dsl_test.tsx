@@ -215,7 +215,7 @@ Deno.test("style arrays merge left to right", () => {
           style={[
             {
               fill: { kind: "solid", color: clr.hex("FFEECC") },
-              inset: u.in(0.1),
+              padding: u.in(0.1),
             },
             {
               line: { width: u.emu(12700), dash: "dash" },
@@ -234,7 +234,7 @@ Deno.test("style arrays merge left to right", () => {
   assertEquals(textbox.style?.fill?.kind, "solid");
   assertEquals(textbox.style?.line?.dash, "dash");
   assertEquals(textbox.style?.fit, "shrink-text");
-  assertEquals(textbox.style?.inset, u.in(0.1));
+  assertEquals(textbox.style?.padding, u.in(0.1));
 });
 
 Deno.test("positioned children in a row resolve without consuming flow space", () => {

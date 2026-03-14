@@ -43,7 +43,7 @@ const styles = {
       angle: 50,
       alpha: u.pct(20),
     },
-    inset: u.in(0.1),
+    padding: u.in(0.1),
   } satisfies BoxStyle,
   bullets: {
     bullet: { kind: "char", char: "•" },

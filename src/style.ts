@@ -82,7 +82,7 @@ export interface CropRect {
 /** Image fit behavior within an allocated frame. */
 export type ImageFit = "contain" | "cover" | "stretch";
 
-/** Padding or inset values in EMUs. */
+/** Padding values in EMUs. */
 export interface Insets {
   readonly top?: Emu;
   readonly right?: Emu;
@@ -113,7 +113,7 @@ export interface BoxStyle {
   readonly fill?: Fill;
   readonly line?: LineStyle;
   readonly verticalAlign?: VerticalAlignment;
-  readonly inset?: Emu | Insets;
+  readonly padding?: Emu | Insets;
   readonly fit?: TextFit;
   readonly shadow?: Shadow;
 }
@@ -263,7 +263,7 @@ function mergeBoxDefinitions(
       fill: mergeFill(merged.fill, definition.fill),
       line: mergeLineStyle(merged.line, definition.line),
       verticalAlign: definition.verticalAlign ?? merged.verticalAlign,
-      inset: mergeInsets(merged.inset, definition.inset),
+      padding: mergeInsets(merged.padding, definition.padding),
       fit: definition.fit ?? merged.fit,
       shadow: mergeShadow(merged.shadow, definition.shadow),
     };
@@ -379,7 +379,7 @@ export function resolveTextContainerStyle(
       fill: mergeFill(merged.fill, entry.fill),
       line: mergeLineStyle(merged.line, entry.line),
       verticalAlign: entry.verticalAlign ?? merged.verticalAlign,
-      inset: mergeInsets(merged.inset, entry.inset),
+      padding: mergeInsets(merged.padding, entry.padding),
       fit: entry.fit ?? merged.fit,
       shadow: mergeShadow(merged.shadow, entry.shadow),
       level: entry.level ?? merged.level,
@@ -411,7 +411,7 @@ export function splitTextContainerStyle(
   if (!style) return { box: undefined, paragraph: undefined, text: undefined };
 
   const hasBox = style.fill !== undefined || style.line !== undefined ||
-    style.verticalAlign !== undefined || style.inset !== undefined ||
+    style.verticalAlign !== undefined || style.padding !== undefined ||
     style.fit !== undefined || style.shadow !== undefined;
   const hasParagraph = style.level !== undefined ||
     style.align !== undefined || style.bullet !== undefined ||
@@ -426,7 +426,7 @@ export function splitTextContainerStyle(
         fill: style.fill,
         line: style.line,
         verticalAlign: style.verticalAlign,
-        inset: style.inset,
+        padding: style.padding,
         fit: style.fit,
         shadow: style.shadow,
       }

@@ -145,7 +145,7 @@ export interface TextBoxShape {
   readonly fill?: Fill;
   readonly line?: LineProperties;
   readonly verticalAlignment?: VerticalAlignment;
-  readonly inset?: Insets;
+  readonly padding?: Insets;
   readonly fit?: TextFit;
   readonly shadow?: Shadow;
 }
@@ -162,7 +162,7 @@ export interface PresetShape {
   readonly fill?: Fill;
   readonly line?: LineProperties;
   readonly verticalAlignment?: VerticalAlignment;
-  readonly inset?: Insets;
+  readonly padding?: Insets;
   readonly fit?: TextFit;
   readonly shadow?: Shadow;
 }
@@ -406,15 +406,15 @@ function renderTextFit(
 
 function renderBodyPr(
   attrs: Record<string, string>,
-  inset: Insets | undefined,
+  padding: Insets | undefined,
   fit: TextFit | undefined,
   defaultFit?: TextFit,
 ): XmlElement {
   const bodyAttrs: Record<string, string> = { ...attrs };
-  if (inset?.left !== undefined) bodyAttrs["lIns"] = String(inset.left);
-  if (inset?.right !== undefined) bodyAttrs["rIns"] = String(inset.right);
-  if (inset?.top !== undefined) bodyAttrs["tIns"] = String(inset.top);
-  if (inset?.bottom !== undefined) bodyAttrs["bIns"] = String(inset.bottom);
+  if (padding?.left !== undefined) bodyAttrs["lIns"] = String(padding.left);
+  if (padding?.right !== undefined) bodyAttrs["rIns"] = String(padding.right);
+  if (padding?.top !== undefined) bodyAttrs["tIns"] = String(padding.top);
+  if (padding?.bottom !== undefined) bodyAttrs["bIns"] = String(padding.bottom);
   return el("a:bodyPr", bodyAttrs, renderTextFit(fit, defaultFit));
 }
 
@@ -455,7 +455,7 @@ function renderTextBoxSp(id: number, shape: TextBoxShape): XmlElement {
     el(
       "p:txBody",
       {},
-      renderBodyPr(bodyPrAttrs, shape.inset, shape.fit, "resize-shape"),
+      renderBodyPr(bodyPrAttrs, shape.padding, shape.fit, "resize-shape"),
       el("a:lstStyle", {}),
       ...shape.paragraphs.map(renderParagraph),
     ),
@@ -524,7 +524,7 @@ function renderPresetSp(id: number, shape: PresetShape): XmlElement {
       el(
         "p:txBody",
         {},
-        renderBodyPr(bodyPrAttrs, shape.inset, shape.fit),
+        renderBodyPr(bodyPrAttrs, shape.padding, shape.fit),
         el("a:lstStyle", {}),
         ...paragraphs.map(renderParagraph),
       ),
