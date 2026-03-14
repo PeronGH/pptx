@@ -57,6 +57,10 @@ Do not add:
 - Keep the root surface small and focused on slide-building.
 - Prefer plain typed objects for styles and other declarative data instead of
   public builder helpers.
+- Prefer a single unified style prop over separate props for each style level.
+- Use `padding` (not `inset`) for internal spacing on all components.
+- Keep branded types (`Emu`, `HexColor`, etc.) — TypeScript cannot validate
+  6 hex digits via template literals (exceeds the union expansion limit).
 - Break the API freely when the abstraction is wrong.
 
 ## Validation
