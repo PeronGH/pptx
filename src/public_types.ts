@@ -6,9 +6,6 @@ import type { Background } from "./document.ts";
 import type { AlignAxis } from "./layout.ts";
 import type { Emu, HexColor } from "./types.ts";
 import type {
-  BoxStyleInput,
-  CellContainerStyleInput,
-  CellStyleInput,
   CropRect,
   CrossAlignment,
   Fill,
@@ -17,8 +14,8 @@ import type {
   LineStyle,
   MainAlignment,
   Shadow,
+  Style,
   StyleInput,
-  TextContainerStyleInput,
   TextFit,
   TextStyle,
   TextStyleInput,
@@ -138,14 +135,14 @@ export type AlignProps = LayoutProps & {
 };
 
 export type TextProps = LayoutProps & {
-  readonly style?: TextContainerStyleInput;
+  readonly style?: StyleInput<Style>;
   readonly gap?: Emu;
   readonly children?: PptxChild;
 };
 
 export type ShapeProps = LayoutProps & {
   readonly preset: string;
-  readonly style?: TextContainerStyleInput;
+  readonly style?: StyleInput<Style>;
   readonly gap?: Emu;
   readonly children?: PptxChild;
 };
@@ -171,13 +168,13 @@ export interface TableRowProps {
 }
 
 export interface TableCellProps {
-  readonly style?: CellContainerStyleInput;
+  readonly style?: StyleInput<Style>;
   readonly gap?: Emu;
   readonly children?: PptxChild;
 }
 
 export type ParagraphProps = LayoutProps & {
-  readonly style?: TextContainerStyleInput;
+  readonly style?: StyleInput<Style>;
   readonly children?: PptxChild;
 };
 
@@ -439,9 +436,6 @@ export type PptxComponent<
 export type {
   AlignAxis,
   Background,
-  BoxStyleInput,
-  CellContainerStyleInput,
-  CellStyleInput,
   ChartAxis,
   ChartBarDirection,
   ChartLegend,
@@ -455,8 +449,8 @@ export type {
   LineStyle,
   MainAlignment,
   Shadow,
+  Style,
   StyleInput,
-  TextContainerStyleInput,
   TextFit,
   TextStyle,
   TextStyleInput,

@@ -2,21 +2,18 @@
 
 import {
   Align,
-  type BoxStyle,
-  type CellStyle,
   Chart,
   clr,
   Column,
   generate,
-  type ParagraphStyle,
   Presentation,
   Row,
   Shape,
   Slide,
   Stack,
+  type Style,
   Table,
   Text,
-  type TextStyle,
   u,
 } from "../mod.ts";
 
@@ -29,16 +26,16 @@ const styles = {
       bottom: u.in(0.18),
       left: u.in(0.28),
     },
-  } satisfies BoxStyle,
+  } satisfies Style,
   heroTitle: {
     fontSize: u.font(24),
     fontColor: clr.hex("FFFFFF"),
     bold: true,
-  } satisfies TextStyle,
+  } satisfies Style,
   heroSubtitle: {
     fontSize: u.font(11),
     fontColor: clr.hex("D9E7F5"),
-  } satisfies TextStyle,
+  } satisfies Style,
   card: {
     fill: { kind: "solid", color: clr.hex("FFFFFF") },
     padding: u.in(0.14),
@@ -49,37 +46,37 @@ const styles = {
       angle: 50,
       alpha: u.pct(18),
     },
-  } satisfies BoxStyle,
+  } satisfies Style,
   cardTitle: {
     fontSize: u.font(14),
     fontColor: clr.hex("17324D"),
     bold: true,
-  } satisfies TextStyle,
+  } satisfies Style,
   body: {
     fontSize: u.font(11),
     fontColor: clr.hex("32465A"),
-  } satisfies TextStyle,
+  } satisfies Style,
   bullet: {
     bullet: { kind: "char", char: "•" },
-  } satisfies ParagraphStyle,
+  } satisfies Style,
   headCell: {
     fill: { kind: "solid", color: clr.hex("17324D") },
     padding: u.in(0.07),
     verticalAlign: "middle",
-  } satisfies CellStyle,
+  } satisfies Style,
   cell: {
     padding: u.in(0.07),
     verticalAlign: "middle",
-  } satisfies CellStyle,
+  } satisfies Style,
   headText: {
     fontSize: u.font(11),
     fontColor: clr.hex("FFFFFF"),
     bold: true,
-  } satisfies TextStyle,
+  } satisfies Style,
   metricText: {
     fontSize: u.font(11),
     fontColor: clr.hex("17324D"),
-  } satisfies TextStyle,
+  } satisfies Style,
 };
 
 export const deck = (

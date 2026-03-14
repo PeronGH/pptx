@@ -51,11 +51,9 @@ import {
 import {
   mergeParagraphStyles,
   mergeTextStyles,
-  resolveCellContainerStyle,
-  resolveTextContainerStyle,
+  resolveStyle,
   resolveTextStyle,
-  splitCellContainerStyle,
-  splitTextContainerStyle,
+  splitStyle,
   type TextStyle,
 } from "./style.ts";
 import type { Emu } from "./types.ts";
@@ -447,9 +445,8 @@ function normalizeParagraphElement(
 ): Paragraph {
   const paragraph = expectTag(element, "p");
   const props = paragraph.props;
-  const resolved = resolveTextContainerStyle(props.style);
-  const { paragraph: paraStyle, text: localTextStyle } =
-    splitTextContainerStyle(resolved);
+  const resolved = resolveStyle(props.style);
+  const { paragraph: paraStyle, text: localTextStyle } = splitStyle(resolved);
   const effectiveTextStyle = mergeTextStyles(
     inheritedTextStyle,
     localTextStyle,
@@ -775,12 +772,17 @@ function normalizeTableCell(
 ): TableCell {
   const td = expectTag(element, "td");
   const props = td.props;
-  const resolved = resolveCellContainerStyle(props.style);
-  const { cell: cellStyle, text: textDefaults } = splitCellContainerStyle(
-    resolved,
-  );
+  const resolved = resolveStyle(props.style);
+  const { box, text: textDefaults } = splitStyle(resolved);
   return {
-    style: cellStyle,
+    style: box
+      ? {
+        fill: box.fill,
+        line: box.line,
+        padding: box.padding,
+        verticalAlign: box.verticalAlign,
+      }
+      : undefined,
     paragraphs: normalizeTextBlocks(
       props.children,
       "td",
@@ -855,8 +857,8 @@ function normalizeBaseNode(
   }
   if (isTag(element, "textbox")) {
     const props = element.props;
-    const resolved = resolveTextContainerStyle(props.style);
-    const { box, text: textDefaults } = splitTextContainerStyle(resolved);
+    const resolved = resolveStyle(props.style);
+    const { box, text: textDefaults } = splitStyle(resolved);
     return {
       kind: "textbox",
       style: box,
@@ -870,8 +872,8 @@ function normalizeBaseNode(
   }
   if (isTag(element, "shape")) {
     const props = element.props;
-    const resolved = resolveTextContainerStyle(props.style);
-    const { box, text: textDefaults } = splitTextContainerStyle(resolved);
+    const resolved = resolveStyle(props.style);
+    const { box, text: textDefaults } = splitStyle(resolved);
     return {
       kind: "shape",
       preset: props.preset,
@@ -913,9 +915,8 @@ function normalizeBaseNode(
   if (isTag(element, "p")) {
     // Top-level <Text.P> auto-creates an implicit textbox.
     const props = element.props;
-    const resolved = resolveTextContainerStyle(props.style);
-    const { box, paragraph: paraStyle, text: textStyle } =
-      splitTextContainerStyle(resolved);
+    const resolved = resolveStyle(props.style);
+    const { box, paragraph: paraStyle, text: textStyle } = splitStyle(resolved);
     return {
       kind: "textbox",
       style: box,

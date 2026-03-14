@@ -6,8 +6,8 @@ import {
   generate,
   Presentation,
   Slide,
+  type Style,
   Text,
-  type TextContainerStyle,
   u,
 } from "../mod.ts";
 
@@ -18,7 +18,7 @@ const heroStyle = {
   fontSize: u.font(28),
   fontColor: clr.hex("FFFFFF"),
   bold: true,
-} satisfies TextContainerStyle;
+} satisfies Style;
 
 export const deck = (
   <Presentation title="Hello deck">

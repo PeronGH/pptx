@@ -4,22 +4,19 @@ import { assert } from "@std/assert/assert";
 import { assertEquals } from "@std/assert/equals";
 import {
   Align,
-  type BoxStyle,
-  type CellStyle,
   Chart,
   clr,
   generate,
   Image,
-  type ParagraphStyle,
   Positioned,
   Presentation,
   Row,
   Shape,
   Slide,
   Stack,
+  type Style,
   Table,
   Text,
-  type TextStyle,
   u,
 } from "../mod.ts";
 import { createTestBmp, validatePptx } from "./helpers.ts";
@@ -27,12 +24,12 @@ import { createTestBmp, validatePptx } from "./helpers.ts";
 const styles = {
   heroBar: {
     fill: { kind: "solid", color: clr.hex("17324D") },
-  } satisfies BoxStyle,
+  } satisfies Style,
   heroTitle: {
     fontSize: u.font(22),
     fontColor: clr.hex("FFFFFF"),
     bold: true,
-  } satisfies TextStyle,
+  } satisfies Style,
   noteCard: {
     fill: { kind: "solid", color: clr.hex("FFFFFF") },
     line: { width: u.emu(6350), dash: "dash" },
@@ -44,20 +41,20 @@ const styles = {
       alpha: u.pct(20),
     },
     padding: u.in(0.1),
-  } satisfies BoxStyle,
+  } satisfies Style,
   bullets: {
     bullet: { kind: "char", char: "•" },
-  } satisfies ParagraphStyle,
+  } satisfies Style,
   metricCell: {
     fill: { kind: "solid", color: clr.hex("17324D") },
     line: { width: u.emu(6350) },
     padding: u.in(0.05),
     verticalAlign: "middle",
-  } satisfies CellStyle,
+  } satisfies Style,
   metricText: {
     fontColor: clr.hex("FFFFFF"),
     bold: true,
-  } satisfies TextStyle,
+  } satisfies Style,
 };
 
 Deno.test("e2e: slide background and stack overlay", async () => {
