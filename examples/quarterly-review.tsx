@@ -63,17 +63,13 @@ const styles = {
     fill: { kind: "solid", color: clr.hex("17324D") },
     padding: u.in(0.07),
     verticalAlign: "middle",
-  } satisfies Style,
-  cell: {
-    padding: u.in(0.07),
-    verticalAlign: "middle",
-  } satisfies Style,
-  headText: {
     fontSize: u.font(11),
     fontColor: clr.hex("FFFFFF"),
     bold: true,
   } satisfies Style,
-  metricText: {
+  cell: {
+    padding: u.in(0.07),
+    verticalAlign: "middle",
     fontSize: u.font(11),
     fontColor: clr.hex("17324D"),
   } satisfies Style,
@@ -170,40 +166,20 @@ export const deck = (
             >
               <Table cols={[u.in(1.15), u.in(0.85)]}>
                 <Table.Row height={u.in(0.44)}>
-                  <Table.Cell
-                    style={{ ...styles.headCell, ...styles.headText }}
-                  >
-                    Metric
-                  </Table.Cell>
-                  <Table.Cell
-                    style={{ ...styles.headCell, ...styles.headText }}
-                  >
-                    Value
-                  </Table.Cell>
+                  <Table.Cell style={styles.headCell}>Metric</Table.Cell>
+                  <Table.Cell style={styles.headCell}>Value</Table.Cell>
                 </Table.Row>
                 <Table.Row height={u.in(0.44)}>
-                  <Table.Cell style={{ ...styles.cell, ...styles.metricText }}>
-                    Revenue
-                  </Table.Cell>
-                  <Table.Cell style={{ ...styles.cell, ...styles.metricText }}>
-                    $1.2M
-                  </Table.Cell>
+                  <Table.Cell style={styles.cell}>Revenue</Table.Cell>
+                  <Table.Cell style={styles.cell}>$1.2M</Table.Cell>
                 </Table.Row>
                 <Table.Row height={u.in(0.44)}>
-                  <Table.Cell style={{ ...styles.cell, ...styles.metricText }}>
-                    Growth
-                  </Table.Cell>
-                  <Table.Cell style={{ ...styles.cell, ...styles.metricText }}>
-                    15%
-                  </Table.Cell>
+                  <Table.Cell style={styles.cell}>Growth</Table.Cell>
+                  <Table.Cell style={styles.cell}>15%</Table.Cell>
                 </Table.Row>
                 <Table.Row height={u.in(0.44)}>
-                  <Table.Cell style={{ ...styles.cell, ...styles.metricText }}>
-                    NPS
-                  </Table.Cell>
-                  <Table.Cell style={{ ...styles.cell, ...styles.metricText }}>
-                    61
-                  </Table.Cell>
+                  <Table.Cell style={styles.cell}>NPS</Table.Cell>
+                  <Table.Cell style={styles.cell}>61</Table.Cell>
                 </Table.Row>
               </Table>
             </Align>
