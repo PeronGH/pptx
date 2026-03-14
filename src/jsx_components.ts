@@ -59,8 +59,8 @@ import {
   type TableProps,
   type TableRowElement,
   type TableRowProps,
-  type TextBoxElement,
-  type TextBoxProps,
+  type TextElement,
+  type TextProps,
   type TextTagProps,
   type UnderlineElement,
 } from "./public_types.ts";
@@ -98,7 +98,7 @@ type TableComponent = ((props: TableProps) => TableElement) & {
   readonly Cell: (props: TableCellProps) => TableCellElement;
 };
 
-type TextComponentFamily = {
+type TextComponent = ((props: TextProps) => TextElement) & {
   readonly P: (props: ParagraphProps) => ParagraphElement;
   readonly Span: (props: SpanProps) => SpanElement;
   readonly Link: (props: LinkProps) => LinkElement;
@@ -188,10 +188,6 @@ export function Positioned(props: PositionedProps): PositionedElement {
   return node(PositionedTag, props);
 }
 
-export function TextBox(props: TextBoxProps): TextBoxElement {
-  return node("textbox", props);
-}
-
 export function Shape(props: ShapeProps): ShapeElement {
   return node("shape", props);
 }
@@ -241,14 +237,18 @@ function TextUnderline(props: TextTagProps): UnderlineElement {
   return node("u", props);
 }
 
-export const Text: TextComponentFamily = {
+function TextBase(props: TextProps): TextElement {
+  return node("textbox", props);
+}
+
+export const Text: TextComponent = Object.assign(TextBase, {
   P: TextP,
   Span: TextSpan,
   Link: TextLink,
   Bold: TextBold,
   Italic: TextItalic,
   Underline: TextUnderline,
-} as const;
+});
 
 function ChartBar<
   Row extends object,

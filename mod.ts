@@ -10,7 +10,7 @@
  * @example
  * ```tsx
  * /** @jsxImportSource @pixel/pptx *\/
- * import { Align, Presentation, Shape, Slide, Text, TextBox, clr, generate, u } from "@pixel/pptx";
+ * import { Align, Presentation, Shape, Slide, Text, clr, generate, u } from "@pixel/pptx";
  *
  * const pptx = generate(
  *   <Presentation title="My Presentation">
@@ -27,18 +27,9 @@
  *         style={{ fill: { kind: "solid", color: clr.hex("17324D") } }}
  *       />
  *       <Align x="center" y="center" w={u.in(8)} h={u.in(1)}>
- *         <TextBox>
- *           <Text.Span
- *           style={{
- *             bold: true,
- *             fontSize: u.font(22),
- *             fontColor: clr.hex("FFFFFF"),
- *           }}
- *         >
- *           Hello
- *         </Text.Span>
- *         , World!
- *         </TextBox>
+ *         <Text.P style={{ bold: true, fontSize: u.font(22), fontColor: clr.hex("FFFFFF") }}>
+ *           Hello, World!
+ *         </Text.P>
  *       </Align>
  *     </Slide>
  *   </Presentation>,
@@ -61,7 +52,6 @@ export {
   Stack,
   Table,
   Text,
-  TextBox,
 } from "./src/jsx_components.ts";
 export { generate } from "./src/generate.ts";
 export { clr, u } from "./src/st.ts";
@@ -91,6 +81,8 @@ export type {
   Shadow,
   Spacing,
   StyleInput,
+  TextContainerStyle,
+  TextContainerStyleInput,
   TextFit,
   TextStyle,
   TextStyleInput,
@@ -139,7 +131,7 @@ export type {
   TableCellProps,
   TableProps,
   TableRowProps,
-  TextBoxProps,
+  TextProps,
   TextTagProps,
 } from "./src/public_types.ts";
 

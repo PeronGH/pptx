@@ -16,7 +16,6 @@ import {
   Stack,
   Table,
   Text,
-  TextBox,
   type TextStyle,
   u,
 } from "../mod.ts";
@@ -134,11 +133,9 @@ export const deck = (
               w={u.in(2.75)}
               h={u.in(0.32)}
             >
-              <TextBox>
-                <Text.P style={{ align: "center" }}>
-                  <Text.Span style={styles.cardTitle}>Pipeline</Text.Span>
-                </Text.P>
-              </TextBox>
+              <Text.P style={{ align: "center", ...styles.cardTitle }}>
+                Pipeline
+              </Text.P>
             </Align>
             <Align
               x="center"
@@ -223,26 +220,18 @@ export const deck = (
               w={u.in(2.58)}
               h={u.in(3)}
             >
-              <TextBox gap={u.in(0.08)}>
-                <Text.P>
-                  <Text.Span style={styles.cardTitle}>Notes</Text.Span>
+              <Text gap={u.in(0.08)} style={styles.body}>
+                <Text.P style={styles.cardTitle}>Notes</Text.P>
+                <Text.P style={styles.bullet}>
+                  Highlights and next steps
                 </Text.P>
                 <Text.P style={styles.bullet}>
-                  <Text.Span style={styles.body}>
-                    Highlights and next steps
-                  </Text.Span>
+                  Review pricing experiments
                 </Text.P>
                 <Text.P style={styles.bullet}>
-                  <Text.Span style={styles.body}>
-                    Review pricing experiments
-                  </Text.Span>
+                  Expand onboarding capacity
                 </Text.P>
-                <Text.P style={styles.bullet}>
-                  <Text.Span style={styles.body}>
-                    Expand onboarding capacity
-                  </Text.Span>
-                </Text.P>
-              </TextBox>
+              </Text>
             </Align>
           </Stack>
         </Row>

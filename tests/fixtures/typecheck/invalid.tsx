@@ -8,7 +8,7 @@ import {
   Presentation,
   Row,
   Slide,
-  TextBox,
+  Text,
   u,
 } from "../../../mod.ts";
 
@@ -27,17 +27,17 @@ void (
 );
 
 void (
-  // @ts-expect-error Absolute placement now belongs to Positioned, not TextBox props
-  <TextBox x={u.in(1)} y={u.in(1)}>
+  // @ts-expect-error Absolute placement now belongs to Positioned, not Text.P props
+  <Text.P x={u.in(1)} y={u.in(1)}>
     Partial frame
-  </TextBox>
+  </Text.P>
 );
 
 void (
   // @ts-expect-error push has been removed in favor of Row.End/Column.End slots
-  <TextBox basis={u.in(1)} push="end">
+  <Text.P basis={u.in(1)} push="end">
     Wrong API
-  </TextBox>
+  </Text.P>
 );
 
 void (
@@ -88,7 +88,7 @@ void (
       <Row>
         <Row.End>
           <Positioned x={u.in(1)} y={u.in(1)} w={u.in(1)} h={u.in(1)}>
-            <TextBox>Wrong place</TextBox>
+            <Text.P>Wrong place</Text.P>
           </Positioned>
         </Row.End>
       </Row>

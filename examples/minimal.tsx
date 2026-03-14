@@ -2,29 +2,23 @@
 
 import {
   Align,
-  type BoxStyle,
   clr,
   generate,
   Presentation,
   Slide,
   Text,
-  TextBox,
-  type TextStyle,
+  type TextContainerStyle,
   u,
 } from "../mod.ts";
 
-const styles = {
-  hero: {
-    fill: { kind: "solid", color: clr.hex("1F4E79") },
-    verticalAlign: "middle",
-    inset: u.in(0.18),
-  } satisfies BoxStyle,
-  heroText: {
-    fontSize: u.font(28),
-    fontColor: clr.hex("FFFFFF"),
-    bold: true,
-  } satisfies TextStyle,
-};
+const heroStyle = {
+  fill: { kind: "solid", color: clr.hex("1F4E79") },
+  verticalAlign: "middle",
+  inset: u.in(0.18),
+  fontSize: u.font(28),
+  fontColor: clr.hex("FFFFFF"),
+  bold: true,
+} satisfies TextContainerStyle;
 
 export const deck = (
   <Presentation title="Hello deck">
@@ -35,9 +29,7 @@ export const deck = (
       }}
     >
       <Align x="center" y="center" w={u.in(6)} h={u.in(1.2)}>
-        <TextBox style={styles.hero}>
-          <Text.Span style={styles.heroText}>Hello, world!</Text.Span>
-        </TextBox>
+        <Text.P style={heroStyle}>Hello, world!</Text.P>
       </Align>
     </Slide>
   </Presentation>

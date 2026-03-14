@@ -32,21 +32,16 @@ import {
   Presentation,
   Slide,
   Text,
-  TextBox,
   u,
 } from "@pixel/pptx";
 
-const styles = {
-  hero: {
-    fill: { kind: "solid", color: clr.hex("1F4E79") },
-    verticalAlign: "middle",
-    inset: u.in(0.18),
-  },
-  heroText: {
-    fontSize: u.font(28),
-    fontColor: clr.hex("FFFFFF"),
-    bold: true,
-  },
+const heroStyle = {
+  fill: { kind: "solid", color: clr.hex("1F4E79") },
+  verticalAlign: "middle",
+  inset: u.in(0.18),
+  fontSize: u.font(28),
+  fontColor: clr.hex("FFFFFF"),
+  bold: true,
 };
 
 const deck = (
@@ -58,9 +53,7 @@ const deck = (
       }}
     >
       <Align x="center" y="center" w={u.in(6)} h={u.in(1.2)}>
-        <TextBox style={styles.hero}>
-          <Text.Span style={styles.heroText}>Hello, world!</Text.Span>
-        </TextBox>
+        <Text.P style={heroStyle}>Hello, world!</Text.P>
       </Align>
     </Slide>
   </Presentation>
@@ -105,7 +98,10 @@ Full source: [`examples/quarterly-review.tsx`](./examples/quarterly-review.tsx)
 
 ### Content JSX components
 
-- `<TextBox>`
+- `<Text>` — multi-paragraph text body (`style` for box styling, `gap` for
+  paragraph spacing)
+- `<Text.P>` — single paragraph; auto-creates a text body at the top level
+  (`box` for box styling, `style` for paragraph styling)
 - `<Shape preset="...">`
 - `<Image ... />`
 - `<Table cols=[...]>`
@@ -118,9 +114,9 @@ Full source: [`examples/quarterly-review.tsx`](./examples/quarterly-review.tsx)
 
 ### Text JSX components
 
-- Raw string and number children create text directly
-- `<Text.P>` creates an explicit paragraph
-- `gap={...}` on `TextBox`, `Shape`, and `Table.Cell` inserts paragraph-block
+- Raw string and number children create text directly inside `<Text.P>`
+- `<Text.Span>` is optional — bare strings inside `<Text.P>` work directly
+- `gap={...}` on `<Text>`, `<Shape>`, and `<Table.Cell>` inserts paragraph-block
   spacing
 - Inline components: `<Text.Span>`, `<Text.Link href="...">`, `<Text.Bold>`,
   `<Text.Italic>`, `<Text.Underline>`
@@ -128,7 +124,7 @@ Full source: [`examples/quarterly-review.tsx`](./examples/quarterly-review.tsx)
 ### Styling model
 
 - Style props are plain typed objects, not special builder tokens
-- `style` accepts either one style object or an array of style objects
+- `style` and `box` accept either one style object or an array of style objects
 - Later style entries win, with nested objects merged structurally
 - Backgrounds, fills, lines, shadows, bullets, and image options are plain data
 - Charts use `data`, `category`, and `series=[...]`, with one or more series for

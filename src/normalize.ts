@@ -53,8 +53,9 @@ import {
   mergeTextStyles,
   resolveBoxStyle,
   resolveCellStyle,
-  resolveParagraphStyle,
+  resolveTextContainerStyle,
   resolveTextStyle,
+  splitTextContainerStyle,
   type TextStyle,
 } from "./style.ts";
 import type { Emu } from "./types.ts";
@@ -440,12 +441,22 @@ function normalizeInlineChildren(
   return runs;
 }
 
-function normalizeParagraphElement(element: PptxElement): Paragraph {
+function normalizeParagraphElement(
+  element: PptxElement,
+  inheritedTextStyle?: TextStyle,
+): Paragraph {
   const paragraph = expectTag(element, "p");
   const props = paragraph.props;
+  const resolved = resolveTextContainerStyle(props.style);
+  const { paragraph: paraStyle, text: localTextStyle } =
+    splitTextContainerStyle(resolved);
+  const effectiveTextStyle = mergeTextStyles(
+    inheritedTextStyle,
+    localTextStyle,
+  );
   return {
-    style: resolveParagraphStyle(props.style),
-    runs: normalizeInlineChildren(props.children),
+    style: paraStyle,
+    runs: normalizeInlineChildren(props.children, effectiveTextStyle),
   };
 }
 
@@ -453,6 +464,7 @@ function normalizeTextBlocks(
   children: PptxChild,
   parentTag: string,
   gap: Emu | undefined,
+  inheritedTextStyle?: TextStyle,
 ): ReadonlyArray<Paragraph> {
   const paragraphs: Paragraph[] = [];
   let inlineBuffer: PptxChild[] = [];
@@ -460,7 +472,7 @@ function normalizeTextBlocks(
   const flushInlineBuffer = () => {
     if (inlineBuffer.length === 0) return;
     paragraphs.push({
-      runs: normalizeInlineChildren(inlineBuffer),
+      runs: normalizeInlineChildren(inlineBuffer, inheritedTextStyle),
     });
     inlineBuffer = [];
   };
@@ -474,7 +486,7 @@ function normalizeTextBlocks(
     const element = expectElement(child, parentTag);
     if (element.type === "p") {
       flushInlineBuffer();
-      paragraphs.push(normalizeParagraphElement(element));
+      paragraphs.push(normalizeParagraphElement(element, inheritedTextStyle));
       continue;
     }
 
@@ -560,13 +572,14 @@ function isFlowLayoutElement(
   | TaggedElement<"shape">
   | TaggedElement<"image">
   | TaggedElement<"table">
+  | TaggedElement<"p">
   | AnyChartElement {
   if (
     isTag(element, "row") || isTag(element, "column") ||
     isTag(element, "stack") || isTag(element, "align") ||
     isTag(element, "textbox") || isTag(element, "shape") ||
     isTag(element, "image") || isTag(element, "table") ||
-    isChartElement(element)
+    isTag(element, "p") || isChartElement(element)
   ) {
     return true;
   }
@@ -597,7 +610,8 @@ function layoutPropsOf(element: PptxElement): LayoutProps {
     isTag(element, "stack") ||
     isTag(element, "align") || isTag(element, "textbox") ||
     isTag(element, "shape") || isTag(element, "image") ||
-    isTag(element, "table") || isChartElement(element)
+    isTag(element, "table") || isTag(element, "p") ||
+    isChartElement(element)
   ) {
     return element.props;
   }
@@ -836,13 +850,16 @@ function normalizeBaseNode(
   }
   if (isTag(element, "textbox")) {
     const props = element.props;
+    const resolved = resolveTextContainerStyle(props.style);
+    const { box, text: textDefaults } = splitTextContainerStyle(resolved);
     return {
       kind: "textbox",
-      style: resolveBoxStyle(props.style),
+      style: box,
       paragraphs: normalizeTextBlocks(
         props.children,
         "textbox",
         textGap(props.gap, defaults),
+        textDefaults,
       ),
     } satisfies LeafTextBox;
   }
@@ -885,6 +902,21 @@ function normalizeBaseNode(
   if (isChartElement(element)) {
     return normalizeChart(element) satisfies Chart;
   }
+  if (isTag(element, "p")) {
+    // Top-level <Text.P> auto-creates an implicit textbox.
+    const props = element.props;
+    const resolved = resolveTextContainerStyle(props.style);
+    const { box, paragraph: paraStyle, text: textStyle } =
+      splitTextContainerStyle(resolved);
+    return {
+      kind: "textbox",
+      style: box,
+      paragraphs: [{
+        style: paraStyle,
+        runs: normalizeInlineChildren(props.children, textStyle),
+      }],
+    } satisfies LeafTextBox;
+  }
   invalidTree(`Unexpected element <${String(element.type)}> in slide tree`);
 }
 
@@ -898,6 +930,7 @@ function elementDisplayTag(element: PptxElement): string {
   if (isRowEndElement(element)) return "Row.End";
   if (isColumnStartElement(element)) return "Column.Start";
   if (isColumnEndElement(element)) return "Column.End";
+  if (isTag(element, "p")) return "Text.P";
   return String(element.type);
 }
 

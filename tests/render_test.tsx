@@ -19,7 +19,6 @@ import {
   Stack,
   Table,
   Text,
-  TextBox,
   type TextStyle,
   u,
 } from "../mod.ts";
@@ -80,11 +79,15 @@ Deno.test("e2e: slide background and stack overlay", async () => {
             <Shape preset="rect" style={styles.heroBar} />
           </Positioned>
           <Align x="center" y="start" w={u.in(6)} h={u.in(1)}>
-            <TextBox style={{ verticalAlign: "middle" }}>
-              <Text.P style={{ align: "center" }}>
-                <Text.Span style={styles.heroTitle}>Hero Title</Text.Span>
-              </Text.P>
-            </TextBox>
+            <Text.P
+              style={{
+                verticalAlign: "middle",
+                align: "center",
+                ...styles.heroTitle,
+              }}
+            >
+              Hero Title
+            </Text.P>
           </Align>
         </Stack>
       </Slide>
@@ -113,7 +116,7 @@ Deno.test("e2e: slide background image", async () => {
           w={u.in(5)}
           h={u.in(1)}
         >
-          <TextBox
+          <Text.P
             style={{
               fill: {
                 kind: "solid",
@@ -123,7 +126,7 @@ Deno.test("e2e: slide background image", async () => {
             }}
           >
             On top of background
-          </TextBox>
+          </Text.P>
         </Positioned>
       </Slide>
     </Presentation>,
@@ -278,7 +281,7 @@ Deno.test("e2e: line, pie, and donut charts", async () => {
   assertEquals(result.slides[0]?.shapes[2]?.is_chart, true);
 });
 
-Deno.test("e2e: textbox gap and inline formatting", async () => {
+Deno.test("e2e: text gap and inline formatting", async () => {
   const pptx = generate(
     <Presentation>
       <Slide>
@@ -288,7 +291,7 @@ Deno.test("e2e: textbox gap and inline formatting", async () => {
           w={u.in(6)}
           h={u.in(2.2)}
         >
-          <TextBox gap={u.in(0.12)} style={styles.noteCard}>
+          <Text gap={u.in(0.12)} style={styles.noteCard}>
             <Text.P>
               <Text.Span style={styles.heroTitle}>Q2 Strategy</Text.Span>
             </Text.P>
@@ -306,7 +309,7 @@ Deno.test("e2e: textbox gap and inline formatting", async () => {
               Memo:{" "}
               <Text.Link href="https://example.com">example.com</Text.Link>
             </Text.P>
-          </TextBox>
+          </Text>
         </Positioned>
       </Slide>
     </Presentation>,

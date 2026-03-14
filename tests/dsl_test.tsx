@@ -14,7 +14,6 @@ import {
   Shape,
   Slide,
   Text,
-  TextBox,
   u,
 } from "../mod.ts";
 import { jsx } from "../src/jsx_runtime.ts";
@@ -52,10 +51,10 @@ Deno.test("inline children normalize into one implicit paragraph", () => {
   const presentation = normalizePresentation(
     <Presentation>
       <Slide>
-        <TextBox>
+        <Text.P>
           Hello <Text.Bold>bold</Text.Bold>{" "}
           <Text.Link href="https://example.com">link</Text.Link>
-        </TextBox>
+        </Text.P>
       </Slide>
     </Presentation>,
   );
@@ -71,14 +70,14 @@ Deno.test("inline children normalize into one implicit paragraph", () => {
   );
 });
 
-Deno.test("textbox gap applies paragraph spacing between paragraph blocks", () => {
+Deno.test("text gap applies paragraph spacing between paragraph blocks", () => {
   const presentation = normalizePresentation(
     <Presentation>
       <Slide>
-        <TextBox gap={u.in(0.2)}>
+        <Text gap={u.in(0.2)}>
           <Text.P>Alpha</Text.P>
           <Text.P>Beta</Text.P>
-        </TextBox>
+        </Text>
       </Slide>
     </Presentation>,
   );
@@ -100,13 +99,13 @@ Deno.test("presentation layout defaults propagate to slides, rows, and text bloc
     >
       <Slide>
         <Column>
-          <TextBox h={u.in(1)}>
+          <Text h={u.in(1)}>
             <Text.P>Alpha</Text.P>
             <Text.P>Beta</Text.P>
-          </TextBox>
+          </Text>
           <Row h={u.in(1.5)}>
-            <TextBox basis={u.in(1)}>A</TextBox>
-            <TextBox basis={u.in(1)}>B</TextBox>
+            <Text.P basis={u.in(1)}>A</Text.P>
+            <Text.P basis={u.in(1)}>B</Text.P>
           </Row>
         </Column>
       </Slide>
@@ -136,10 +135,10 @@ Deno.test("Row.End consumes remaining space before the trailing group", () => {
       <Slide>
         <Row>
           <Row.Start>
-            <TextBox basis={u.in(2)}>Left</TextBox>
+            <Text.P basis={u.in(2)}>Left</Text.P>
           </Row.Start>
           <Row.End>
-            <TextBox basis={u.in(2)}>Right</TextBox>
+            <Text.P basis={u.in(2)}>Right</Text.P>
           </Row.End>
         </Row>
       </Slide>
@@ -165,10 +164,10 @@ Deno.test("Column.End consumes remaining space before the trailing group", () =>
       <Slide>
         <Column>
           <Column.Start>
-            <TextBox h={u.in(2)}>Top</TextBox>
+            <Text.P h={u.in(2)}>Top</Text.P>
           </Column.Start>
           <Column.End>
-            <TextBox h={u.in(2)}>Bottom</TextBox>
+            <Text.P h={u.in(2)}>Bottom</Text.P>
           </Column.End>
         </Column>
       </Slide>
@@ -212,7 +211,7 @@ Deno.test("style arrays merge left to right", () => {
   const presentation = normalizePresentation(
     <Presentation>
       <Slide>
-        <TextBox
+        <Text.P
           style={[
             {
               fill: { kind: "solid", color: clr.hex("FFEECC") },
@@ -225,7 +224,7 @@ Deno.test("style arrays merge left to right", () => {
           ]}
         >
           Hello
-        </TextBox>
+        </Text.P>
       </Slide>
     </Presentation>,
   );
@@ -243,11 +242,11 @@ Deno.test("positioned children in a row resolve without consuming flow space", (
     <Presentation>
       <Slide>
         <Row>
-          <TextBox basis={u.in(2)}>Left</TextBox>
+          <Text.P basis={u.in(2)}>Left</Text.P>
           <Positioned x={u.in(1)} y={u.in(0.5)} w={u.in(1)} h={u.in(0.5)}>
-            <TextBox>Overlay</TextBox>
+            <Text.P>Overlay</Text.P>
           </Positioned>
-          <TextBox basis={u.in(2)}>Right</TextBox>
+          <Text.P basis={u.in(2)}>Right</Text.P>
         </Row>
       </Slide>
     </Presentation>,
@@ -276,9 +275,9 @@ Deno.test("row slot groups reject mixed direct flow children", () => {
         <Presentation>
           <Slide>
             <Row>
-              <TextBox basis={u.in(2)}>Left</TextBox>
+              <Text.P basis={u.in(2)}>Left</Text.P>
               <Row.End>
-                <TextBox basis={u.in(2)}>Right</TextBox>
+                <Text.P basis={u.in(2)}>Right</Text.P>
               </Row.End>
             </Row>
           </Slide>
@@ -500,9 +499,9 @@ Deno.test("generated XML includes hyperlink relationships from inline tags", () 
   const pptx = generate(
     <Presentation>
       <Slide>
-        <TextBox>
+        <Text.P>
           Visit <Text.Link href="https://example.com">example.com</Text.Link>
-        </TextBox>
+        </Text.P>
       </Slide>
     </Presentation>,
   );

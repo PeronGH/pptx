@@ -15,9 +15,9 @@ import type {
   Insets,
   LineStyle,
   MainAlignment,
-  ParagraphStyleInput,
   Shadow,
   StyleInput,
+  TextContainerStyleInput,
   TextFit,
   TextStyle,
   TextStyleInput,
@@ -136,8 +136,8 @@ export type AlignProps = LayoutProps & {
   readonly children: PptxChild;
 };
 
-export type TextBoxProps = LayoutProps & {
-  readonly style?: BoxStyleInput;
+export type TextProps = LayoutProps & {
+  readonly style?: TextContainerStyleInput;
   readonly gap?: Emu;
   readonly children?: PptxChild;
 };
@@ -175,10 +175,10 @@ export interface TableCellProps {
   readonly children?: PptxChild;
 }
 
-export interface ParagraphProps {
-  readonly style?: ParagraphStyleInput;
+export type ParagraphProps = LayoutProps & {
+  readonly style?: TextContainerStyleInput;
   readonly children?: PptxChild;
-}
+};
 
 export interface SpanProps {
   readonly style?: TextStyleInput;
@@ -298,7 +298,7 @@ interface InternalElementProps {
   readonly column: ColumnProps;
   readonly stack: StackProps;
   readonly align: AlignProps;
-  readonly textbox: TextBoxProps;
+  readonly textbox: TextProps;
   readonly shape: ShapeProps;
   readonly image: ImageProps;
   readonly table: TableProps;
@@ -343,7 +343,7 @@ export type RowStartElement = PptxElement<typeof RowStartTag, SlotProps>;
 export type RowEndElement = PptxElement<typeof RowEndTag, SlotProps>;
 export type ColumnStartElement = PptxElement<typeof ColumnStartTag, SlotProps>;
 export type ColumnEndElement = PptxElement<typeof ColumnEndTag, SlotProps>;
-export type TextBoxElement = PptxElement<"textbox", TextBoxProps>;
+export type TextElement = PptxElement<"textbox", TextProps>;
 export type ShapeElement = PptxElement<"shape", ShapeProps>;
 export type ImageElement = PptxElement<"image", ImageProps>;
 export type TableElement = PptxElement<"table", TableProps>;
@@ -405,7 +405,7 @@ export type PptxNonFragmentElement =
   | RowEndElement
   | ColumnStartElement
   | ColumnEndElement
-  | TextBoxElement
+  | TextElement
   | ShapeElement
   | ImageElement
   | TableElement
@@ -452,9 +452,9 @@ export type {
   Insets,
   LineStyle,
   MainAlignment,
-  ParagraphStyleInput,
   Shadow,
   StyleInput,
+  TextContainerStyleInput,
   TextFit,
   TextStyle,
   TextStyleInput,

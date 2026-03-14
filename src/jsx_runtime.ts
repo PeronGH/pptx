@@ -33,7 +33,7 @@ export type {
   TableCellProps,
   TableProps,
   TableRowProps,
-  TextBoxProps,
+  TextProps,
   TextTagProps,
 } from "./public_types.ts";
 

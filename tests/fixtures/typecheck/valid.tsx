@@ -6,7 +6,7 @@ import {
   Presentation,
   Row,
   Slide,
-  TextBox,
+  Text,
   u,
 } from "../../../mod.ts";
 
@@ -30,7 +30,7 @@ const deck = (
     <Slide>
       <Row>
         <Row.Start>
-          <TextBox basis={u.in(2)}>Left</TextBox>
+          <Text.P basis={u.in(2)}>Left</Text.P>
         </Row.Start>
         <Row.End>
           <Chart.Bar
