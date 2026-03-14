@@ -168,7 +168,7 @@ export interface TableRowProps {
 }
 
 export interface TableCellProps {
-  readonly style?: StyleInput<Style>;
+  readonly style?: StyleInput<Omit<Style, "fit" | "shadow">>;
   readonly gap?: Emu;
   readonly children?: PptxChild;
 }
