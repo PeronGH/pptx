@@ -98,10 +98,8 @@ Full source: [`examples/quarterly-review.tsx`](./examples/quarterly-review.tsx)
 
 ### Content JSX components
 
-- `<Text>` — multi-paragraph text body (`style` for box styling, `gap` for
-  paragraph spacing)
+- `<Text>` — multi-paragraph text body (`gap` for paragraph spacing)
 - `<Text.P>` — single paragraph; auto-creates a text body at the top level
-  (`box` for box styling, `style` for paragraph styling)
 - `<Shape preset="...">`
 - `<Image ... />`
 - `<Table cols=[...]>`
@@ -124,7 +122,7 @@ Full source: [`examples/quarterly-review.tsx`](./examples/quarterly-review.tsx)
 ### Styling model
 
 - Style props are plain typed objects, not special builder tokens
-- `style` and `box` accept either one style object or an array of style objects
+- `style` accepts either one style object or an array of style objects
 - Later style entries win, with nested objects merged structurally
 - Backgrounds, fills, lines, shadows, bullets, and image options are plain data
 - Charts use `data`, `category`, and `series=[...]`, with one or more series for
