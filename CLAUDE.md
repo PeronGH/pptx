@@ -75,6 +75,8 @@ deno test
 deno publish --dry-run
 ```
 
+- Add tests for every new behavior, not just regressions. If a feature ships
+  without a test that exercises it directly, the feature is incomplete.
 - Every PPTX-producing test must validate ZIP, OPC structure, `python-pptx`
   round-trip, and LibreOffice conversion.
 - Any intentional runtime throw, assertion, or type/lint suppression must carry

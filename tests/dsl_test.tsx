@@ -13,6 +13,7 @@ import {
   Row,
   Shape,
   Slide,
+  Table,
   Text,
   u,
 } from "../mod.ts";
@@ -493,6 +494,113 @@ Deno.test("Chart.Donut validates holeSize range", () => {
     Error,
     "holeSize",
   );
+});
+
+Deno.test("unified style on Text.P splits into box, paragraph, and text parts", () => {
+  const presentation = normalizePresentation(
+    <Presentation>
+      <Slide>
+        <Text.P
+          style={{
+            fill: { kind: "solid", color: clr.hex("AABBCC") },
+            align: "center",
+            bold: true,
+            fontSize: u.font(18),
+          }}
+        >
+          Styled
+        </Text.P>
+      </Slide>
+    </Presentation>,
+  );
+
+  const textbox = presentation.slides[0]?.children[0];
+  assert(textbox && textbox.kind === "textbox");
+  // Box part
+  assertEquals(textbox.style?.fill?.kind, "solid");
+  // Paragraph part
+  assertEquals(textbox.paragraphs[0]?.style?.align, "center");
+  // Text part applied to bare string run
+  assertEquals(textbox.paragraphs[0]?.runs[0]?.style?.bold, true);
+  assertEquals(textbox.paragraphs[0]?.runs[0]?.style?.fontSize, u.font(18));
+});
+
+Deno.test("Text propagates text style defaults to child paragraphs", () => {
+  const presentation = normalizePresentation(
+    <Presentation>
+      <Slide>
+        <Text style={{ fontSize: u.font(14), fontColor: clr.hex("333333") }}>
+          <Text.P>Inherits defaults</Text.P>
+          <Text.P style={{ bold: true }}>Also inherits, plus bold</Text.P>
+        </Text>
+      </Slide>
+    </Presentation>,
+  );
+
+  const textbox = presentation.slides[0]?.children[0];
+  assert(textbox && textbox.kind === "textbox");
+  // First paragraph inherits text defaults
+  const run0 = textbox.paragraphs[0]?.runs[0];
+  assertEquals(run0?.style?.fontSize, u.font(14));
+  assertEquals(run0?.style?.fontColor, clr.hex("333333"));
+  // Second paragraph merges its own bold with inherited defaults
+  const run1 = textbox.paragraphs[1]?.runs[0];
+  assertEquals(run1?.style?.bold, true);
+  assertEquals(run1?.style?.fontSize, u.font(14));
+});
+
+Deno.test("Shape propagates text style defaults to children", () => {
+  const presentation = normalizePresentation(
+    <Presentation>
+      <Slide>
+        <Shape
+          preset="roundRect"
+          style={{
+            fill: { kind: "solid", color: clr.hex("17324D") },
+            fontColor: clr.hex("FFFFFF"),
+            bold: true,
+          }}
+        >
+          <Text.P>Inherits white bold</Text.P>
+        </Shape>
+      </Slide>
+    </Presentation>,
+  );
+
+  const shape = presentation.slides[0]?.children[0];
+  assert(shape && shape.kind === "shape");
+  assertEquals(shape.style?.fill?.kind, "solid");
+  const run = shape.paragraphs[0]?.runs[0];
+  assertEquals(run?.style?.fontColor, clr.hex("FFFFFF"));
+  assertEquals(run?.style?.bold, true);
+});
+
+Deno.test("Table.Cell propagates text style defaults to children", () => {
+  const presentation = normalizePresentation(
+    <Presentation>
+      <Slide>
+        <Table cols={[u.in(5)]}>
+          <Table.Row height={u.in(1)}>
+            <Table.Cell
+              style={{
+                fill: { kind: "solid", color: clr.hex("17324D") },
+                fontColor: clr.hex("FFFFFF"),
+              }}
+            >
+              Inherits white text
+            </Table.Cell>
+          </Table.Row>
+        </Table>
+      </Slide>
+    </Presentation>,
+  );
+
+  const table = presentation.slides[0]?.children[0];
+  assert(table && table.kind === "table");
+  const cell = table.rows[0]?.cells[0];
+  assertEquals(cell?.style?.fill?.kind, "solid");
+  const run = cell?.paragraphs[0]?.runs[0];
+  assertEquals(run?.style?.fontColor, clr.hex("FFFFFF"));
 });
 
 Deno.test("generated XML includes hyperlink relationships from inline tags", () => {
