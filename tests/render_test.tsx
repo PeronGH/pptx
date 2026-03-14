@@ -64,10 +64,7 @@ Deno.test("e2e: slide background and stack overlay", async () => {
   const pptx = generate(
     <Presentation>
       <Slide
-        background={{
-          kind: "fill",
-          fill: { kind: "solid", color: clr.hex("F7F4EE") },
-        }}
+        background={{ kind: "solid", color: clr.hex("F7F4EE") }}
       >
         <Stack>
           <Positioned
@@ -104,7 +101,6 @@ Deno.test("e2e: slide background image", async () => {
     <Presentation>
       <Slide
         background={{
-          kind: "image",
           data: createTestBmp(8, 4),
           contentType: "image/bmp",
           fit: "cover",

@@ -144,7 +144,7 @@ export type TextProps = LayoutProps & {
 
 export type ShapeProps = LayoutProps & {
   readonly preset: string;
-  readonly style?: BoxStyleInput;
+  readonly style?: TextContainerStyleInput;
   readonly gap?: Emu;
   readonly children?: PptxChild;
 };
@@ -170,7 +170,7 @@ export interface TableRowProps {
 }
 
 export interface TableCellProps {
-  readonly style?: CellStyleInput;
+  readonly style?: TextContainerStyleInput;
   readonly gap?: Emu;
   readonly children?: PptxChild;
 }

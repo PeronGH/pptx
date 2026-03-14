@@ -15,7 +15,11 @@ import type {
   VerticalAlignment,
 } from "./style.ts";
 import type { Paragraph, TextRun } from "./text.ts";
-import type { Background, Presentation } from "./document.ts";
+import type {
+  Background,
+  BackgroundImageProps,
+  Presentation,
+} from "./document.ts";
 import { resolveImageFit } from "./image_fit.ts";
 import { resolveSlideChildren } from "./layout.ts";
 import { normalizePresentation } from "./normalize.ts";
@@ -391,11 +395,21 @@ function toInternalShape(
   }
 }
 
+function isBackgroundImage(
+  bg: Background,
+): bg is BackgroundImageProps {
+  return typeof bg === "object" && "data" in bg;
+}
+
 function backgroundToFill(
   background: Background | undefined,
 ): SlideBackground | undefined {
-  if (!background || background.kind !== "fill") return undefined;
-  return { fill: toInternalFill(background.fill) };
+  if (!background) return undefined;
+  if (typeof background === "string") {
+    return { fill: toInternalFill({ kind: "solid", color: background }) };
+  }
+  if (isBackgroundImage(background)) return undefined;
+  return { fill: toInternalFill(background) };
 }
 
 function backgroundToPicture(
@@ -403,7 +417,12 @@ function backgroundToPicture(
   slideFrame: Frame,
   ctx: SlideContext,
 ): PictureShape | undefined {
-  if (!background || background.kind !== "image") return undefined;
+  if (
+    !background || typeof background === "string" ||
+    !isBackgroundImage(background)
+  ) {
+    return undefined;
+  }
   const rId = ctx.relGen.next();
   ctx.images.set(rId, {
     data: background.data,

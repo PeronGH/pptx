@@ -2,7 +2,7 @@
  * Slides and presentations in the new public API.
  */
 
-import type { Emu } from "./types.ts";
+import type { Emu, HexColor } from "./types.ts";
 import type { CropRect, Fill, ImageFit, Insets } from "./style.ts";
 import type { SlideChild } from "./layout.ts";
 
@@ -16,10 +16,8 @@ export interface BackgroundImageProps {
   readonly alpha?: number;
 }
 
-/** A slide background. */
-export type Background =
-  | { readonly kind: "fill"; readonly fill: Fill }
-  | ({ readonly kind: "image" } & BackgroundImageProps);
+/** A slide background: a hex color, a fill, or an image. */
+export type Background = Fill | HexColor | BackgroundImageProps;
 
 /** Slide-level props. */
 export interface SlideProps {
@@ -45,16 +43,6 @@ export interface PresentationOptions {
 export interface Presentation {
   readonly options: PresentationOptions;
   readonly slides: ReadonlyArray<Slide>;
-}
-
-/** Create a slide background from a fill. */
-export function backgroundFill(fill: Fill): Background {
-  return { kind: "fill", fill };
-}
-
-/** Create a slide background from an image. */
-export function backgroundImage(props: BackgroundImageProps): Background {
-  return { kind: "image", ...props };
 }
 
 function isSlideProps(value: SlideProps | SlideChild): value is SlideProps {

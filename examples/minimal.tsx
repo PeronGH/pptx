@@ -22,12 +22,7 @@ const heroStyle = {
 
 export const deck = (
   <Presentation title="Hello deck">
-    <Slide
-      background={{
-        kind: "fill",
-        fill: { kind: "solid", color: clr.hex("F7F4EE") },
-      }}
-    >
+    <Slide background={{ kind: "solid", color: clr.hex("F7F4EE") }}>
       <Align x="center" y="center" w={u.in(6)} h={u.in(1.2)}>
         <Text.P style={heroStyle}>Hello, world!</Text.P>
       </Align>

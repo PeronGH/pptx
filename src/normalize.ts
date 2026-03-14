@@ -51,8 +51,6 @@ import {
 import {
   mergeParagraphStyles,
   mergeTextStyles,
-  resolveBoxStyle,
-  resolveCellStyle,
   resolveTextContainerStyle,
   resolveTextStyle,
   splitTextContainerStyle,
@@ -775,12 +773,22 @@ function normalizeTableCell(
 ): TableCell {
   const cell = expectTag(element, "td");
   const props = cell.props;
+  const resolved = resolveTextContainerStyle(props.style);
+  const { box, text: textDefaults } = splitTextContainerStyle(resolved);
   return {
-    style: resolveCellStyle(props.style),
+    style: box
+      ? {
+        fill: box.fill,
+        line: box.line,
+        padding: box.padding,
+        verticalAlign: box.verticalAlign,
+      }
+      : undefined,
     paragraphs: normalizeTextBlocks(
       props.children,
       "td",
       textGap(props.gap, defaults),
+      textDefaults,
     ),
   };
 }
@@ -865,14 +873,17 @@ function normalizeBaseNode(
   }
   if (isTag(element, "shape")) {
     const props = element.props;
+    const resolved = resolveTextContainerStyle(props.style);
+    const { box, text: textDefaults } = splitTextContainerStyle(resolved);
     return {
       kind: "shape",
       preset: props.preset,
-      style: resolveBoxStyle(props.style),
+      style: box,
       paragraphs: normalizeTextBlocks(
         props.children,
         "shape",
         textGap(props.gap, defaults),
+        textDefaults,
       ),
     } satisfies LeafShape;
   }

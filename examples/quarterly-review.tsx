@@ -92,15 +92,12 @@ export const deck = (
   >
     <Slide
       background={{
-        kind: "fill",
-        fill: {
-          kind: "linear-gradient",
-          angle: 90,
-          stops: [
-            { pos: u.pct(0), color: clr.hex("FFF8F1") },
-            { pos: u.pct(100), color: clr.hex("F2F6FB") },
-          ],
-        },
+        kind: "linear-gradient",
+        angle: 90,
+        stops: [
+          { pos: u.pct(0), color: clr.hex("FFF8F1") },
+          { pos: u.pct(100), color: clr.hex("F2F6FB") },
+        ],
       }}
       layout={{
         slidePadding: {
@@ -112,14 +109,14 @@ export const deck = (
       }}
     >
       <Column>
-        <Shape preset="roundRect" h={u.in(1.25)} style={styles.heroBar}>
-          <Text.P>
-            <Text.Span style={styles.heroTitle}>Quarterly Review</Text.Span>
-          </Text.P>
-          <Text.P>
-            <Text.Span style={styles.heroSubtitle}>
-              Q2 snapshot: growth is ahead of plan
-            </Text.Span>
+        <Shape
+          preset="roundRect"
+          h={u.in(1.25)}
+          style={{ ...styles.heroBar, ...styles.heroTitle }}
+        >
+          <Text.P>Quarterly Review</Text.P>
+          <Text.P style={styles.heroSubtitle}>
+            Q2 snapshot: growth is ahead of plan
           </Text.P>
         </Shape>
 
@@ -176,35 +173,39 @@ export const deck = (
             >
               <Table cols={[u.in(1.15), u.in(0.85)]}>
                 <Table.Row height={u.in(0.44)}>
-                  <Table.Cell style={styles.headCell}>
-                    <Text.Span style={styles.headText}>Metric</Text.Span>
+                  <Table.Cell
+                    style={{ ...styles.headCell, ...styles.headText }}
+                  >
+                    Metric
                   </Table.Cell>
-                  <Table.Cell style={styles.headCell}>
-                    <Text.Span style={styles.headText}>Value</Text.Span>
-                  </Table.Cell>
-                </Table.Row>
-                <Table.Row height={u.in(0.44)}>
-                  <Table.Cell style={styles.cell}>
-                    <Text.Span style={styles.metricText}>Revenue</Text.Span>
-                  </Table.Cell>
-                  <Table.Cell style={styles.cell}>
-                    <Text.Span style={styles.metricText}>$1.2M</Text.Span>
+                  <Table.Cell
+                    style={{ ...styles.headCell, ...styles.headText }}
+                  >
+                    Value
                   </Table.Cell>
                 </Table.Row>
                 <Table.Row height={u.in(0.44)}>
-                  <Table.Cell style={styles.cell}>
-                    <Text.Span style={styles.metricText}>Growth</Text.Span>
+                  <Table.Cell style={{ ...styles.cell, ...styles.metricText }}>
+                    Revenue
                   </Table.Cell>
-                  <Table.Cell style={styles.cell}>
-                    <Text.Span style={styles.metricText}>15%</Text.Span>
+                  <Table.Cell style={{ ...styles.cell, ...styles.metricText }}>
+                    $1.2M
                   </Table.Cell>
                 </Table.Row>
                 <Table.Row height={u.in(0.44)}>
-                  <Table.Cell style={styles.cell}>
-                    <Text.Span style={styles.metricText}>NPS</Text.Span>
+                  <Table.Cell style={{ ...styles.cell, ...styles.metricText }}>
+                    Growth
                   </Table.Cell>
-                  <Table.Cell style={styles.cell}>
-                    <Text.Span style={styles.metricText}>61</Text.Span>
+                  <Table.Cell style={{ ...styles.cell, ...styles.metricText }}>
+                    15%
+                  </Table.Cell>
+                </Table.Row>
+                <Table.Row height={u.in(0.44)}>
+                  <Table.Cell style={{ ...styles.cell, ...styles.metricText }}>
+                    NPS
+                  </Table.Cell>
+                  <Table.Cell style={{ ...styles.cell, ...styles.metricText }}>
+                    61
                   </Table.Cell>
                 </Table.Row>
               </Table>
