@@ -7,6 +7,7 @@ import type { AlignAxis } from "./layout.ts";
 import type { Emu, HexColor } from "./types.ts";
 import type {
   BoxStyleInput,
+  CellContainerStyleInput,
   CellStyleInput,
   CropRect,
   CrossAlignment,
@@ -170,7 +171,7 @@ export interface TableRowProps {
 }
 
 export interface TableCellProps {
-  readonly style?: TextContainerStyleInput;
+  readonly style?: CellContainerStyleInput;
   readonly gap?: Emu;
   readonly children?: PptxChild;
 }
@@ -439,6 +440,7 @@ export type {
   AlignAxis,
   Background,
   BoxStyleInput,
+  CellContainerStyleInput,
   CellStyleInput,
   ChartAxis,
   ChartBarDirection,

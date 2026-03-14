@@ -51,8 +51,10 @@ import {
 import {
   mergeParagraphStyles,
   mergeTextStyles,
+  resolveCellContainerStyle,
   resolveTextContainerStyle,
   resolveTextStyle,
+  splitCellContainerStyle,
   splitTextContainerStyle,
   type TextStyle,
 } from "./style.ts";
@@ -771,19 +773,14 @@ function normalizeTableCell(
   element: PptxElement,
   defaults: LayoutDefaults,
 ): TableCell {
-  const cell = expectTag(element, "td");
-  const props = cell.props;
-  const resolved = resolveTextContainerStyle(props.style);
-  const { box, text: textDefaults } = splitTextContainerStyle(resolved);
+  const td = expectTag(element, "td");
+  const props = td.props;
+  const resolved = resolveCellContainerStyle(props.style);
+  const { cell: cellStyle, text: textDefaults } = splitCellContainerStyle(
+    resolved,
+  );
   return {
-    style: box
-      ? {
-        fill: box.fill,
-        line: box.line,
-        padding: box.padding,
-        verticalAlign: box.verticalAlign,
-      }
-      : undefined,
+    style: cellStyle,
     paragraphs: normalizeTextBlocks(
       props.children,
       "td",

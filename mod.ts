@@ -65,6 +65,8 @@ export type {
   BoxStyle,
   BoxStyleInput,
   Bullet,
+  CellContainerStyle,
+  CellContainerStyleInput,
   CellStyle,
   CellStyleInput,
   CropRect,

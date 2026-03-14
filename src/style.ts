@@ -130,6 +130,10 @@ export interface CellStyle {
 export interface TextContainerStyle
   extends BoxStyle, ParagraphStyle, TextStyle {}
 
+/** Unified styling for table cells: cell, paragraph, and text-run fields. */
+export interface CellContainerStyle
+  extends CellStyle, ParagraphStyle, TextStyle {}
+
 export type StyleEntry<T> = T | false | null | undefined;
 export type StyleInput<T> = StyleEntry<T> | ReadonlyArray<StyleEntry<T>>;
 
@@ -138,6 +142,7 @@ export type TextStyleInput = StyleInput<TextStyle>;
 export type ParagraphStyleInput = StyleInput<ParagraphStyle>;
 export type CellStyleInput = StyleInput<CellStyle>;
 export type TextContainerStyleInput = StyleInput<TextContainerStyle>;
+export type CellContainerStyleInput = StyleInput<CellContainerStyle>;
 
 function isStyleValue<T>(entry: StyleEntry<T>): entry is T {
   return entry !== undefined && entry !== false && entry !== null;
@@ -429,6 +434,86 @@ export function splitTextContainerStyle(
         padding: style.padding,
         fit: style.fit,
         shadow: style.shadow,
+      }
+      : undefined,
+    paragraph: hasParagraph
+      ? {
+        level: style.level,
+        align: style.align,
+        bullet: style.bullet,
+        spacing: style.spacing,
+      }
+      : undefined,
+    text: hasText
+      ? {
+        bold: style.bold,
+        italic: style.italic,
+        underline: style.underline,
+        fontSize: style.fontSize,
+        fontColor: style.fontColor,
+        fontFamily: style.fontFamily,
+      }
+      : undefined,
+  };
+}
+
+/** Resolve unified cell-container style input into a concrete style object. */
+export function resolveCellContainerStyle(
+  style?: CellContainerStyleInput,
+): CellContainerStyle | undefined {
+  const entries = styleEntries(style);
+  if (entries.length === 0) return undefined;
+  let merged: CellContainerStyle = {};
+  for (const entry of entries) {
+    merged = {
+      fill: mergeFill(merged.fill, entry.fill),
+      line: mergeLineStyle(merged.line, entry.line),
+      padding: mergeInsets(merged.padding, entry.padding),
+      verticalAlign: entry.verticalAlign ?? merged.verticalAlign,
+      level: entry.level ?? merged.level,
+      align: entry.align ?? merged.align,
+      bullet: entry.bullet ?? merged.bullet,
+      spacing: mergeSpacing(merged.spacing, entry.spacing),
+      bold: entry.bold ?? merged.bold,
+      italic: entry.italic ?? merged.italic,
+      underline: entry.underline ?? merged.underline,
+      fontSize: entry.fontSize ?? merged.fontSize,
+      fontColor: entry.fontColor ?? merged.fontColor,
+      fontFamily: entry.fontFamily ?? merged.fontFamily,
+    };
+  }
+  return merged;
+}
+
+/** Split result for a unified cell-container style. */
+export interface SplitCellContainerStyle {
+  readonly cell: CellStyle | undefined;
+  readonly paragraph: ParagraphStyle | undefined;
+  readonly text: TextStyle | undefined;
+}
+
+/** Decompose a unified cell-container style into cell, paragraph, and text parts. */
+export function splitCellContainerStyle(
+  style: CellContainerStyle | undefined,
+): SplitCellContainerStyle {
+  if (!style) return { cell: undefined, paragraph: undefined, text: undefined };
+
+  const hasCell = style.fill !== undefined || style.line !== undefined ||
+    style.padding !== undefined || style.verticalAlign !== undefined;
+  const hasParagraph = style.level !== undefined ||
+    style.align !== undefined || style.bullet !== undefined ||
+    style.spacing !== undefined;
+  const hasText = style.bold !== undefined || style.italic !== undefined ||
+    style.underline !== undefined || style.fontSize !== undefined ||
+    style.fontColor !== undefined || style.fontFamily !== undefined;
+
+  return {
+    cell: hasCell
+      ? {
+        fill: style.fill,
+        line: style.line,
+        padding: style.padding,
+        verticalAlign: style.verticalAlign,
       }
       : undefined,
     paragraph: hasParagraph
