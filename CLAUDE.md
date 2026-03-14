@@ -59,8 +59,8 @@ Do not add:
   public builder helpers.
 - Prefer a single unified style prop over separate props for each style level.
 - Use `padding` (not `inset`) for internal spacing on all components.
-- Keep branded types (`Emu`, `HexColor`, etc.) — TypeScript cannot validate
-  6 hex digits via template literals (exceeds the union expansion limit).
+- Keep branded types (`Emu`, `HexColor`, etc.) — TypeScript cannot validate 6
+  hex digits via template literals (exceeds the union expansion limit).
 - Break the API freely when the abstraction is wrong.
 
 ## Validation
