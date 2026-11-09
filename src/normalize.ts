@@ -60,6 +60,7 @@ import {
   mergeInsets,
   mergeParagraphStyles,
   mergeTextStyles,
+  type ParagraphStyle,
   resolveStyle,
   resolveTextStyle,
   splitStyle,
@@ -404,6 +405,7 @@ function normalizeInlineChildren(
 function normalizeParagraphElement(
   element: PptxElement,
   inheritedTextStyle?: TextStyle,
+  inheritedParagraphStyle?: ParagraphStyle,
 ): Paragraph {
   const paragraph = expectTag(element, "p");
   const props = paragraph.props;
@@ -414,7 +416,7 @@ function normalizeParagraphElement(
     localTextStyle,
   );
   return {
-    style: paraStyle,
+    style: mergeParagraphStyles(inheritedParagraphStyle, paraStyle),
     runs: normalizeInlineChildren(props.children, effectiveTextStyle),
   };
 }
@@ -424,6 +426,7 @@ function normalizeTextBlocks(
   parentTag: string,
   gap: Emu | undefined,
   inheritedTextStyle?: TextStyle,
+  inheritedParagraphStyle?: ParagraphStyle,
 ): ReadonlyArray<Paragraph> {
   const paragraphs: Paragraph[] = [];
   let inlineBuffer: PptxChild[] = [];
@@ -431,6 +434,7 @@ function normalizeTextBlocks(
   const flushInlineBuffer = () => {
     if (inlineBuffer.length === 0) return;
     paragraphs.push({
+      style: inheritedParagraphStyle,
       runs: normalizeInlineChildren(inlineBuffer, inheritedTextStyle),
     });
     inlineBuffer = [];
@@ -445,7 +449,13 @@ function normalizeTextBlocks(
     const element = expectElement(child, parentTag);
     if (element.type === "p") {
       flushInlineBuffer();
-      paragraphs.push(normalizeParagraphElement(element, inheritedTextStyle));
+      paragraphs.push(
+        normalizeParagraphElement(
+          element,
+          inheritedTextStyle,
+          inheritedParagraphStyle,
+        ),
+      );
       continue;
     }
 
@@ -719,7 +729,9 @@ function normalizeTableCell(
   const td = expectTag(element, "td");
   const props = td.props;
   const resolved = resolveStyle(props.style);
-  const { box, text: textDefaults } = splitStyle(resolved);
+  const { box, paragraph: paragraphDefaults, text: textDefaults } = splitStyle(
+    resolved,
+  );
   return {
     colSpan: props.colSpan,
     rowSpan: props.rowSpan,
@@ -736,6 +748,7 @@ function normalizeTableCell(
       "td",
       textGap(props.gap, defaults),
       textDefaults,
+      paragraphDefaults,
     ),
   };
 }
@@ -806,7 +819,8 @@ function normalizeBaseNode(
   if (isTag(element, "textbox") || isTag(element, "title")) {
     const props = element.props;
     const resolved = resolveStyle(props.style);
-    const { box, text: textDefaults } = splitStyle(resolved);
+    const { box, paragraph: paragraphDefaults, text: textDefaults } =
+      splitStyle(resolved);
     return {
       kind: "textbox",
       name: props.name,
@@ -817,13 +831,15 @@ function normalizeBaseNode(
         element.type,
         textGap(props.gap, defaults),
         textDefaults,
+        paragraphDefaults,
       ),
     } satisfies LeafTextBox;
   }
   if (isTag(element, "shape")) {
     const props = element.props;
     const resolved = resolveStyle(props.style);
-    const { box, text: textDefaults } = splitStyle(resolved);
+    const { box, paragraph: paragraphDefaults, text: textDefaults } =
+      splitStyle(resolved);
     return {
       kind: "shape",
       name: props.name,
@@ -834,6 +850,7 @@ function normalizeBaseNode(
         "shape",
         textGap(props.gap, defaults),
         textDefaults,
+        paragraphDefaults,
       ),
     } satisfies LeafShape;
   }

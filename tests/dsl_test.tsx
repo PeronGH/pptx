@@ -775,3 +775,30 @@ Deno.test("slides default to 16:9 widescreen; presets and custom sizes apply", (
     "slide width",
   );
 });
+
+Deno.test("container paragraph styles apply to their paragraphs", () => {
+  const presentation = normalizePresentation(
+    <Presentation>
+      <Slide>
+        <Text style={{ align: "center", bullet: { kind: "char", char: "-" } }}>
+          inline text
+          <Text.P style={{ align: "right" }}>own alignment</Text.P>
+        </Text>
+        <Shape preset="rect" style={{ align: "center" }}>label</Shape>
+        <Table cols={[u.in(1)]}>
+          <Table.Row height={u.in(0.4)}>
+            <Table.Cell style={{ align: "center" }}>cell</Table.Cell>
+          </Table.Row>
+        </Table>
+      </Slide>
+    </Presentation>,
+  );
+  const [text, shape, table] = presentation.slides[0]?.children ?? [];
+  assert(text?.kind === "textbox");
+  assertEquals(text.paragraphs.map((p) => p.style?.align), ["center", "right"]);
+  assertEquals(text.paragraphs[1]?.style?.bullet, { kind: "char", char: "-" });
+  assert(shape?.kind === "shape");
+  assertEquals(shape.paragraphs[0]?.style?.align, "center");
+  assert(table?.kind === "table");
+  assertEquals(table.rows[0]?.cells[0]?.paragraphs[0]?.style?.align, "center");
+});
