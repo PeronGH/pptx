@@ -12,11 +12,14 @@ project="$(cd "$(dirname "${BASH_SOURCE[0]}")/openxml-validator" && pwd)"
 out="$project/bin/out"
 
 # Concurrent `dotnet run` invocations race on obj/, so build once under a lock
-# and execute the built assembly directly.
+# and execute the built assembly directly. The build must not leave compiler
+# servers behind: they would inherit the lock descriptor (fd 9) and hold the
+# lock, and the pipes of whoever invoked this script, until they idle out.
 (
   flock 9
   if [[ ! -f "$out/openxml-validator.dll" || "$project/Program.cs" -nt "$out/openxml-validator.dll" || "$project/openxml-validator.csproj" -nt "$out/openxml-validator.dll" ]]; then
-    dotnet build "$project" -c Release -o "$out" --verbosity quiet >&2
+    dotnet build "$project" -c Release -o "$out" --verbosity quiet \
+      --disable-build-servers 9>&- >&2
   fi
 ) 9>"$project/bin.lock"
 
