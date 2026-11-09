@@ -20,6 +20,7 @@ import {
   positiveFixedAngle,
   positiveFixedPercentage,
   textFontSize,
+  textIndent,
   textMargin,
   textSpacingPoint,
 } from "./simple_types.ts";
@@ -467,11 +468,8 @@ function renderBackgroundImage(image: BackgroundImage): XmlElement {
   );
 }
 
-function renderTextFit(
-  fit: TextFit | undefined,
-  defaultFit?: TextFit,
-): XmlElement | undefined {
-  switch (fit ?? defaultFit) {
+function renderTextFit(fit: TextFit | undefined): XmlElement | undefined {
+  switch (fit) {
     case "none":
       return el("a:noAutofit", {});
     case "shrink-text":
@@ -487,7 +485,6 @@ function renderBodyPr(
   attrs: Record<string, string>,
   padding: Insets | undefined,
   fit: TextFit | undefined,
-  defaultFit?: TextFit,
 ): XmlElement {
   const bodyAttrs: Record<string, string> = { ...attrs };
   if (padding?.left !== undefined) bodyAttrs["lIns"] = textMargin(padding.left);
@@ -498,7 +495,7 @@ function renderBodyPr(
   if (padding?.bottom !== undefined) {
     bodyAttrs["bIns"] = textMargin(padding.bottom);
   }
-  return el("a:bodyPr", bodyAttrs, renderTextFit(fit, defaultFit));
+  return el("a:bodyPr", bodyAttrs, renderTextFit(fit));
 }
 
 function renderTextBoxSp(id: number, shape: TextBoxShape): XmlElement {
@@ -533,7 +530,7 @@ function renderTextBoxSp(id: number, shape: TextBoxShape): XmlElement {
     el(
       "p:txBody",
       {},
-      renderBodyPr(bodyPrAttrs, shape.padding, shape.fit, "resize-shape"),
+      renderBodyPr(bodyPrAttrs, shape.padding, shape.fit),
       el("a:lstStyle", {}),
       ...shape.paragraphs.map(renderParagraph),
     ),
@@ -746,6 +743,9 @@ function renderChart(id: number, shape: ChartShape): XmlElement {
   );
 }
 
+const BULLET_INDENT = 228600;
+const LEVEL_INDENT = 457200;
+
 function renderParagraph(para: TextParagraph): XmlElement {
   const children: XmlElement[] = [];
 
@@ -754,6 +754,15 @@ function renderParagraph(para: TextParagraph): XmlElement {
 
   if (hasPPr) {
     const pPrAttrs: Record<string, string | undefined> = {};
+    if (para.bullet && para.bullet.kind !== "none") {
+      // Hanging indent so the bullet sits left of the text, using the
+      // per-level margins of PowerPoint's default body style.
+      const level = para.level ?? 0;
+      pPrAttrs["marL"] = textMargin(
+        (BULLET_INDENT + level * LEVEL_INDENT) as Emu,
+      );
+      pPrAttrs["indent"] = textIndent(-BULLET_INDENT as Emu);
+    }
     if (para.level !== undefined) pPrAttrs["lvl"] = String(para.level);
     if (para.alignment !== undefined) pPrAttrs["algn"] = para.alignment;
 

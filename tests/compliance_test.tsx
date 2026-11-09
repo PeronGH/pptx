@@ -156,3 +156,38 @@ Deno.test("e2e: contain background letterboxes with fillRect insets", async () =
   assert(slide.includes('<a:alphaModFix amt="60000"/>'));
   assert(slide.includes('<a:fillRect t="16667" b="16667"/>'));
 });
+
+Deno.test("e2e: bullets hang, text boxes keep their frame, app.xml is consistent", async () => {
+  const pptx = generate(
+    <Presentation>
+      <Slide>
+        <Text>
+          <Text.P style={{ bullet: { kind: "char", char: "•" } }}>one</Text.P>
+          <Text.P
+            style={{
+              level: 1,
+              bullet: { kind: "autonum", type: "arabicPeriod" },
+            }}
+          >
+            two
+          </Text.P>
+          <Text.P style={{ bullet: { kind: "none" } }}>three</Text.P>
+        </Text>
+      </Slide>
+      <Slide />
+    </Presentation>,
+  );
+
+  await validatePptx(pptx, 2);
+  const slide = extractZipText(pptx, "ppt/slides/slide1.xml");
+  assert(slide.includes('<a:pPr marL="228600" indent="-228600">'));
+  assert(slide.includes('<a:pPr marL="685800" indent="-228600" lvl="1">'));
+  assert(slide.includes("<a:pPr><a:buNone/></a:pPr>"));
+  assert(!slide.includes("spAutoFit"));
+
+  const app = extractZipText(pptx, "docProps/app.xml");
+  assert(app.includes("<Application>@pixel/pptx</Application>"));
+  assert(app.includes("<Slides>2</Slides>"));
+  assert(app.includes('<vt:vector size="1" baseType="lpstr">'));
+  assert(!extractZipText(pptx, "docProps/core.xml").includes("dc:creator"));
+});

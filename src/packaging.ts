@@ -95,8 +95,6 @@ export interface PackageOptions {
  */
 export function generatePptx(options: PackageOptions): Uint8Array {
   const files: Record<string, Uint8Array> = {};
-  const title = options.title ?? "";
-  const creator = options.creator ?? "pptx-deno";
 
   // Media parts keyed by image bytes, so a reused image is stored once.
   const mediaParts = new Map<Uint8Array, string>();
@@ -369,7 +367,9 @@ export function generatePptx(options: PackageOptions): Uint8Array {
   files["ppt/slideLayouts/_rels/slideLayout1.xml.rels"] = encode(
     renderRelationships(slRels),
   );
-  files["docProps/core.xml"] = encode(renderCoreProps(title, creator));
+  files["docProps/core.xml"] = encode(
+    renderCoreProps(options.title, options.creator),
+  );
   files["docProps/app.xml"] = encode(renderAppProps(options.slides.length));
 
   return zipSync(files);

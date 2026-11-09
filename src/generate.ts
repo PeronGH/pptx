@@ -218,7 +218,10 @@ function toInternalRun(run: TextRun, ctx: SlideContext): InternalRun {
   let hyperlinkInfo: { rId: string } | undefined;
   if (run.hyperlink) {
     const rId = ctx.relGen.next();
-    ctx.hyperlinks.set(rId, { url: run.hyperlink });
+    // Relationship targets are xsd:anyURI (ECMA-376 Part 2 §6.5.3.4). Parsing
+    // rejects non-URLs and the serialized form percent-encodes spaces and
+    // non-ASCII characters.
+    ctx.hyperlinks.set(rId, { url: new URL(run.hyperlink).href });
     hyperlinkInfo = { rId };
   }
 

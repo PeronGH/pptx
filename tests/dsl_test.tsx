@@ -712,3 +712,31 @@ Deno.test("generated XML includes hyperlink relationships from inline tags", () 
   assert(slideXml.includes("hlinkClick"));
   assert(relsXml.includes("https://example.com"));
 });
+
+Deno.test("hyperlinks are serialized as URLs and invalid ones are rejected", () => {
+  const pptx = generate(
+    <Presentation>
+      <Slide>
+        <Text.P>
+          <Text.Link href="https://example.com/a b?q=ü">link</Text.Link>
+        </Text.P>
+      </Slide>
+    </Presentation>,
+  );
+  const relsXml = extractZipText(pptx, "ppt/slides/_rels/slide1.xml.rels");
+  assert(relsXml.includes('Target="https://example.com/a%20b?q=%C3%BC"'));
+
+  assertThrows(
+    () =>
+      generate(
+        <Presentation>
+          <Slide>
+            <Text.P>
+              <Text.Link href="not a url">link</Text.Link>
+            </Text.P>
+          </Slide>
+        </Presentation>,
+      ),
+    TypeError,
+  );
+});

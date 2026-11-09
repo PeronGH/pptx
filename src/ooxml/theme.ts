@@ -10,11 +10,14 @@
 import { el, renderXmlDocument } from "../xml.ts";
 import { NS_A } from "./namespaces.ts";
 
+/** Theme name, also listed in docProps/app.xml `TitlesOfParts`. */
+export const THEME_NAME = "Office Theme";
+
 /** Generate the default Office Theme. ECMA-376 §20.1.6.9. */
 export function renderTheme(): string {
   const root = el(
     "a:theme",
-    { "xmlns:a": NS_A, name: "Office Theme" },
+    { "xmlns:a": NS_A, name: THEME_NAME },
     el(
       "a:themeElements",
       {},

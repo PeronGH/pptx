@@ -9,6 +9,7 @@
  */
 
 import { el, renderXmlDocument } from "../xml.ts";
+import { THEME_NAME } from "./theme.ts";
 import {
   NS_A,
   NS_CP,
@@ -84,7 +85,10 @@ export function renderTableStyles(): string {
 }
 
 /** Generate docProps/core.xml. ECMA-376 Part 2 §8.2-§8.3. */
-export function renderCoreProps(title: string, creator: string): string {
+export function renderCoreProps(
+  title: string | undefined,
+  creator: string | undefined,
+): string {
   const now = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
   const root = el(
     "cp:coreProperties",
@@ -95,16 +99,19 @@ export function renderCoreProps(title: string, creator: string): string {
       "xmlns:dcmitype": NS_DCMITYPE,
       "xmlns:xsi": NS_XSI,
     },
-    el("dc:title", {}, title),
-    el("dc:creator", {}, creator),
-    el("cp:revision", {}, "1"),
+    title === undefined ? undefined : el("dc:title", {}, title),
+    creator === undefined ? undefined : el("dc:creator", {}, creator),
     el("dcterms:created", { "xsi:type": "dcterms:W3CDTF" }, now),
     el("dcterms:modified", { "xsi:type": "dcterms:W3CDTF" }, now),
   );
   return renderXmlDocument(root);
 }
 
-/** Generate docProps/app.xml. ECMA-376 Part 1 §15.2.12.3 and §22.2.2.21. */
+/**
+ * Generate docProps/app.xml. ECMA-376 Part 1 §15.2.12.3 and §22.2.2.21.
+ * `HeadingPairs` counts must add up to the `TitlesOfParts` entries; the only
+ * titled part this generator writes is the theme.
+ */
 export function renderAppProps(slideCount: number): string {
   const root = el(
     "Properties",
@@ -112,24 +119,16 @@ export function renderAppProps(slideCount: number): string {
       xmlns: NS_EP,
       "xmlns:vt": NS_VT,
     },
-    el("TotalTime", {}, "0"),
-    el("Words", {}, "0"),
-    el("Application", {}, "pptx-deno"),
-    el("Paragraphs", {}, "0"),
+    el("Application", {}, "@pixel/pptx"),
     el("Slides", {}, String(slideCount)),
-    el("Notes", {}, "0"),
-    el("HiddenSlides", {}, "0"),
-    el("ScaleCrop", {}, "false"),
     el(
       "HeadingPairs",
       {},
       el(
         "vt:vector",
-        { size: "4", baseType: "variant" },
+        { size: "2", baseType: "variant" },
         el("vt:variant", {}, el("vt:lpstr", {}, "Theme")),
         el("vt:variant", {}, el("vt:i4", {}, "1")),
-        el("vt:variant", {}, el("vt:lpstr", {}, "Slide Titles")),
-        el("vt:variant", {}, el("vt:i4", {}, String(slideCount))),
       ),
     ),
     el(
@@ -138,13 +137,9 @@ export function renderAppProps(slideCount: number): string {
       el(
         "vt:vector",
         { size: "1", baseType: "lpstr" },
-        el("vt:lpstr", {}, "Office Theme"),
+        el("vt:lpstr", {}, THEME_NAME),
       ),
     ),
-    el("LinksUpToDate", {}, "false"),
-    el("SharedDoc", {}, "false"),
-    el("HyperlinksChanged", {}, "false"),
-    el("AppVersion", {}, "16.0000"),
   );
   return renderXmlDocument(root);
 }
