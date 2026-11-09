@@ -20,6 +20,7 @@ export interface SlideRef {
 /** Generate presentation.xml. ECMA-376 §13.3.6. */
 export function renderPresentation(
   slideMasterRelId: string,
+  notesMasterRelId: string | undefined,
   slideRefs: ReadonlyArray<SlideRef>,
   slideWidth: Emu,
   slideHeight: Emu,
@@ -52,6 +53,11 @@ export function renderPresentation(
       autoCompressPictures: "0",
     },
     slideMasterIdLst,
+    notesMasterRelId === undefined ? undefined : el(
+      "p:notesMasterIdLst",
+      {},
+      el("p:notesMasterId", { "r:id": notesMasterRelId }),
+    ),
     sldIdLst,
     sldSz,
     notesSz,

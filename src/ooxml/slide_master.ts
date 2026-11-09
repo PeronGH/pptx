@@ -8,6 +8,22 @@
 import { el, renderXmlDocument } from "../xml.ts";
 import { NS_A, NS_P, NS_R } from "./namespaces.ts";
 
+/** Theme color mapping shared by the slide and notes masters (§19.3.1.6). */
+export const COLOR_MAP = {
+  bg1: "lt1",
+  tx1: "dk1",
+  bg2: "lt2",
+  tx2: "dk2",
+  accent1: "accent1",
+  accent2: "accent2",
+  accent3: "accent3",
+  accent4: "accent4",
+  accent5: "accent5",
+  accent6: "accent6",
+  hlink: "hlink",
+  folHlink: "folHlink",
+} as const;
+
 /** Generate a minimal slide master. ECMA-376 §13.3.10. */
 export function renderSlideMaster(layoutRelIds: ReadonlyArray<string>): string {
   const layoutRefs = layoutRelIds.map((relId) =>
@@ -57,23 +73,7 @@ export function renderSlideMaster(layoutRelIds: ReadonlyArray<string>): string {
         ),
       ),
     ),
-    el(
-      "p:clrMap",
-      {
-        bg1: "lt1",
-        tx1: "dk1",
-        bg2: "lt2",
-        tx2: "dk2",
-        accent1: "accent1",
-        accent2: "accent2",
-        accent3: "accent3",
-        accent4: "accent4",
-        accent5: "accent5",
-        accent6: "accent6",
-        hlink: "hlink",
-        folHlink: "folHlink",
-      },
-    ),
+    el("p:clrMap", COLOR_MAP),
     el("p:sldLayoutIdLst", {}, ...layoutRefs),
   );
 

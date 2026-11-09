@@ -240,3 +240,40 @@ Deno.test("e2e: shape names reach PowerPoint's selection pane", async () => {
   const slide = extractZipText(pres.generate(), "ppt/slides/slide1.xml");
   assert(slide.includes('name="imperative"'));
 });
+
+Deno.test("e2e: speaker notes become notes slides with a notes master", async () => {
+  const notes = "Open with the headline.\nThen the chart.";
+  const pptx = generate(
+    <Presentation>
+      <Slide notes={notes}>
+        <Text.P>Slide with notes</Text.P>
+      </Slide>
+      <Slide>
+        <Text.P>Slide without notes</Text.P>
+      </Slide>
+    </Presentation>,
+  );
+  const result = await validatePptx(pptx, 2);
+  assertEquals(
+    result.slides.map((slide) => slide.notes),
+    [notes, null],
+  );
+  const presentation = extractZipText(pptx, "ppt/presentation.xml");
+  assert(presentation.includes("<p:notesMasterIdLst>"));
+
+  const withoutNotes = generate(
+    <Presentation>
+      <Slide />
+    </Presentation>,
+  );
+  assert(
+    !extractZipText(withoutNotes, "[Content_Types].xml").includes("notes"),
+  );
+
+  const pres = createPresentation();
+  pres.addSlide({ notes: "imperative notes" });
+  assert(
+    extractZipText(pres.generate(), "ppt/notesSlides/notesSlide1.xml")
+      .includes("imperative notes"),
+  );
+});

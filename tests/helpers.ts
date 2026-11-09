@@ -6,6 +6,8 @@ export interface ValidationResult {
   slides: Array<{
     index: number;
     shape_count: number;
+    title: string | null;
+    notes: string | null;
     shapes: Array<{
       name: string;
       shape_type: string | null;

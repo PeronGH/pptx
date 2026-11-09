@@ -291,6 +291,9 @@ export function generate(root: PptxElement): Uint8Array {
       images: ctx.images,
       charts: ctx.charts,
       hyperlinks: ctx.hyperlinks,
+      notes: slide.props.notes === undefined
+        ? undefined
+        : { relId: ctx.relGen.next(), text: slide.props.notes },
     };
   });
 

@@ -23,6 +23,8 @@ import {
   renderChartSpace,
   renderContentTypes,
   renderCoreProps,
+  renderNotesMaster,
+  renderNotesSlide,
   renderPresentation,
   renderPresProps,
   renderRelationships,
@@ -68,6 +70,8 @@ export interface PackageSlide {
   readonly charts: ReadonlyMap<string, ChartResource>;
   /** Hyperlinks referenced by shapes. Map from rId to resource. */
   readonly hyperlinks: ReadonlyMap<string, HyperlinkResource>;
+  /** Speaker notes and the slide's relationship ID for its notes slide. */
+  readonly notes?: { readonly relId: string; readonly text: string };
 }
 
 /** Options for generating a PPTX package. */
@@ -130,6 +134,27 @@ export function generatePptx(options: PackageOptions): Uint8Array {
     type: REL_TYPE.theme,
     target: "theme/theme1.xml",
   });
+
+  // A notes master exists only when some slide has notes (§13.3.4); it uses
+  // its own theme part, as PowerPoint does.
+  const hasNotes = options.slides.some((slide) => slide.notes !== undefined);
+  const notesMasterRelId = hasNotes ? presRelGen.next() : undefined;
+  if (notesMasterRelId) {
+    presRels.push({
+      id: notesMasterRelId,
+      type: REL_TYPE.notesMaster,
+      target: "notesMasters/notesMaster1.xml",
+    });
+    files["ppt/notesMasters/notesMaster1.xml"] = encode(
+      renderNotesMaster(options.slideWidth, options.slideHeight),
+    );
+    files["ppt/notesMasters/_rels/notesMaster1.xml.rels"] = encode(
+      renderRelationships([
+        { id: "rId1", type: REL_TYPE.theme, target: "../theme/theme2.xml" },
+      ]),
+    );
+    files["ppt/theme/theme2.xml"] = encode(renderTheme());
+  }
 
   presRels.push({
     id: presRelGen.next(),
@@ -235,6 +260,15 @@ export function generatePptx(options: PackageOptions): Uint8Array {
       contentType: CONTENT_TYPE.slide,
     });
   }
+  if (hasNotes) {
+    overrides.push(
+      {
+        partName: "/ppt/notesMasters/notesMaster1.xml",
+        contentType: CONTENT_TYPE.notesMaster,
+      },
+      { partName: "/ppt/theme/theme2.xml", contentType: CONTENT_TYPE.theme },
+    );
+  }
 
   // --- Generate slide XML, relationships, and media ---
   let chartCounter = 0;
@@ -310,6 +344,29 @@ export function generatePptx(options: PackageOptions): Uint8Array {
       });
     }
 
+    if (slide.notes) {
+      const notesPart = `notesSlides/notesSlide${i + 1}.xml`;
+      files[`ppt/${notesPart}`] = encode(renderNotesSlide(slide.notes.text));
+      files[`ppt/notesSlides/_rels/notesSlide${i + 1}.xml.rels`] = encode(
+        renderRelationships([
+          {
+            id: "rId1",
+            type: REL_TYPE.notesMaster,
+            target: "../notesMasters/notesMaster1.xml",
+          },
+        ]),
+      );
+      overrides.push({
+        partName: `/ppt/${notesPart}`,
+        contentType: CONTENT_TYPE.notesSlide,
+      });
+      slideRels.push({
+        id: slide.notes.relId,
+        type: REL_TYPE.notesSlide,
+        target: `../${notesPart}`,
+      });
+    }
+
     files[`ppt/slides/_rels/slide${i + 1}.xml.rels`] = encode(
       renderRelationships(slideRels),
     );
@@ -336,6 +393,7 @@ export function generatePptx(options: PackageOptions): Uint8Array {
   files["ppt/presentation.xml"] = encode(
     renderPresentation(
       slideMasterRelId,
+      notesMasterRelId,
       slideRefs,
       options.slideWidth,
       options.slideHeight,

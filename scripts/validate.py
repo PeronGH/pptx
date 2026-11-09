@@ -173,9 +173,16 @@ def validate_python_pptx(path: str, expected_slides: int | None = None) -> list[
             "slides": [],
         }
         for i, slide in enumerate(prs.slides):
+            title = slide.shapes.title
             slide_info = {
                 "index": i,
                 "shape_count": len(slide.shapes),
+                "title": title.text_frame.text if title is not None else None,
+                "notes": (
+                    slide.notes_slide.notes_text_frame.text
+                    if slide.has_notes_slide
+                    else None
+                ),
                 "shapes": [],
             }
             for shape in slide.shapes:

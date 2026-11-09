@@ -238,10 +238,12 @@ function textGap(
 
 function withResolvedSlideProps(
   background: Slide["props"]["background"],
+  notes: string | undefined,
   defaults: LayoutDefaults,
 ): Slide["props"] {
   return {
     background,
+    notes,
     contentPadding: defaults.slidePadding,
   };
 }
@@ -1032,7 +1034,7 @@ function normalizeSlide(
   const props = slide.props;
   const defaults = mergeLayoutDefaults(inheritedDefaults, props.layout);
   return {
-    props: withResolvedSlideProps(props.background, defaults),
+    props: withResolvedSlideProps(props.background, props.notes, defaults),
     children: normalizeSlideChildren(props.children, defaults),
   };
 }

@@ -69,6 +69,10 @@ export const REL_TYPE = {
     "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster",
   slideLayout:
     "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout",
+  notesMaster:
+    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/notesMaster",
+  notesSlide:
+    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/notesSlide",
   theme:
     "http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme",
   presProps:
@@ -102,6 +106,10 @@ export const CONTENT_TYPE = {
     "application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml",
   slideLayout:
     "application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml",
+  notesMaster:
+    "application/vnd.openxmlformats-officedocument.presentationml.notesMaster+xml",
+  notesSlide:
+    "application/vnd.openxmlformats-officedocument.presentationml.notesSlide+xml",
   theme: "application/vnd.openxmlformats-officedocument.theme+xml",
   presProps:
     "application/vnd.openxmlformats-officedocument.presentationml.presProps+xml",

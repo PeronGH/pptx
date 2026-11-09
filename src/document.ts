@@ -22,6 +22,7 @@ export type Background = Fill | HexColor | BackgroundImageProps;
 /** Slide-level props. */
 export interface SlideProps {
   readonly background?: Background;
+  readonly notes?: string;
   readonly contentPadding?: Emu | Insets;
 }
 

@@ -122,7 +122,7 @@ are the matching component props plus `x`, `y`, `w`, and `h`.
 ### Structural JSX components
 
 - `<Presentation>`
-- `<Slide>`
+- `<Slide>` — `notes` adds speaker notes
 - `<Row>`
 - `<Row.Start>`
 - `<Row.End>`

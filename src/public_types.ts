@@ -121,6 +121,8 @@ export interface PresentationProps {
 
 export interface SlideProps {
   readonly background?: Background;
+  /** Speaker notes; each line becomes a paragraph. */
+  readonly notes?: string;
   readonly layout?: LayoutDefaults;
   readonly children?: PptxChild;
 }
