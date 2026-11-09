@@ -2,14 +2,18 @@ import { assertEquals } from "@std/assert/equals";
 import { assertThrows } from "@std/assert/throws";
 import { u } from "../mod.ts";
 import type { Emu, HundredthPoint, Percentage } from "../src/types.ts";
+import { PRESET_GEOMETRIES } from "../src/ooxml/enums.ts";
 import {
   coordinate,
+  enumeration,
   lineWidth,
+  minOccurs,
   positiveCoordinate,
   positiveFixedAngle,
   positiveFixedPercentage,
   slideSizeCoordinate,
   textFontSize,
+  textIndentLevel,
   textSpacingPoint,
 } from "../src/ooxml/simple_types.ts";
 
@@ -47,4 +51,20 @@ Deno.test("simple types reject values outside their ECMA-376 range", () => {
   assertEquals(slideSizeCoordinate(u.in(1), "w"), "914400");
   assertThrows(() => slideSizeCoordinate(u.in(0.5), "w"), RangeError, "w");
   assertThrows(() => slideSizeCoordinate(u.in(57), "w"), RangeError, "w");
+});
+
+Deno.test("enumerations, levels, and counts are checked at runtime", () => {
+  assertEquals(enumeration("rect", PRESET_GEOMETRIES, "preset"), "rect");
+  assertThrows(
+    () => enumeration("notAShape" as "rect", PRESET_GEOMETRIES, "preset"),
+    RangeError,
+    'Unknown preset "notAShape"',
+  );
+  assertEquals(textIndentLevel(8), "8");
+  assertThrows(() => textIndentLevel(9), RangeError, "paragraph level");
+  assertThrows(
+    () => minOccurs([1], 2, "gradient stops"),
+    RangeError,
+    "at least 2",
+  );
 });

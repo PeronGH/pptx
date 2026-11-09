@@ -10,17 +10,26 @@
 
 import { el, renderXmlDocument, type XmlElement } from "../xml.ts";
 import type { Emu, HexColor, HundredthPoint, Percentage } from "../types.ts";
-import type { AutoNumberScheme, PresetGeometry, TextLevel } from "./enums.ts";
+import {
+  AUTO_NUMBER_SCHEMES,
+  type AutoNumberScheme,
+  PRESET_GEOMETRIES,
+  type PresetGeometry,
+  type TextLevel,
+} from "./enums.ts";
 import { NS_A, NS_C, NS_P, NS_R } from "./namespaces.ts";
 import {
   coordinate,
+  enumeration,
   lineWidth,
+  minOccurs,
   percentage,
   positiveCoordinate,
   positiveFixedAngle,
   positiveFixedPercentage,
   textFontSize,
   textIndent,
+  textIndentLevel,
   textMargin,
   textSpacingPoint,
 } from "./simple_types.ts";
@@ -360,7 +369,7 @@ function renderFill(fill: Fill | undefined): XmlElement | undefined {
         el(
           "a:gsLst",
           {},
-          ...fill.stops.map((stop) =>
+          ...minOccurs(fill.stops, 2, "gradient stops").map((stop) =>
             el(
               "a:gs",
               { pos: positiveFixedPercentage(stop.pos, "gradient stop") },
@@ -540,7 +549,9 @@ function renderTextBoxSp(id: number, shape: TextBoxShape): XmlElement {
 function renderPresetSp(id: number, shape: PresetShape): XmlElement {
   const spPrChildren: XmlElement[] = [
     renderTransform("a:xfrm", shape),
-    el("a:prstGeom", { prst: shape.preset }, el("a:avLst", {})),
+    el("a:prstGeom", {
+      prst: enumeration(shape.preset, PRESET_GEOMETRIES, "preset geometry"),
+    }, el("a:avLst", {})),
   ];
 
   if (shape.fill) {
@@ -763,7 +774,7 @@ function renderParagraph(para: TextParagraph): XmlElement {
       );
       pPrAttrs["indent"] = textIndent(-BULLET_INDENT as Emu);
     }
-    if (para.level !== undefined) pPrAttrs["lvl"] = String(para.level);
+    if (para.level !== undefined) pPrAttrs["lvl"] = textIndentLevel(para.level);
     if (para.alignment !== undefined) pPrAttrs["algn"] = para.alignment;
 
     const pPrChildren: XmlElement[] = [];
@@ -793,7 +804,13 @@ function renderParagraph(para: TextParagraph): XmlElement {
           pPrChildren.push(el("a:buChar", { char: para.bullet.char }));
           break;
         case "autonum":
-          pPrChildren.push(el("a:buAutoNum", { type: para.bullet.type }));
+          pPrChildren.push(el("a:buAutoNum", {
+            type: enumeration(
+              para.bullet.type,
+              AUTO_NUMBER_SCHEMES,
+              "auto-number scheme",
+            ),
+          }));
           break;
         case "none":
           pPrChildren.push(el("a:buNone", {}));

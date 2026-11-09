@@ -700,3 +700,51 @@ Deno.test("hyperlinks are serialized as URLs and invalid ones are rejected", () 
     TypeError,
   );
 });
+
+Deno.test("type-only constraints are enforced for plain-JavaScript callers", () => {
+  const generateWith = (child: unknown) => () =>
+    generate(
+      <Presentation>
+        <Slide>{child as never}</Slide>
+      </Presentation>,
+    );
+  // Casts stand in for untyped JavaScript input.
+  assertThrows(
+    generateWith(<Shape preset={"notAShape" as "rect"} />),
+    RangeError,
+    "preset geometry",
+  );
+  assertThrows(
+    generateWith(<Text.P style={{ level: 9 as 8 }}>x</Text.P>),
+    RangeError,
+    "paragraph level",
+  );
+  assertThrows(
+    generateWith(
+      <Text.P
+        style={{ bullet: { kind: "autonum", type: "bogus" as "arabicPeriod" } }}
+      >
+        x
+      </Text.P>,
+    ),
+    RangeError,
+    "auto-number scheme",
+  );
+  const oneStop = [{ pos: u.pct(0), color: clr.hex("FF0000") }];
+  assertThrows(
+    generateWith(
+      <Shape
+        preset="rect"
+        style={{
+          fill: {
+            kind: "linear-gradient",
+            angle: 0,
+            stops: oneStop as never,
+          },
+        }}
+      />,
+    ),
+    RangeError,
+    "gradient stops",
+  );
+});

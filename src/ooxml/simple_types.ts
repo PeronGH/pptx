@@ -1,15 +1,17 @@
 /**
- * Serializers for ECMA-376 simple types whose ranges the branded number types
- * cannot encode. Every numeric attribute the writer emits goes through one of
- * these, so out-of-range or non-integer values never reach the XML.
+ * Serializers for ECMA-376 simple types whose constraints the TypeScript types
+ * cannot enforce at runtime. Every numeric or enumerated attribute the writer
+ * emits goes through one of these, so invalid values never reach the XML.
  */
 
 import type { Emu, HundredthPoint, Percentage } from "../types.ts";
 
 function outOfRange(message: string): never {
   // Branded numbers carry a unit but not a range, and the valid range depends
-  // on the attribute a value ends up in. This is the last point where an
-  // invalid value can be caught before it produces a non-conforming part.
+  // on the attribute a value ends up in. Enumerations and element counts are
+  // typed, but plain-JavaScript callers bypass the types. This is the last
+  // point where an invalid value can be caught before it produces a
+  // non-conforming part.
   throw new RangeError(message);
 }
 
@@ -86,4 +88,31 @@ export function positiveFixedAngle(degrees: number): string {
 /** `ST_Percentage` (§20.1.10.40): signed, e.g. crop insets. */
 export function percentage(value: Percentage, what: string): string {
   return integerIn(value, -2147483648, 2147483647, `${what} (1/1000 %)`);
+}
+
+/** `ST_TextIndentLevelType` (§20.1.10.71): paragraph level 0 to 8. */
+export function textIndentLevel(value: number): string {
+  return integerIn(value, 0, 8, "paragraph level");
+}
+
+/** A value from a schema enumeration (see `enums.ts`). */
+export function enumeration<T extends string>(
+  value: T,
+  allowed: ReadonlyArray<T>,
+  what: string,
+): T {
+  if (!allowed.includes(value)) outOfRange(`Unknown ${what} "${value}"`);
+  return value;
+}
+
+/** A schema `minOccurs` lower bound on repeated child elements. */
+export function minOccurs<T>(
+  items: ReadonlyArray<T>,
+  min: number,
+  what: string,
+): ReadonlyArray<T> {
+  if (items.length < min) {
+    outOfRange(`${what} needs at least ${min} entries, got ${items.length}`);
+  }
+  return items;
 }
