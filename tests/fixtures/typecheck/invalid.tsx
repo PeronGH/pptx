@@ -14,6 +14,7 @@ import {
   Text,
   u,
 } from "../../../mod.ts";
+import { createPresentation } from "../../../imperative.ts";
 
 const pipeline = [
   { quarter: "Q1", amount: 12, flag: true },
@@ -144,3 +145,31 @@ void (
   // @ts-expect-error tables need at least one column
   <Table cols={[]} />
 );
+
+const imperativeSlide = createPresentation().addSlide();
+const at = { x: u.in(1), y: u.in(1), w: u.in(1), h: u.in(1) };
+
+// @ts-expect-error imperative items take absolute placement, not flow props
+imperativeSlide.addText("x", { ...at, grow: 1 });
+
+// @ts-expect-error imperative shapes use the same preset names
+imperativeSlide.addShape("notAShape", at);
+
+// @ts-expect-error tables still need their column widths
+imperativeSlide.addTable([["a"]], at);
+
+imperativeSlide.addBarChart({
+  ...at,
+  data: pipeline,
+  // @ts-expect-error chart category must reference a string field
+  category: "amount",
+  series: [{ name: "Pipeline", value: "amount" }],
+});
+
+imperativeSlide.addPieChart({
+  ...at,
+  data: pipeline,
+  category: "quarter",
+  // @ts-expect-error pie charts accept exactly one series
+  series: [{ name: "A", value: "amount" }, { name: "B", value: "amount" }],
+});

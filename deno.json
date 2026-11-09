@@ -4,6 +4,7 @@
   "license": "MIT",
   "exports": {
     ".": "./mod.ts",
+    "./imperative": "./imperative.ts",
     "./jsx-runtime": "./jsx-runtime.ts",
     "./jsx-dev-runtime": "./jsx-dev-runtime.ts"
   },
@@ -14,6 +15,7 @@
   },
   "imports": {
     "@pixel/pptx": "./mod.ts",
+    "@pixel/pptx/imperative": "./imperative.ts",
     "@pixel/pptx/jsx-runtime": "./jsx-runtime.ts",
     "@pixel/pptx/jsx-dev-runtime": "./jsx-dev-runtime.ts",
     "fflate": "npm:fflate@0.8.2",

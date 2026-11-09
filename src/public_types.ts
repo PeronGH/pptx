@@ -41,7 +41,7 @@ export const RowEndTag = Symbol.for("@pixel/pptx.row.end");
 export const ColumnStartTag = Symbol.for("@pixel/pptx.column.start");
 export const ColumnEndTag = Symbol.for("@pixel/pptx.column.end");
 
-type KeysOfType<T, Value> = Extract<
+export type KeysOfType<T, Value> = Extract<
   {
     [K in keyof T]-?: T[K] extends Value ? K : never;
   }[keyof T],
