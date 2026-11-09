@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+# Download the ECMA-376 (ISO/IEC 29500) bundle into .spec/: spec PDFs, text
+# extracts for grepping, XSD/RELAX NG schemas, and an XML catalog that resolves
+# the external Dublin Core and xml.xsd imports offline.
+
+set -euo pipefail
+
+root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+spec="$root/.spec"
+base="https://ecma-international.org/wp-content/uploads"
+parts=(
+  ECMA-376-1_5th_edition_december_2016
+  ECMA-376-2_5th_edition_december_2021
+  ECMA-376-3_5th_edition_december_2015
+  ECMA-376-4_5th_edition_december_2016
+)
+
+mkdir -p "$spec/external"
+cd "$spec"
+
+for part in "${parts[@]}"; do
+  [[ -d "$part" ]] && continue
+  curl -fsSL -o "$part.zip" "$base/$part.zip"
+  python3 -m zipfile -e "$part.zip" "$part"
+  rm "$part.zip"
+  for inner in "$part"/*.zip; do
+    [[ -e "$inner" ]] || continue
+    python3 -m zipfile -e "$inner" "${inner%.zip}"
+    rm "$inner"
+  done
+  for pdf in "$part"/*.pdf; do
+    pdftotext -layout "$pdf" "${pdf%.pdf}.txt"
+  done
+done
+
+for url in \
+  https://www.dublincore.org/schemas/xmls/qdc/2003/04/02/dc.xsd \
+  https://www.dublincore.org/schemas/xmls/qdc/2003/04/02/dcterms.xsd \
+  https://www.dublincore.org/schemas/xmls/qdc/2003/04/02/dcmitype.xsd \
+  https://www.w3.org/2001/xml.xsd; do
+  file="external/${url##*/}"
+  [[ -f "$file" ]] || curl -fsSL -A "Mozilla/5.0" -o "$file" "$url"
+done
+
+cat >catalog.xml <<'EOF'
+<?xml version="1.0"?>
+<catalog xmlns="urn:oasis:names:tc:entity:xmlns:xml:catalog">
+  <system systemId="http://www.w3.org/2001/03/xml.xsd" uri="external/xml.xsd"/>
+  <system systemId="http://www.w3.org/2001/xml.xsd" uri="external/xml.xsd"/>
+  <system systemId="http://dublincore.org/schemas/xmls/qdc/2003/04/02/dc.xsd" uri="external/dc.xsd"/>
+  <system systemId="http://dublincore.org/schemas/xmls/qdc/2003/04/02/dcterms.xsd" uri="external/dcterms.xsd"/>
+</catalog>
+EOF
+
+echo "OOXML spec bundle ready in $spec"

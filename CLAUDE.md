@@ -18,12 +18,14 @@ Do not add:
 
 ## Source of truth
 
-- Use the local OOXML bundle first.
+- Use the local OOXML bundle in `.spec/` first (gitignored; create it with
+  `scripts/fetch-spec`). It holds ECMA-376 parts 1-4 as PDF and grep-able text,
+  plus the Strict, Transitional, and OPC schemas.
 - Treat ECMA-376 and ISO/IEC 29500 as authoritative.
 - Use Microsoft implementation notes and Open XML SDK as secondary references.
 - Use `python-pptx` only for structural validation.
 - Use PptxGenJS only as a compatibility reference when the spec is ambiguous.
-- If the spec bundle path or a needed reference is missing, stop and ask.
+- If a needed reference is missing from the bundle, stop and ask.
 
 ## Design constraints
 
