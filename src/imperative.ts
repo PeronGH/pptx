@@ -18,6 +18,7 @@ import {
   Slide,
   Table,
   Text,
+  Title,
 } from "./jsx_components.ts";
 import type {
   ChartBarProps,
@@ -80,6 +81,8 @@ export type ChartOptions<Props> = Placed<Props>;
 export interface SlideBuilder {
   /** Add a text box. `text` is a string or `Text.P(...)` paragraphs. */
   addText(text: PptxChild, options: TextOptions): SlideBuilder;
+  /** Add the slide title (at most one per slide); see `Title`. */
+  addTitle(text: PptxChild, options: TextOptions): SlideBuilder;
   /** Add a preset shape, optionally with text inside. */
   addShape(preset: PresetGeometry, options: ShapeOptions): SlideBuilder;
   /** Add a PNG, JPEG, GIF, or BMP image. */
@@ -145,6 +148,11 @@ class SlideBuilderImpl implements SlideBuilder {
   addText(text: PptxChild, options: TextOptions): SlideBuilder {
     const { placement, props } = splitPlacement(options);
     return this.add(Text({ ...props, children: text }), placement);
+  }
+
+  addTitle(text: PptxChild, options: TextOptions): SlideBuilder {
+    const { placement, props } = splitPlacement(options);
+    return this.add(Title({ ...props, children: text }), placement);
   }
 
   addShape(preset: PresetGeometry, options: ShapeOptions): SlideBuilder {

@@ -14,18 +14,13 @@ import {
   type Style,
   Table,
   Text,
+  Title,
   u,
 } from "../mod.ts";
 
 const styles = {
   heroBar: {
     fill: { kind: "solid", color: clr.hex("1F4E79") },
-    padding: {
-      top: u.in(0.18),
-      right: u.in(0.28),
-      bottom: u.in(0.18),
-      left: u.in(0.28),
-    },
   } satisfies Style,
   heroTitle: {
     fontSize: u.font(24),
@@ -84,6 +79,7 @@ export const deck = (
     }}
   >
     <Slide
+      notes="Lead with the Q4 pipeline jump, then walk the metrics table."
       background={{
         kind: "linear-gradient",
         angle: 90,
@@ -102,16 +98,20 @@ export const deck = (
       }}
     >
       <Column>
-        <Shape
-          preset="roundRect"
-          h={u.in(1.25)}
-          style={{ ...styles.heroBar, ...styles.heroTitle }}
-        >
-          <Text.P>Quarterly Review</Text.P>
-          <Text.P style={styles.heroSubtitle}>
-            Q2 snapshot: growth is ahead of plan
-          </Text.P>
-        </Shape>
+        <Stack h={u.in(1.25)}>
+          <Shape preset="roundRect" style={styles.heroBar} />
+          <Column
+            gap={u.emu(0)}
+            padding={{ top: u.in(0.12), left: u.in(0.18), right: u.in(0.18) }}
+          >
+            <Title h={u.in(0.6)} style={styles.heroTitle}>
+              Quarterly Review
+            </Title>
+            <Text.P grow={1} style={styles.heroSubtitle}>
+              Q2 snapshot: growth is ahead of plan
+            </Text.P>
+          </Column>
+        </Stack>
 
         <Row align="start">
           <Stack grow={3.05}>

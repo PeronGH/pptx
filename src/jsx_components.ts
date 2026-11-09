@@ -62,6 +62,7 @@ import {
   type TextElement,
   type TextProps,
   type TextTagProps,
+  type TitleElement,
   type UnderlineElement,
 } from "./public_types.ts";
 
@@ -175,6 +176,16 @@ export const Column: ColumnComponent = Object.assign(ColumnBase, {
   Start: ColumnStart,
   End: ColumnEnd,
 });
+
+/**
+ * The slide title: laid out like `<Text>`, but written as the slide's title
+ * placeholder so PowerPoint's outline, navigation pane, and screen readers
+ * see it. Unstyled text inherits a 36pt heading-font title style. At most one
+ * per slide.
+ */
+export function Title(props: TextProps): TitleElement {
+  return node("title", props);
+}
 
 export function Stack(props: StackProps): StackElement {
   return node("stack", props);

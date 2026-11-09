@@ -318,6 +318,7 @@ interface InternalElementProps {
   readonly stack: StackProps;
   readonly align: AlignProps;
   readonly textbox: TextProps;
+  readonly title: TextProps;
   readonly shape: ShapeProps;
   readonly image: ImageProps;
   readonly table: TableProps;
@@ -363,6 +364,7 @@ export type RowEndElement = PptxElement<typeof RowEndTag, SlotProps>;
 export type ColumnStartElement = PptxElement<typeof ColumnStartTag, SlotProps>;
 export type ColumnEndElement = PptxElement<typeof ColumnEndTag, SlotProps>;
 export type TextElement = PptxElement<"textbox", TextProps>;
+export type TitleElement = PptxElement<"title", TextProps>;
 export type ShapeElement = PptxElement<"shape", ShapeProps>;
 export type ImageElement = PptxElement<"image", ImageProps>;
 export type TableElement = PptxElement<"table", TableProps>;
@@ -425,6 +427,7 @@ export type PptxNonFragmentElement =
   | ColumnStartElement
   | ColumnEndElement
   | TextElement
+  | TitleElement
   | ShapeElement
   | ImageElement
   | TableElement

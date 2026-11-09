@@ -47,7 +47,7 @@ export type {
   TextRun,
   VerticalAlignment,
 } from "./slide.ts";
-export { renderBlankSlideLayout } from "./slide_layout.ts";
+export { renderTitleOnlySlideLayout } from "./slide_layout.ts";
 export { renderNotesMaster, renderNotesSlide } from "./notes.ts";
 export { renderSlideMaster } from "./slide_master.ts";
 export { renderTheme } from "./theme.ts";

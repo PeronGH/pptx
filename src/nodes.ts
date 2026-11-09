@@ -12,6 +12,8 @@ import type { Paragraph } from "./text.ts";
 export interface TextBox {
   readonly kind: "textbox";
   readonly name?: string;
+  /** Written as the slide's title placeholder (`<Title>`). */
+  readonly placeholder?: "title";
   readonly style?: BoxStyle;
   readonly paragraphs: ReadonlyArray<Paragraph>;
 }

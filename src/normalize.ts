@@ -518,6 +518,7 @@ function layoutPropsOf(element: PptxElement): LayoutProps {
     isTag(element, "row") || isTag(element, "column") ||
     isTag(element, "stack") ||
     isTag(element, "align") || isTag(element, "textbox") ||
+    isTag(element, "title") ||
     isTag(element, "shape") || isTag(element, "image") ||
     isTag(element, "table") || isTag(element, "p") ||
     isChartElement(element)
@@ -799,17 +800,18 @@ function normalizeBaseNode(
       child: normalizeNode(expectElement(children[0], "align"), defaults),
     } satisfies Align;
   }
-  if (isTag(element, "textbox")) {
+  if (isTag(element, "textbox") || isTag(element, "title")) {
     const props = element.props;
     const resolved = resolveStyle(props.style);
     const { box, text: textDefaults } = splitStyle(resolved);
     return {
       kind: "textbox",
       name: props.name,
+      placeholder: element.type === "title" ? "title" : undefined,
       style: box,
       paragraphs: normalizeTextBlocks(
         props.children,
-        "textbox",
+        element.type,
         textGap(props.gap, defaults),
         textDefaults,
       ),

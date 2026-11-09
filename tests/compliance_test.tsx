@@ -2,6 +2,7 @@
 
 import { assert } from "@std/assert/assert";
 import { assertEquals } from "@std/assert/equals";
+import { assertThrows } from "@std/assert/throws";
 import {
   Chart,
   clr,
@@ -14,6 +15,7 @@ import {
   Slide,
   Table,
   Text,
+  Title,
   u,
 } from "../mod.ts";
 import { createPresentation } from "../imperative.ts";
@@ -276,4 +278,59 @@ Deno.test("e2e: speaker notes become notes slides with a notes master", async ()
     extractZipText(pres.generate(), "ppt/notesSlides/notesSlide1.xml")
       .includes("imperative notes"),
   );
+});
+
+Deno.test("e2e: <Title> is the slide's title placeholder", async () => {
+  const pptx = generate(
+    <Presentation>
+      <Slide>
+        <Column gap={u.in(0.2)}>
+          <Title h={u.in(1)}>Quarterly Review</Title>
+          <Text.P>Body text</Text.P>
+        </Column>
+      </Slide>
+      <Slide>
+        <Text.P>No title here</Text.P>
+      </Slide>
+    </Presentation>,
+  );
+  const result = await validatePptx(pptx, 2);
+  assertEquals(result.slides.map((slide) => slide.title), [
+    "Quarterly Review",
+    null,
+  ]);
+  assertEquals(result.slides[0]?.shapes[0]?.name, "Title 2");
+  const slide = extractZipText(pptx, "ppt/slides/slide1.xml");
+  assert(slide.includes('<p:nvPr><p:ph type="title"/></p:nvPr>'));
+  assert(
+    extractZipText(pptx, "ppt/slideLayouts/slideLayout1.xml").includes(
+      'type="titleOnly"',
+    ),
+  );
+
+  assertThrows(
+    () =>
+      generate(
+        <Presentation>
+          <Slide>
+            <Column>
+              <Title>One</Title>
+              <Title>Two</Title>
+            </Column>
+          </Slide>
+        </Presentation>,
+      ),
+    Error,
+    "at most one <Title>",
+  );
+
+  const pres = createPresentation();
+  pres.addSlide().addTitle("Imperative title", {
+    x: u.in(0.5),
+    y: u.in(0.3),
+    w: u.in(9),
+    h: u.in(1),
+  });
+  const imperative = extractZipText(pres.generate(), "ppt/slides/slide1.xml");
+  assert(imperative.includes('<p:ph type="title"/>'));
 });

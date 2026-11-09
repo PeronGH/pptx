@@ -102,10 +102,11 @@ pres.addSlide({ background: clr.hex("F7F4EE") })
 writeFileSync("review.pptx", pres.generate());
 ```
 
-Slides support `addText`, `addShape`, `addImage`, `addTable`, `addBarChart`,
-`addLineChart`, `addPieChart`, `addDonutChart`, and `add(node, placement)` for
-placing any component tree (e.g. `Row({ children: [...] })`) in a frame. Options
-are the matching component props plus `x`, `y`, `w`, and `h`.
+Slides support `addTitle`, `addText`, `addShape`, `addImage`, `addTable`,
+`addBarChart`, `addLineChart`, `addPieChart`, `addDonutChart`, and
+`add(node, placement)` for placing any component tree (e.g.
+`Row({ children: [...] })`) in a frame. Options are the matching component props
+plus `x`, `y`, `w`, and `h`.
 
 ## Public API
 
@@ -135,6 +136,8 @@ are the matching component props plus `x`, `y`, `w`, and `h`.
 
 ### Content JSX components
 
+- `<Title>` — the slide title (one per slide); lays out like `<Text>` and is
+  what PowerPoint's outline, navigation, and screen readers use
 - `<Text>` — multi-paragraph text body (`gap` for paragraph spacing)
 - `<Text.P>` — single paragraph; auto-creates a text body at the top level
 - `<Shape preset="...">` — `preset` is a typed DrawingML preset geometry name

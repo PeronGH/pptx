@@ -19,7 +19,6 @@ import {
   type Relationship,
   RelationshipIdGenerator,
   renderAppProps,
-  renderBlankSlideLayout,
   renderChartSpace,
   renderContentTypes,
   renderCoreProps,
@@ -32,6 +31,7 @@ import {
   renderSlideMaster,
   renderTableStyles,
   renderTheme,
+  renderTitleOnlySlideLayout,
   renderViewProps,
   type SlideBackground,
   type SlideRef,
@@ -407,13 +407,13 @@ export function generatePptx(options: PackageOptions): Uint8Array {
   files["ppt/tableStyles.xml"] = encode(renderTableStyles());
   files["ppt/theme/theme1.xml"] = encode(renderTheme());
   files["ppt/slideMasters/slideMaster1.xml"] = encode(
-    renderSlideMaster([layoutRelId]),
+    renderSlideMaster([layoutRelId], options.slideWidth),
   );
   files["ppt/slideMasters/_rels/slideMaster1.xml.rels"] = encode(
     renderRelationships(smRels),
   );
   files["ppt/slideLayouts/slideLayout1.xml"] = encode(
-    renderBlankSlideLayout(),
+    renderTitleOnlySlideLayout(),
   );
   files["ppt/slideLayouts/_rels/slideLayout1.xml.rels"] = encode(
     renderRelationships(slRels),

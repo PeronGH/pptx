@@ -50,6 +50,7 @@ export {
   Stack,
   Table,
   Text,
+  Title,
 } from "./src/jsx_components.ts";
 export { generate } from "./src/generate.ts";
 export { clr, u } from "./src/st.ts";

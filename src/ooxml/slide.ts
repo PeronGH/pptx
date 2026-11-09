@@ -168,6 +168,11 @@ export interface TextBoxShape {
   readonly kind: "textbox";
   /** Shape name (`p:cNvPr/@name`); defaults to a kind-and-id name. */
   readonly name?: string;
+  /**
+   * Write the text box as the slide's title placeholder (§19.3.1.36 `p:ph`),
+   * so PowerPoint's outline, navigation, and screen readers see the title.
+   */
+  readonly placeholder?: "title";
   readonly x: Emu;
   readonly y: Emu;
   readonly cx: Emu;
@@ -546,9 +551,19 @@ function renderTextBoxSp(id: number, shape: TextBoxShape): XmlElement {
     el(
       "p:nvSpPr",
       {},
-      el("p:cNvPr", { id: String(id), name: shape.name ?? `TextBox ${id}` }),
-      el("p:cNvSpPr", { txBox: "1" }),
-      el("p:nvPr", {}),
+      el("p:cNvPr", {
+        id: String(id),
+        name: shape.name ??
+          `${shape.placeholder === "title" ? "Title" : "TextBox"} ${id}`,
+      }),
+      shape.placeholder === "title"
+        ? el("p:cNvSpPr", {}, el("a:spLocks", { noGrp: "1" }))
+        : el("p:cNvSpPr", { txBox: "1" }),
+      el(
+        "p:nvPr",
+        {},
+        shape.placeholder && el("p:ph", { type: shape.placeholder }),
+      ),
     ),
     el("p:spPr", {}, ...spPrChildren),
     el(

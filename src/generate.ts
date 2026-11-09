@@ -153,7 +153,7 @@ function toSlideShape(node: SceneNode, ctx: SlideContext): SlideShape {
         shadow: node.style?.shadow,
       };
       return node.kind === "textbox"
-        ? { ...text, kind: "textbox" }
+        ? { ...text, kind: "textbox", placeholder: node.placeholder }
         : { ...text, kind: "preset", preset: node.preset };
     }
     case "image": {
@@ -278,6 +278,16 @@ export function generate(root: PptxElement): Uint8Array {
   const slides = presentation.slides.map((slide): PackageSlide => {
     const contentFrame = insetFrame(slideFrame, slide.props.contentPadding);
     const sceneNodes = resolveSlideChildren(slide.children, contentFrame);
+    const titles = sceneNodes.filter((node) =>
+      node.kind === "textbox" && node.placeholder === "title"
+    );
+    if (titles.length > 1) {
+      // Titles can sit anywhere in the layout tree, so only the resolved
+      // slide can be counted. A slide has a single title placeholder.
+      throw new Error(
+        `A slide can have at most one <Title>, found ${titles.length}`,
+      );
+    }
     const ctx = createSlideContext();
     const background = toSlideBackground(
       slide.props.background,
