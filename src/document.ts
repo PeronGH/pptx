@@ -3,6 +3,7 @@
  */
 
 import type { Emu, HexColor, Percentage } from "./types.ts";
+import type { SlideSize } from "./public_types.ts";
 import type { CropRect, Fill, ImageFit, Insets } from "./style.ts";
 import type { ResolvableNode } from "./layout.ts";
 
@@ -34,8 +35,7 @@ export interface Slide {
 export interface PresentationOptions {
   readonly title?: string;
   readonly creator?: string;
-  readonly slideWidth?: Emu;
-  readonly slideHeight?: Emu;
+  readonly size?: SlideSize;
 }
 
 /** A complete presentation. */

@@ -10,7 +10,7 @@ import type { Background, BackgroundImageProps } from "./document.ts";
 import { inspectImage, resolveImageFit } from "./image.ts";
 import { insetFrame, resolveSlideChildren } from "./layout.ts";
 import { normalizePresentation } from "./normalize.ts";
-import type { PptxElement } from "./public_types.ts";
+import type { PptxElement, SlideSize } from "./public_types.ts";
 import type { Frame, SceneNode } from "./scene.ts";
 import type { TableCell } from "./nodes.ts";
 import type {
@@ -248,11 +248,26 @@ function toSlideBackground(
   };
 }
 
+function resolveSlideSize(size: SlideSize = "16:9"): {
+  readonly width: Emu;
+  readonly height: Emu;
+} {
+  switch (size) {
+    case "16:9":
+      return { width: emu(12192000), height: emu(6858000) };
+    case "4:3":
+      return { width: u.in(10), height: u.in(7.5) };
+    default:
+      return size;
+  }
+}
+
 /** Generate a PPTX file from a JSX-authored presentation. */
 export function generate(root: PptxElement): Uint8Array {
   const presentation = normalizePresentation(root);
-  const slideWidth = presentation.options.slideWidth ?? u.in(10);
-  const slideHeight = presentation.options.slideHeight ?? u.in(7.5);
+  const { width: slideWidth, height: slideHeight } = resolveSlideSize(
+    presentation.options.size,
+  );
   const slideFrame: Frame = {
     x: emu(0),
     y: emu(0),

@@ -70,6 +70,15 @@ export interface LayoutDefaults {
   readonly textGap?: Emu;
 }
 
+/**
+ * Slide size: `"16:9"` is PowerPoint's Widescreen (13.333in x 7.5in), `"4:3"`
+ * its Standard (10in x 7.5in). Custom sizes must be 1in to 56in per side.
+ */
+export type SlideSize =
+  | "16:9"
+  | "4:3"
+  | { readonly width: Emu; readonly height: Emu };
+
 /** Props of components that become one slide shape. */
 export interface ShapeNameProps {
   /**
@@ -104,8 +113,8 @@ export interface PositionedProps {
 export interface PresentationProps {
   readonly title?: string;
   readonly creator?: string;
-  readonly slideWidth?: Emu;
-  readonly slideHeight?: Emu;
+  /** Slide size; defaults to `"16:9"`. */
+  readonly size?: SlideSize;
   readonly layout?: LayoutDefaults;
   readonly children?: PptxChild;
 }

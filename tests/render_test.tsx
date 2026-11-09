@@ -131,7 +131,7 @@ Deno.test("e2e: slide background image", async () => {
 
   const slide = extractZipText(pptx, "ppt/slides/slide1.xml");
   assert(slide.includes('<p:bg><p:bgPr><a:blipFill dpi="0" rotWithShape="1">'));
-  assert(slide.includes('<a:srcRect l="16667" r="16667"/>'));
+  assert(slide.includes('<a:srcRect l="5556" r="5556"/>'));
 });
 
 Deno.test("e2e: image fits", async () => {

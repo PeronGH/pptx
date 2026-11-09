@@ -157,7 +157,7 @@ Deno.test("e2e: contain background letterboxes with fillRect insets", async () =
   await validatePptx(pptx, 1);
   const slide = extractZipText(pptx, "ppt/slides/slide1.xml");
   assert(slide.includes('<a:alphaModFix amt="60000"/>'));
-  assert(slide.includes('<a:fillRect t="16667" b="16667"/>'));
+  assert(slide.includes('<a:fillRect t="5556" b="5556"/>'));
 });
 
 Deno.test("e2e: bullets hang, text boxes keep their frame, app.xml is consistent", async () => {

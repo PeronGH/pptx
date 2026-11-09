@@ -748,3 +748,30 @@ Deno.test("type-only constraints are enforced for plain-JavaScript callers", () 
     "gradient stops",
   );
 });
+
+Deno.test("slides default to 16:9 widescreen; presets and custom sizes apply", () => {
+  const sizeOf = (pptx: Uint8Array) =>
+    extractZipText(pptx, "ppt/presentation.xml").match(/<p:sldSz [^>]*>/)?.[0];
+  assertEquals(
+    sizeOf(generate(<Presentation />)),
+    '<p:sldSz cx="12192000" cy="6858000"/>',
+  );
+  assertEquals(
+    sizeOf(generate(<Presentation size="4:3" />)),
+    '<p:sldSz cx="9144000" cy="6858000"/>',
+  );
+  assertEquals(
+    sizeOf(
+      generate(
+        <Presentation size={{ width: u.in(10), height: u.in(5.625) }} />,
+      ),
+    ),
+    '<p:sldSz cx="9144000" cy="5143500"/>',
+  );
+  assertThrows(
+    () =>
+      generate(<Presentation size={{ width: u.in(0.5), height: u.in(1) }} />),
+    RangeError,
+    "slide width",
+  );
+});

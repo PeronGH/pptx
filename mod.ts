@@ -123,6 +123,7 @@ export type {
   ShapeNameProps,
   ShapeProps,
   SlideProps,
+  SlideSize,
   SlotProps,
   SpanProps,
   StackProps,

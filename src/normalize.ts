@@ -1053,8 +1053,7 @@ export function normalizePresentation(root: PptxElement): Presentation {
     options: {
       title: props.title,
       creator: props.creator,
-      slideWidth: props.slideWidth,
-      slideHeight: props.slideHeight,
+      size: props.size,
     },
     slides,
   };

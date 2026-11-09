@@ -114,6 +114,8 @@ are the matching component props plus `x`, `y`, `w`, and `h`.
 - `generate(<Presentation>...</Presentation>)`
 - `u.*` for units: `in`, `cm`, `pt`, `emu`, `font`, `pct`
 - `clr.hex(...)` for validated OOXML colors
+- `<Presentation size>`: `"16:9"` (default, PowerPoint Widescreen), `"4:3"`, or
+  `{ width, height }`
 - Inherited layout defaults through `presentation layout={...}` and
   `slide layout={...}`
 

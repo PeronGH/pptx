@@ -9,7 +9,7 @@
 import { el, renderXmlDocument } from "../xml.ts";
 import type { Emu } from "../types.ts";
 import { NS_A, NS_P, NS_R } from "./namespaces.ts";
-import { positiveCoordinate, slideSizeCoordinate } from "./simple_types.ts";
+import { slideSizeCoordinate } from "./simple_types.ts";
 
 /** Slide reference with its relationship ID and numeric ID. */
 export interface SlideRef {
@@ -39,11 +39,8 @@ export function renderPresentation(
     cx: slideSizeCoordinate(slideWidth, "slide width (EMU)"),
     cy: slideSizeCoordinate(slideHeight, "slide height (EMU)"),
   });
-  // Notes pages are portrait, matching PowerPoint's default.
-  const notesSz = el("p:notesSz", {
-    cx: positiveCoordinate(slideHeight),
-    cy: positiveCoordinate(slideWidth),
-  });
+  // PowerPoint's notes page: portrait 7.5in x 10in, independent of slides.
+  const notesSz = el("p:notesSz", { cx: "6858000", cy: "9144000" });
 
   const root = el(
     "p:presentation",
