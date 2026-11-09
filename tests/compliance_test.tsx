@@ -5,15 +5,18 @@ import { assertEquals } from "@std/assert/equals";
 import {
   Chart,
   clr,
+  Column,
   generate,
   Image,
   Presentation,
   Row,
   Shape,
   Slide,
+  Table,
   Text,
   u,
 } from "../mod.ts";
+import { createPresentation } from "../imperative.ts";
 import {
   createTestBmp,
   createTestPng,
@@ -190,4 +193,50 @@ Deno.test("e2e: bullets hang, text boxes keep their frame, app.xml is consistent
   assert(app.includes("<Slides>2</Slides>"));
   assert(app.includes('<vt:vector size="1" baseType="lpstr">'));
   assert(!extractZipText(pptx, "docProps/core.xml").includes("dc:creator"));
+});
+
+Deno.test("e2e: shape names reach PowerPoint's selection pane", async () => {
+  const pptx = generate(
+    <Presentation>
+      <Slide>
+        <Column gap={u.in(0.1)}>
+          <Text.P name="headline">Title</Text.P>
+          <Shape name="badge" preset="ellipse" h={u.in(0.5)} />
+          <Image name="logo" data={createTestPng()} h={u.in(0.5)} />
+          <Table name="metrics" cols={[u.in(2)]} h={u.in(0.5)}>
+            <Table.Row height={u.in(0.5)}>
+              <Table.Cell>1</Table.Cell>
+            </Table.Row>
+          </Table>
+          <Chart.Pie
+            name="mix"
+            data={[{ c: "A", v: 1 }]}
+            category="c"
+            series={[{ name: "S", value: "v" }]}
+          />
+          <Text.P>unnamed</Text.P>
+        </Column>
+      </Slide>
+    </Presentation>,
+  );
+  const result = await validatePptx(pptx, 1);
+  assertEquals(result.slides[0]?.shapes.map((shape) => shape.name), [
+    "headline",
+    "badge",
+    "logo",
+    "metrics",
+    "mix",
+    "TextBox 7",
+  ]);
+
+  const pres = createPresentation();
+  pres.addSlide().addText("x", {
+    name: "imperative",
+    x: u.in(1),
+    y: u.in(1),
+    w: u.in(1),
+    h: u.in(1),
+  });
+  const slide = extractZipText(pres.generate(), "ppt/slides/slide1.xml");
+  assert(slide.includes('name="imperative"'));
 });

@@ -120,6 +120,7 @@ export type {
   PptxElement,
   PresentationProps,
   RowProps,
+  ShapeNameProps,
   ShapeProps,
   SlideProps,
   SlotProps,

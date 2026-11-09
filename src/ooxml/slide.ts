@@ -166,6 +166,8 @@ export type VerticalAlignment = "t" | "ctr" | "b";
 /** Shape-backed text box. */
 export interface TextBoxShape {
   readonly kind: "textbox";
+  /** Shape name (`p:cNvPr/@name`); defaults to a kind-and-id name. */
+  readonly name?: string;
   readonly x: Emu;
   readonly y: Emu;
   readonly cx: Emu;
@@ -182,6 +184,8 @@ export interface TextBoxShape {
 /** Preset shape. */
 export interface PresetShape {
   readonly kind: "preset";
+  /** Shape name (`p:cNvPr/@name`); defaults to a kind-and-id name. */
+  readonly name?: string;
   readonly x: Emu;
   readonly y: Emu;
   readonly cx: Emu;
@@ -199,6 +203,8 @@ export interface PresetShape {
 /** Picture shape. */
 export interface PictureShape {
   readonly kind: "picture";
+  /** Shape name (`p:cNvPr/@name`); defaults to a kind-and-id name. */
+  readonly name?: string;
   readonly x: Emu;
   readonly y: Emu;
   readonly cx: Emu;
@@ -227,6 +233,8 @@ export interface TableRow {
 /** Table shape. */
 export interface TableShape {
   readonly kind: "table";
+  /** Shape name (`p:cNvPr/@name`); defaults to a kind-and-id name. */
+  readonly name?: string;
   readonly x: Emu;
   readonly y: Emu;
   readonly cx: Emu;
@@ -238,6 +246,8 @@ export interface TableShape {
 /** Graphic-frame-backed chart. */
 export interface ChartShape {
   readonly kind: "chart";
+  /** Shape name (`p:cNvPr/@name`); defaults to a kind-and-id name. */
+  readonly name?: string;
   readonly x: Emu;
   readonly y: Emu;
   readonly cx: Emu;
@@ -536,7 +546,7 @@ function renderTextBoxSp(id: number, shape: TextBoxShape): XmlElement {
     el(
       "p:nvSpPr",
       {},
-      el("p:cNvPr", { id: String(id), name: `TextBox ${id}` }),
+      el("p:cNvPr", { id: String(id), name: shape.name ?? `TextBox ${id}` }),
       el("p:cNvSpPr", { txBox: "1" }),
       el("p:nvPr", {}),
     ),
@@ -574,7 +584,7 @@ function renderPresetSp(id: number, shape: PresetShape): XmlElement {
     el(
       "p:nvSpPr",
       {},
-      el("p:cNvPr", { id: String(id), name: `Shape ${id}` }),
+      el("p:cNvPr", { id: String(id), name: shape.name ?? `Shape ${id}` }),
       el("p:cNvSpPr", {}),
       el("p:nvPr", {}),
     ),
@@ -628,7 +638,11 @@ function renderPicture(id: number, shape: PictureShape): XmlElement {
     el(
       "p:nvPicPr",
       {},
-      el("p:cNvPr", { id: String(id), name: `Picture ${id}`, descr: desc }),
+      el("p:cNvPr", {
+        id: String(id),
+        name: shape.name ?? `Picture ${id}`,
+        descr: desc,
+      }),
       el("p:cNvPicPr", {}, el("a:picLocks", { noChangeAspect: "1" })),
       el("p:nvPr", {}),
     ),
@@ -712,7 +726,7 @@ function renderTable(id: number, shape: TableShape): XmlElement {
     el(
       "p:nvGraphicFramePr",
       {},
-      el("p:cNvPr", { id: String(id), name: `Table ${id}` }),
+      el("p:cNvPr", { id: String(id), name: shape.name ?? `Table ${id}` }),
       el("p:cNvGraphicFramePr", {}, el("a:graphicFrameLocks", { noGrp: "1" })),
       el("p:nvPr", {}),
     ),
@@ -742,7 +756,7 @@ function renderChart(id: number, shape: ChartShape): XmlElement {
     el(
       "p:nvGraphicFramePr",
       {},
-      el("p:cNvPr", { id: String(id), name: `Chart ${id}` }),
+      el("p:cNvPr", { id: String(id), name: shape.name ?? `Chart ${id}` }),
       el("p:cNvGraphicFramePr", {}, el("a:graphicFrameLocks", { noGrp: "1" })),
       el("p:nvPr", {}),
     ),

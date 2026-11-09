@@ -11,6 +11,7 @@ import type { Paragraph } from "./text.ts";
 /** A positionless text box leaf. */
 export interface TextBox {
   readonly kind: "textbox";
+  readonly name?: string;
   readonly style?: BoxStyle;
   readonly paragraphs: ReadonlyArray<Paragraph>;
 }
@@ -18,6 +19,7 @@ export interface TextBox {
 /** A positionless preset shape leaf. */
 export interface Shape {
   readonly kind: "shape";
+  readonly name?: string;
   readonly preset: PresetGeometry;
   readonly style?: BoxStyle;
   readonly paragraphs: ReadonlyArray<Paragraph>;
@@ -26,6 +28,7 @@ export interface Shape {
 /** A positionless image leaf. */
 export interface Image {
   readonly kind: "image";
+  readonly name?: string;
   readonly data: Uint8Array;
   readonly description?: string;
   readonly fit?: ImageFit;
@@ -48,6 +51,7 @@ export interface TableRow {
 /** A positionless table leaf. */
 export interface Table {
   readonly kind: "table";
+  readonly name?: string;
   readonly cols: readonly [Emu, ...Emu[]];
   readonly rows: ReadonlyArray<TableRow>;
 }

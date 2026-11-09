@@ -133,7 +133,13 @@ function fitTableColumns(
 }
 
 function toSlideShape(node: SceneNode, ctx: SlideContext): SlideShape {
-  const placement = { x: node.x, y: node.y, cx: node.w, cy: node.h };
+  const placement = {
+    name: node.name,
+    x: node.x,
+    y: node.y,
+    cx: node.w,
+    cy: node.h,
+  };
   switch (node.kind) {
     case "textbox":
     case "shape": {
@@ -162,6 +168,7 @@ function toSlideShape(node: SceneNode, ctx: SlideContext): SlideShape {
       );
       return {
         kind: "picture",
+        name: node.name,
         x: frame.x,
         y: frame.y,
         cx: frame.w,

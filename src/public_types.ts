@@ -70,6 +70,15 @@ export interface LayoutDefaults {
   readonly textGap?: Emu;
 }
 
+/** Props of components that become one slide shape. */
+export interface ShapeNameProps {
+  /**
+   * Shape name shown in PowerPoint's selection pane. Name shapes to trace
+   * issues found in a rendered slide back to the code that made them.
+   */
+  readonly name?: string;
+}
+
 /** Shared row/column child sizing props. */
 export interface LayoutProps {
   readonly basis?: Emu;
@@ -135,20 +144,20 @@ export type AlignProps = LayoutProps & {
   readonly children: PptxChild;
 };
 
-export type TextProps = LayoutProps & {
+export type TextProps = LayoutProps & ShapeNameProps & {
   readonly style?: StyleInput<Style>;
   readonly gap?: Emu;
   readonly children?: PptxChild;
 };
 
-export type ShapeProps = LayoutProps & {
+export type ShapeProps = LayoutProps & ShapeNameProps & {
   readonly preset: PresetGeometry;
   readonly style?: StyleInput<Style>;
   readonly gap?: Emu;
   readonly children?: PptxChild;
 };
 
-export type ImageProps = LayoutProps & {
+export type ImageProps = LayoutProps & ShapeNameProps & {
   /** PNG, JPEG, GIF, or BMP bytes; the format is detected from the data. */
   readonly data: Uint8Array;
   readonly description?: string;
@@ -158,7 +167,7 @@ export type ImageProps = LayoutProps & {
   readonly children?: never;
 };
 
-export type TableProps = LayoutProps & {
+export type TableProps = LayoutProps & ShapeNameProps & {
   readonly cols: readonly [Emu, ...Emu[]];
   readonly children?: PptxChild;
 };
@@ -174,7 +183,7 @@ export interface TableCellProps {
   readonly children?: PptxChild;
 }
 
-export type ParagraphProps = LayoutProps & {
+export type ParagraphProps = LayoutProps & ShapeNameProps & {
   readonly style?: StyleInput<Style>;
   readonly children?: PptxChild;
 };
@@ -195,7 +204,7 @@ export interface TextTagProps {
   readonly children?: PptxChild;
 }
 
-type ChartSharedProps = {
+type ChartSharedProps = ShapeNameProps & {
   readonly title?: string;
   readonly labels?: boolean;
   readonly legend?: ChartLegend;

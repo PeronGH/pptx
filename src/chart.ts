@@ -53,17 +53,23 @@ export interface ChartSeries<
 /** A normalized series definition. */
 export type ChartSeriesData = ChartSeriesDefinition;
 
+/** Layout-leaf fields shared by every chart. */
+interface ChartLeaf {
+  readonly kind: "chart";
+  readonly name?: string;
+}
+
 /** A normalized multi-series bar chart leaf. */
-export type BarChart = BarChartDefinition & { readonly kind: "chart" };
+export type BarChart = BarChartDefinition & ChartLeaf;
 
 /** A normalized multi-series line chart leaf. */
-export type LineChart = LineChartDefinition & { readonly kind: "chart" };
+export type LineChart = LineChartDefinition & ChartLeaf;
 
 /** A normalized single-series pie chart leaf. */
-export type PieChart = PieChartDefinition & { readonly kind: "chart" };
+export type PieChart = PieChartDefinition & ChartLeaf;
 
 /** A normalized single-series donut chart leaf. */
-export type DonutChart = DonutChartDefinition & { readonly kind: "chart" };
+export type DonutChart = DonutChartDefinition & ChartLeaf;
 
 /** Union of normalized chart leaves. */
 export type Chart = BarChart | LineChart | PieChart | DonutChart;

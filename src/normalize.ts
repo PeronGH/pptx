@@ -616,6 +616,7 @@ function normalizeChart(element: AnyChartElement): Chart {
   if (isChartBarElement(element)) {
     return {
       kind: "chart",
+      name: element.props.name,
       type: "bar",
       categories,
       series: normalizeChartSeries(element.props.data, element.props.series),
@@ -630,6 +631,7 @@ function normalizeChart(element: AnyChartElement): Chart {
   if (isChartLineElement(element)) {
     return {
       kind: "chart",
+      name: element.props.name,
       type: "line",
       categories,
       series: normalizeChartSeries(element.props.data, element.props.series),
@@ -648,6 +650,7 @@ function normalizeChart(element: AnyChartElement): Chart {
     );
     return {
       kind: "chart",
+      name: element.props.name,
       type: "pie",
       categories,
       series: [series[0]!],
@@ -659,6 +662,7 @@ function normalizeChart(element: AnyChartElement): Chart {
   const series = normalizeChartSeries(element.props.data, element.props.series);
   return {
     kind: "chart",
+    name: element.props.name,
     type: "donut",
     categories,
     series: [series[0]!],
@@ -799,6 +803,7 @@ function normalizeBaseNode(
     const { box, text: textDefaults } = splitStyle(resolved);
     return {
       kind: "textbox",
+      name: props.name,
       style: box,
       paragraphs: normalizeTextBlocks(
         props.children,
@@ -814,6 +819,7 @@ function normalizeBaseNode(
     const { box, text: textDefaults } = splitStyle(resolved);
     return {
       kind: "shape",
+      name: props.name,
       preset: props.preset,
       style: box,
       paragraphs: normalizeTextBlocks(
@@ -828,6 +834,7 @@ function normalizeBaseNode(
     const props = element.props;
     return {
       kind: "image",
+      name: props.name,
       data: props.data,
       description: props.description,
       fit: props.fit,
@@ -854,6 +861,7 @@ function normalizeBaseNode(
     }
     return {
       kind: "table",
+      name: props.name,
       cols: props.cols,
       rows,
     } satisfies LeafTable;
@@ -868,6 +876,7 @@ function normalizeBaseNode(
     const { box, paragraph: paraStyle, text: textStyle } = splitStyle(resolved);
     return {
       kind: "textbox",
+      name: props.name,
       style: box,
       paragraphs: [{
         style: paraStyle,
