@@ -545,7 +545,7 @@ Deno.test("tables reject missing rows and ragged rows", () => {
         </Presentation>,
       ),
     Error,
-    "has 1 cells but the table has 2 columns",
+    "leaves 1 of the table's 2 columns empty",
   );
 });
 

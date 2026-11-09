@@ -146,7 +146,8 @@ plus `x`, `y`, `w`, and `h`.
   the bytes
 - `<Table cols=[...]>`
 - `<Table.Row height={...}>`
-- `<Table.Cell>`
+- `<Table.Cell>` — `colSpan`/`rowSpan` merge cells; as in HTML, leave the
+  covered cells out of later rows
 - `<Chart.Bar ... />`
 - `<Chart.Line ... />`
 - `<Chart.Area ... />`

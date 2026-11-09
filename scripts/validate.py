@@ -215,6 +215,12 @@ def validate_python_pptx(path: str, expected_slides: int | None = None) -> list[
                             row_data.append(cell.text)
                         table_data.append(row_data)
                     shape_info["table_data"] = table_data
+                    shape_info["table_merges"] = [
+                        [r, c, cell.span_height, cell.span_width]
+                        for r, row in enumerate(tbl.rows)
+                        for c, cell in enumerate(row.cells)
+                        if cell.is_merge_origin
+                    ]
 
                 # Chart detection
                 if getattr(shape, "has_chart", False):

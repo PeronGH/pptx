@@ -445,3 +445,62 @@ Deno.test("e2e: stacked bars, area charts, and number formats", async () => {
     ),
   );
 });
+
+Deno.test("e2e: table cells span columns and rows", async () => {
+  const header = {
+    fill: { kind: "solid", color: clr.hex("17324D") },
+    fontColor: clr.hex("FFFFFF"),
+    bold: true,
+  } as const;
+  const pptx = generate(
+    <Presentation>
+      <Slide>
+        <Table cols={[u.in(2), u.in(1.5), u.in(1.5)]} h={u.in(2)}>
+          <Table.Row height={u.in(0.5)}>
+            <Table.Cell rowSpan={2} style={header}>Region</Table.Cell>
+            <Table.Cell colSpan={2} style={header}>2026</Table.Cell>
+          </Table.Row>
+          <Table.Row height={u.in(0.5)}>
+            <Table.Cell style={header}>H1</Table.Cell>
+            <Table.Cell style={header}>H2</Table.Cell>
+          </Table.Row>
+          <Table.Row height={u.in(0.5)}>
+            <Table.Cell>North</Table.Cell>
+            <Table.Cell>12</Table.Cell>
+            <Table.Cell>15</Table.Cell>
+          </Table.Row>
+          <Table.Row height={u.in(0.5)}>
+            <Table.Cell colSpan={3}>Totals pending</Table.Cell>
+          </Table.Row>
+        </Table>
+      </Slide>
+    </Presentation>,
+  );
+  const result = await validatePptx(pptx, 1);
+  const table = result.slides[0]?.shapes[0];
+  assertEquals(table?.table_merges, [[0, 0, 2, 1], [0, 1, 1, 2], [3, 0, 1, 3]]);
+  assertEquals(table?.table_data?.[0], ["Region", "2026", ""]);
+  assertEquals(table?.table_data?.[1], ["", "H1", "H2"]);
+
+  assertThrows(
+    () =>
+      generate(
+        <Presentation>
+          <Slide>
+            <Table cols={[u.in(1), u.in(1)]}>
+              <Table.Row height={u.in(0.5)}>
+                <Table.Cell rowSpan={2}>a</Table.Cell>
+                <Table.Cell>b</Table.Cell>
+              </Table.Row>
+              <Table.Row height={u.in(0.5)}>
+                <Table.Cell>c</Table.Cell>
+                <Table.Cell>d</Table.Cell>
+              </Table.Row>
+            </Table>
+          </Slide>
+        </Presentation>,
+      ),
+    Error,
+    "needs more than the table's 2 columns",
+  );
+});

@@ -40,6 +40,8 @@ export interface Image {
 
 /** A table cell. */
 export interface TableCell {
+  readonly colSpan?: number;
+  readonly rowSpan?: number;
   readonly style?: CellStyle;
   readonly paragraphs: ReadonlyArray<Paragraph>;
 }

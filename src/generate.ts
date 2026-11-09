@@ -9,6 +9,7 @@ import type { Paragraph, TextRun } from "./text.ts";
 import type { Background, BackgroundImageProps } from "./document.ts";
 import { inspectImage, resolveImageFit } from "./image.ts";
 import { insetFrame, resolveSlideChildren } from "./layout.ts";
+import { placeTableCells } from "./table_grid.ts";
 import { normalizePresentation } from "./normalize.ts";
 import type { PptxElement, SlideSize } from "./public_types.ts";
 import type { Frame, SceneNode } from "./scene.ts";
@@ -184,9 +185,28 @@ function toSlideShape(node: SceneNode, ctx: SlideContext): SlideShape {
         ...placement,
         kind: "table",
         columns: fitTableColumns(node.w, node.cols),
-        rows: node.rows.map((row) => ({
-          height: row.height,
-          cells: row.cells.map((cell) => toTableCell(cell, ctx)),
+        rows: placeTableCells(
+          node.rows.map((row) => row.cells),
+          node.cols.length,
+        ).map((slots, index) => ({
+          height: node.rows[index]!.height,
+          cells: slots.map((slot): OoxmlTableCell =>
+            slot.kind === "anchor"
+              ? {
+                ...toTableCell(slot.cell, ctx),
+                gridSpan: slot.colSpan,
+                rowSpan: slot.rowSpan,
+              }
+              // Covered slots repeat the anchor's fill and borders so the
+              // merged area draws consistently in every consumer.
+              : {
+                ...boxProperties(slot.anchor.style),
+                paragraphs: [],
+                hMerge: slot.hMerge,
+                vMerge: slot.vMerge,
+                gridSpan: slot.colSpan,
+              }
+          ),
         })),
       };
     case "chart": {

@@ -223,6 +223,14 @@ export interface PictureShape {
 /** A table cell. */
 export interface TableCell {
   readonly paragraphs: ReadonlyArray<TextParagraph>;
+  /** Grid columns spanned by this cell (`gridSpan`). */
+  readonly gridSpan?: number;
+  /** Rows spanned by this cell (`rowSpan`). */
+  readonly rowSpan?: number;
+  /** Merged into the cell to the left (`hMerge`). */
+  readonly hMerge?: boolean;
+  /** Merged into the cell above (`vMerge`). */
+  readonly vMerge?: boolean;
   readonly fill?: Fill;
   readonly line?: LineProperties;
   readonly padding?: Insets;
@@ -726,7 +734,18 @@ function renderTable(id: number, shape: TableShape): XmlElement {
       if (Object.keys(tcPrAttrs).length > 0 || tcPrChildren.length > 0) {
         tcChildren.push(el("a:tcPr", tcPrAttrs, ...tcPrChildren));
       }
-      return el("a:tc", {}, ...tcChildren);
+      // CT_TableCell (§21.1.3.16): merges are spans on the first cell plus
+      // hMerge/vMerge on every grid slot it covers.
+      return el("a:tc", {
+        gridSpan: cell.gridSpan !== undefined && cell.gridSpan > 1
+          ? String(cell.gridSpan)
+          : undefined,
+        rowSpan: cell.rowSpan !== undefined && cell.rowSpan > 1
+          ? String(cell.rowSpan)
+          : undefined,
+        hMerge: cell.hMerge ? "1" : undefined,
+        vMerge: cell.vMerge ? "1" : undefined,
+      }, ...tcChildren);
     });
     return el(
       "a:tr",

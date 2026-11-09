@@ -134,5 +134,9 @@ Deno.test("imperative builder reports invalid content at generate time", () => {
     ...frame(1, 1, 2, 2),
     cols: [u.in(1), u.in(1)],
   });
-  assertThrows(() => pres.generate(), Error, "has 1 cells");
+  assertThrows(
+    () => pres.generate(),
+    Error,
+    "leaves 1 of the table's 2 columns empty",
+  );
 });

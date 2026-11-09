@@ -191,6 +191,13 @@ export interface TableRowProps {
 }
 
 export interface TableCellProps {
+  /**
+   * Grid columns this cell spans. As in HTML, the cells it covers are left
+   * out of the row.
+   */
+  readonly colSpan?: number;
+  /** Rows this cell spans; later rows leave out the covered cells. */
+  readonly rowSpan?: number;
   readonly style?: StyleInput<Omit<Style, "fit" | "shadow">>;
   readonly gap?: Emu;
   readonly children?: PptxChild;

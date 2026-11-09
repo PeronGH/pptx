@@ -20,6 +20,8 @@ export interface ValidationResult {
       table_rows?: number;
       table_cols?: number;
       table_data?: string[][];
+      /** Merge origins as [row, col, rowSpan, colSpan]. */
+      table_merges?: number[][];
     }>;
   }>;
 }

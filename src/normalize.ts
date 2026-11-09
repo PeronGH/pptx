@@ -55,6 +55,7 @@ import {
   RowStartTag,
 } from "./public_types.ts";
 import { emu } from "./st.ts";
+import { placeTableCells } from "./table_grid.ts";
 import {
   mergeInsets,
   mergeParagraphStyles,
@@ -720,6 +721,8 @@ function normalizeTableCell(
   const resolved = resolveStyle(props.style);
   const { box, text: textDefaults } = splitStyle(resolved);
   return {
+    colSpan: props.colSpan,
+    rowSpan: props.rowSpan,
     style: box
       ? {
         fill: box.fill,
@@ -851,18 +854,11 @@ function normalizeBaseNode(
     const rows = nonIgnorableChildren(props.children).map((child) =>
       normalizeTableRow(expectElement(child, "table"), defaults)
     );
-    // Row and cell counts come from JSX children, which TypeScript cannot
-    // count. PowerPoint rejects tables without rows or with ragged rows.
+    // Row counts come from JSX children, which TypeScript cannot count.
+    // PowerPoint rejects tables without rows; placeTableCells rejects rows
+    // that do not tile the grid.
     if (rows.length === 0) invalidTree("<Table> requires at least one row");
-    for (const [index, row] of rows.entries()) {
-      if (row.cells.length !== props.cols.length) {
-        invalidTree(
-          `<Table.Row> ${
-            index + 1
-          } has ${row.cells.length} cells but the table has ${props.cols.length} columns`,
-        );
-      }
-    }
+    placeTableCells(rows.map((row) => row.cells), props.cols.length);
     return {
       kind: "table",
       name: props.name,
