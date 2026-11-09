@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+if ! command -v dotnet >/dev/null 2>&1; then
+  echo "dotnet not found: required for Open XML SDK validation" >&2
+  exit 1
+fi
+
+export DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_NOLOGO=1
+project="$(cd "$(dirname "${BASH_SOURCE[0]}")/openxml-validator" && pwd)"
+out="$project/bin/out"
+
+# Concurrent `dotnet run` invocations race on obj/, so build once under a lock
+# and execute the built assembly directly.
+(
+  flock 9
+  if [[ ! -f "$out/openxml-validator.dll" || "$project/Program.cs" -nt "$out/openxml-validator.dll" || "$project/openxml-validator.csproj" -nt "$out/openxml-validator.dll" ]]; then
+    dotnet build "$project" -c Release -o "$out" --verbosity quiet >&2
+  fi
+) 9>"$project/bin.lock"
+
+exec dotnet "$out/openxml-validator.dll" "$@"

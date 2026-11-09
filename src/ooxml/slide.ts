@@ -605,16 +605,17 @@ function renderTable(id: number, shape: TableShape): XmlElement {
       }
       if (cell.verticalAlignment) tcPrAttrs["anchor"] = cell.verticalAlignment;
       const tcPrChildren: XmlElement[] = [];
-      if (cell.fill) {
-        const fillEl = renderFill(cell.fill);
-        if (fillEl) tcPrChildren.push(fillEl);
-      }
+      // CT_TableCellProperties order: lnL, lnR, lnT, lnB, ..., fill.
       if (cell.line) {
         const tags = ["a:lnL", "a:lnR", "a:lnT", "a:lnB"] as const;
         for (const tag of tags) {
           const lineEl = renderLine(cell.line, tag);
           if (lineEl) tcPrChildren.push(lineEl);
         }
+      }
+      if (cell.fill) {
+        const fillEl = renderFill(cell.fill);
+        if (fillEl) tcPrChildren.push(fillEl);
       }
       if (Object.keys(tcPrAttrs).length > 0 || tcPrChildren.length > 0) {
         tcChildren.push(el("a:tcPr", tcPrAttrs, ...tcPrChildren));
@@ -752,20 +753,21 @@ function renderTextRun(run: TextRun): XmlElement {
   if (run.underline) rPrAttrs["u"] = "sng";
   if (run.fontSize !== undefined) rPrAttrs["sz"] = String(run.fontSize);
 
+  // CT_TextCharacterProperties order: fill, ..., latin, ea, cs, ..., hlinkClick.
   const rPrChildren: XmlElement[] = [];
   if (run.fontColor !== undefined) {
     rPrChildren.push(
       el("a:solidFill", {}, renderColor(run.fontColor)),
     );
   }
-  if (run.hyperlink) {
-    rPrChildren.push(el("a:hlinkClick", { "r:id": run.hyperlink.rId }));
-  }
   if (run.fontFamily !== undefined) {
     rPrChildren.push(
       el("a:latin", { typeface: run.fontFamily }),
       el("a:cs", { typeface: run.fontFamily }),
     );
+  }
+  if (run.hyperlink) {
+    rPrChildren.push(el("a:hlinkClick", { "r:id": run.hyperlink.rId }));
   }
 
   const hasRunProps = Object.keys(rPrAttrs).length > 0 ||

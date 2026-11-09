@@ -79,15 +79,16 @@ deno publish --dry-run
 
 - Add tests for every new behavior, not just regressions. If a feature ships
   without a test that exercises it directly, the feature is incomplete.
-- Every PPTX-producing test must validate ZIP, OPC structure, `python-pptx`
-  round-trip, and LibreOffice conversion.
+- Every PPTX-producing test must validate ZIP, OPC structure, ECMA-376 XSDs,
+  Open XML SDK, `python-pptx` round-trip, and LibreOffice conversion (all via
+  `scripts/validate.py`).
 - Any intentional runtime throw, assertion, or type/lint suppression must carry
   a brief justification explaining why the invariant cannot be enforced
   statically or at the validation boundary.
-- Use `scripts/python3` for Python validation and `scripts/libreoffice` for
-  LibreOffice invocation.
-- If `python-pptx`, `lxml`, LibreOffice, or rasterizer tools are missing, stop
-  and ask the user to install them.
+- Use `scripts/python3` for Python validation, `scripts/libreoffice` for
+  LibreOffice invocation, and `scripts/openxml-validate` for the Open XML SDK.
+- If `python-pptx`, `lxml`, LibreOffice, `dotnet`, fonts, or rasterizer tools
+  are missing, stop and ask the user to install them.
 - After large layout, styling, or public API changes, do a manual visual check
   by generating a complex deck, converting it with LibreOffice, rasterizing it,
   and inspecting the images.

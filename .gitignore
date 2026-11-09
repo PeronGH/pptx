@@ -1,3 +1,6 @@
 .DS_Store
 examples/*.pptx
 .spec/
+scripts/openxml-validator/bin/
+scripts/openxml-validator/obj/
+scripts/openxml-validator/bin.lock

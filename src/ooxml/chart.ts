@@ -211,18 +211,17 @@ function renderLegend(legend: ChartLegendDefinition) {
 }
 
 function renderAxisDataLabels(kind: "bar" | "line") {
+  // CT_DLbls order: dLblPos precedes the show* flags; showLeaderLines follows.
   return el(
     "c:dLbls",
     {},
+    kind === "bar" ? el("c:dLblPos", { val: "outEnd" }) : undefined,
     el("c:showLegendKey", { val: "0" }),
     el("c:showVal", { val: "1" }),
     el("c:showCatName", { val: "0" }),
     el("c:showSerName", { val: "0" }),
     el("c:showPercent", { val: "0" }),
     el("c:showBubbleSize", { val: "0" }),
-    kind === "bar"
-      ? el("c:dLblPos", { val: "outEnd" })
-      : el("c:showLeaderLines", { val: "1" }),
   );
 }
 
@@ -315,10 +314,10 @@ function renderLineSeries(
     el("c:idx", { val: String(index) }),
     el("c:order", { val: String(index) }),
     renderSeriesText(index, series.name),
+    renderLineSeriesColor(series.color),
     definition.markers
       ? undefined
       : el("c:marker", {}, el("c:symbol", { val: "none" })),
-    renderLineSeriesColor(series.color),
     renderCategoryRef(definition.categories),
     renderValueRef(series.values, index),
     el("c:smooth", { val: "0" }),
@@ -454,7 +453,9 @@ function renderDonutChart(definition: DonutChartDefinition) {
     renderPieSeries(definition, definition.series[0], 0),
     definition.labels ? renderCircularDataLabels() : undefined,
     el("c:firstSliceAng", { val: "0" }),
-    el("c:holeSize", { val: `${definition.holeSize}%` }),
+    // Transitional ST_HoleSize also allows "NN%", but Office only reads the
+    // unsignedByte form.
+    el("c:holeSize", { val: String(definition.holeSize) }),
   );
 }
 

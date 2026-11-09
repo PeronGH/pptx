@@ -5,8 +5,10 @@ PPTX validation script.
 Validates generated PPTX files using:
 1. ZIP validity check
 2. OPC structure check ([Content_Types].xml, .rels files)
-3. python-pptx round-trip (structural validation)
-4. LibreOffice headless PDF conversion (rendering validation)
+3. ECMA-376 XSD validation of every XML part (needs .spec/, see scripts/fetch-spec)
+4. Open XML SDK validation (scripts/openxml-validate)
+5. python-pptx round-trip (structural validation)
+6. LibreOffice headless PDF conversion (rendering validation)
 
 Usage:
     python3 scripts/validate.py <pptx_path> [--slides N] [--libreoffice]
@@ -16,18 +18,45 @@ Exit codes:
     1: Validation failed
 """
 
+import io
 import json
+import os
 import subprocess
 import sys
 import tempfile
 import zipfile
 from pathlib import Path
 
-from lxml import etree
-from pptx import Presentation
-from pptx.enum.shapes import MSO_SHAPE_TYPE
+SCRIPTS = Path(__file__).parent
+SPEC = SCRIPTS.parent / ".spec"
+# libxml2 reads the catalog when lxml loads; it maps the external Dublin Core
+# and xml.xsd imports to local copies so schema loading never hits the network.
+os.environ["XML_CATALOG_FILES"] = str(SPEC / "catalog.xml")
 
-LIBREOFFICE_PATH = Path(__file__).with_name("libreoffice")
+from lxml import etree  # noqa: E402
+from pptx import Presentation  # noqa: E402
+from pptx.enum.shapes import MSO_SHAPE_TYPE  # noqa: E402
+
+LIBREOFFICE_PATH = SCRIPTS / "libreoffice"
+OPENXML_VALIDATE_PATH = SCRIPTS / "openxml-validate"
+
+_TRANSITIONAL = (
+    SPEC / "ECMA-376-4_5th_edition_december_2016" / "OfficeOpenXML-XMLSchema-Transitional"
+)
+_OPC = SPEC / "ECMA-376-2_5th_edition_december_2021" / "OpenPackagingConventions-XMLSchema"
+_NS = "http://schemas.openxmlformats.org"
+SCHEMAS = {
+    f"{_NS}/package/2006/content-types": _OPC / "opc-contentTypes.xsd",
+    f"{_NS}/package/2006/relationships": _OPC / "opc-relationships.xsd",
+    f"{_NS}/package/2006/metadata/core-properties": _OPC / "opc-coreProperties.xsd",
+    f"{_NS}/officeDocument/2006/extended-properties": _TRANSITIONAL
+    / "shared-documentPropertiesExtended.xsd",
+    f"{_NS}/presentationml/2006/main": _TRANSITIONAL / "pml.xsd",
+    f"{_NS}/drawingml/2006/main": _TRANSITIONAL / "dml-main.xsd",
+    f"{_NS}/drawingml/2006/chart": _TRANSITIONAL / "dml-chart.xsd",
+    f"{_NS}/spreadsheetml/2006/main": _TRANSITIONAL / "sml.xsd",
+}
+_schema_cache: dict[str, etree.XMLSchema] = {}
 
 
 def validate_zip(path: str) -> list[str]:
@@ -68,6 +97,56 @@ def validate_opc_structure(path: str) -> list[str]:
             errors.append("Missing _rels/.rels")
 
     return errors
+
+
+def _validate_package_schemas(label: str, data: bytes) -> list[str]:
+    errors = []
+    with zipfile.ZipFile(io.BytesIO(data)) as zf:
+        for name in zf.namelist():
+            body = zf.read(name)
+            if name.endswith(".xlsx"):
+                errors.extend(_validate_package_schemas(f"{label}{name}!", body))
+                continue
+            if not name.endswith((".xml", ".rels")):
+                continue
+            try:
+                root = etree.fromstring(body)
+            except etree.XMLSyntaxError:
+                continue  # reported by validate_opc_structure
+            namespace = etree.QName(root).namespace
+            if namespace not in SCHEMAS:
+                errors.append(f"No schema for {label}{name} ({namespace})")
+                continue
+            if namespace not in _schema_cache:
+                _schema_cache[namespace] = etree.XMLSchema(
+                    etree.parse(str(SCHEMAS[namespace]))
+                )
+            schema = _schema_cache[namespace]
+            if not schema.validate(etree.ElementTree(root)):
+                errors.extend(
+                    f"{label}{name}:{e.line}: {e.message}" for e in schema.error_log
+                )
+    return errors
+
+
+def validate_schemas(path: str) -> list[str]:
+    """Validate every XML part against the ECMA-376 Transitional/OPC XSDs."""
+    if not SPEC.is_dir():
+        return [f"OOXML spec bundle missing at {SPEC}: run scripts/fetch-spec"]
+    return _validate_package_schemas("", Path(path).read_bytes())
+
+
+def validate_openxml_sdk(path: str) -> list[str]:
+    """Validate with the Open XML SDK (Microsoft 365 file format version)."""
+    result = subprocess.run(
+        [str(OPENXML_VALIDATE_PATH), path],
+        capture_output=True,
+        text=True,
+        timeout=300,
+    )
+    if result.returncode != 0:
+        return [f"Open XML SDK validator failed: {result.stderr}"]
+    return json.loads(result.stdout)
 
 
 def validate_python_pptx(path: str, expected_slides: int | None = None) -> list[str]:
@@ -163,7 +242,7 @@ def validate_libreoffice(path: str) -> list[str]:
                 ],
                 capture_output=True,
                 text=True,
-                timeout=30,
+                timeout=120,
             )
             if result.returncode != 0:
                 errors.append(
@@ -209,6 +288,16 @@ def main() -> int:
     all_errors.extend(errors)
     if errors:
         print(f"OPC validation FAILED: {errors}", file=sys.stderr)
+
+    errors = validate_schemas(args.pptx_path)
+    all_errors.extend(errors)
+    if errors:
+        print(f"XSD validation FAILED: {errors}", file=sys.stderr)
+
+    errors = validate_openxml_sdk(args.pptx_path)
+    all_errors.extend(errors)
+    if errors:
+        print(f"Open XML SDK validation FAILED: {errors}", file=sys.stderr)
 
     # python-pptx round-trip
     errors = validate_python_pptx(args.pptx_path, args.slides)
