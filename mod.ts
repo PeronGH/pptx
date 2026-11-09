@@ -69,6 +69,7 @@ export type {
   ImageFit,
   Insets,
   LineDash,
+  LineEnd,
   LineSpacing,
   LineStyle,
   MainAlignment,
@@ -102,6 +103,8 @@ export type { Paragraph, TextRun } from "./src/text.ts";
 
 export type {
   AutoNumberScheme,
+  LineEndSize,
+  LineEndType,
   PresetGeometry,
   TextLevel,
   UnderlineStyle,
@@ -138,6 +141,7 @@ export type {
   TableRowProps,
   TextProps,
   TextTagProps,
+  TransformProps,
 } from "./src/public_types.ts";
 
 export type {

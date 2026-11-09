@@ -271,3 +271,21 @@ export const UNDERLINE_STYLES = [
 
 /** Underline styles. ECMA-376 Part 1 §20.1.10.82 (`ST_TextUnderlineType`). */
 export type UnderlineStyle = typeof UNDERLINE_STYLES[number];
+
+/** `ST_LineEndType` values except `none`. */
+export const LINE_END_TYPES = [
+  "triangle",
+  "stealth",
+  "diamond",
+  "oval",
+  "arrow",
+] as const;
+
+/** Line end decorations. ECMA-376 Part 1 §20.1.10.33 (`ST_LineEndType`). */
+export type LineEndType = typeof LINE_END_TYPES[number];
+
+/** `ST_LineEndWidth` / `ST_LineEndLength` values (§20.1.10.34-35). */
+export const LINE_END_SIZES = ["sm", "med", "lg"] as const;
+
+/** Line end width or length. */
+export type LineEndSize = typeof LINE_END_SIZES[number];

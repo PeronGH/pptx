@@ -53,6 +53,7 @@ import {
   type PptxNonFragmentElement,
   RowEndTag,
   RowStartTag,
+  type TransformProps,
 } from "./public_types.ts";
 import { emu } from "./st.ts";
 import { placeTableCells } from "./table_grid.ts";
@@ -630,6 +631,10 @@ function normalizeValueAxis(
   };
 }
 
+function transformOf(props: TransformProps): TransformProps {
+  return { rotation: props.rotation, flipH: props.flipH, flipV: props.flipV };
+}
+
 function normalizeChart(element: AnyChartElement): Chart {
   const props = element.props;
   const base = {
@@ -823,6 +828,7 @@ function normalizeBaseNode(
       splitStyle(resolved);
     return {
       kind: "textbox",
+      ...transformOf(props),
       name: props.name,
       placeholder: element.type === "title" ? "title" : undefined,
       style: box,
@@ -842,6 +848,7 @@ function normalizeBaseNode(
       splitStyle(resolved);
     return {
       kind: "shape",
+      ...transformOf(props),
       name: props.name,
       preset: props.preset,
       style: box,
@@ -858,6 +865,7 @@ function normalizeBaseNode(
     const props = element.props;
     return {
       kind: "image",
+      ...transformOf(props),
       name: props.name,
       data: props.data,
       description: props.description,
@@ -893,6 +901,7 @@ function normalizeBaseNode(
     const { box, paragraph: paraStyle, text: textStyle } = splitStyle(resolved);
     return {
       kind: "textbox",
+      ...transformOf(props),
       name: props.name,
       style: box,
       paragraphs: [{

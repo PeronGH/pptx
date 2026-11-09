@@ -13,6 +13,10 @@ import type { Emu, HexColor, HundredthPoint, Percentage } from "../types.ts";
 import {
   AUTO_NUMBER_SCHEMES,
   type AutoNumberScheme,
+  LINE_END_SIZES,
+  LINE_END_TYPES,
+  type LineEndSize,
+  type LineEndType,
   PRESET_GEOMETRIES,
   type PresetGeometry,
   type TextLevel,
@@ -75,6 +79,30 @@ export interface LineProperties {
   readonly width?: Emu;
   readonly fill?: Fill;
   readonly dash?: LineDash;
+  /** Decoration at the line's start point (`a:headEnd`). */
+  readonly beginArrow?: LineEnd;
+  /** Decoration at the line's end point (`a:tailEnd`). */
+  readonly endArrow?: LineEnd;
+}
+
+/**
+ * An arrowhead or other decoration at one end of an open line, e.g. a
+ * `"line"` or `"curvedConnector3"` preset. Closed shapes ignore it.
+ */
+export interface LineEnd {
+  readonly type: LineEndType;
+  readonly width?: LineEndSize;
+  readonly length?: LineEndSize;
+}
+
+/** Rotation and mirroring of a shape within its frame (`a:xfrm`). */
+export interface ShapeTransform {
+  /** Clockwise rotation in degrees about the frame's center. */
+  readonly rotation?: number;
+  /** Mirror horizontally; with `flipV`, sets a line's direction. */
+  readonly flipH?: boolean;
+  /** Mirror vertically. */
+  readonly flipV?: boolean;
 }
 
 /** Insets for text bodies and table cells. */
@@ -195,7 +223,7 @@ export interface TextParagraph {
 export type VerticalAlignment = "t" | "ctr" | "b";
 
 /** Shape-backed text box. */
-export interface TextBoxShape {
+export interface TextBoxShape extends ShapeTransform {
   readonly kind: "textbox";
   /** Shape name (`p:cNvPr/@name`); defaults to a kind-and-id name. */
   readonly name?: string;
@@ -218,7 +246,7 @@ export interface TextBoxShape {
 }
 
 /** Preset shape. */
-export interface PresetShape {
+export interface PresetShape extends ShapeTransform {
   readonly kind: "preset";
   /** Shape name (`p:cNvPr/@name`); defaults to a kind-and-id name. */
   readonly name?: string;
@@ -237,7 +265,7 @@ export interface PresetShape {
 }
 
 /** Picture shape. */
-export interface PictureShape {
+export interface PictureShape extends ShapeTransform {
   readonly kind: "picture";
   /** Shape name (`p:cNvPr/@name`); defaults to a kind-and-id name. */
   readonly name?: string;
@@ -389,7 +417,7 @@ export function renderSlide(
   return renderXmlDocument(root);
 }
 
-interface Placement {
+interface Placement extends ShapeTransform {
   readonly x: Emu;
   readonly y: Emu;
   readonly cx: Emu;
@@ -397,9 +425,16 @@ interface Placement {
 }
 
 function renderTransform(tag: "a:xfrm" | "p:xfrm", shape: Placement) {
+  const rotation = shape.rotation === undefined
+    ? undefined
+    : positiveFixedAngle(shape.rotation);
   return el(
     tag,
-    {},
+    {
+      rot: rotation === "0" ? undefined : rotation,
+      flipH: shape.flipH ? "1" : undefined,
+      flipV: shape.flipV ? "1" : undefined,
+    },
     el("a:off", { x: coordinate(shape.x, "x"), y: coordinate(shape.y, "y") }),
     el("a:ext", {
       cx: positiveCoordinate(shape.cx, "width"),
@@ -475,7 +510,22 @@ function renderLine(
   if (dash) {
     children.push(el("a:prstDash", { val: dash }));
   }
+  // CT_LineProperties order: fill, prstDash, join, headEnd, tailEnd.
+  if (line.beginArrow) {
+    children.push(renderLineEnd("a:headEnd", line.beginArrow));
+  }
+  if (line.endArrow) children.push(renderLineEnd("a:tailEnd", line.endArrow));
   return el(tag, attrs, ...children);
+}
+
+function renderLineEnd(tag: "a:headEnd" | "a:tailEnd", end: LineEnd) {
+  const size = (value: LineEndSize | undefined, what: string) =>
+    value === undefined ? undefined : enumeration(value, LINE_END_SIZES, what);
+  return el(tag, {
+    type: enumeration(end.type, LINE_END_TYPES, "line end type"),
+    w: size(end.width, "line end width"),
+    len: size(end.length, "line end length"),
+  });
 }
 
 function renderShadow(shadow: Shadow | undefined): XmlElement | undefined {

@@ -9,6 +9,7 @@ import {
   Column,
   generate,
   Image,
+  Positioned,
   Presentation,
   Row,
   Shape,
@@ -552,4 +553,62 @@ Deno.test("e2e: character and line spacing styles", async () => {
   ) {
     assert(slide.includes(fragment), fragment);
   }
+});
+
+Deno.test("e2e: arrowheads, rotation, and lines in every direction", async () => {
+  const arrow = {
+    width: u.pt(2),
+    fill: { kind: "solid", color: clr.hex("1F4E79") },
+    endArrow: { type: "triangle", width: "med", length: "lg" },
+  } as const;
+  const pptx = generate(
+    <Presentation>
+      <Slide>
+        <Positioned x={u.in(1)} y={u.in(1)} w={u.in(3)} h={u.emu(0)}>
+          <Shape preset="line" style={{ line: arrow }} />
+        </Positioned>
+        <Positioned x={u.in(5)} y={u.in(1)} w={u.in(3)} h={u.in(1.5)}>
+          <Shape
+            preset="curvedConnector3"
+            flipV
+            style={{ line: { ...arrow, beginArrow: { type: "oval" } } }}
+          />
+        </Positioned>
+        <Positioned x={u.in(1)} y={u.in(3)} w={u.in(2)} h={u.in(0.6)}>
+          <Text.P rotation={45}>rotated</Text.P>
+        </Positioned>
+        <Positioned x={u.in(4)} y={u.in(3)} w={u.in(1)} h={u.in(1)}>
+          <Image data={createTestPng()} flipH />
+        </Positioned>
+      </Slide>
+    </Presentation>,
+  );
+  await validatePptx(pptx, 1);
+  const slide = extractZipText(pptx, "ppt/slides/slide1.xml");
+  assert(slide.includes('<a:tailEnd type="triangle" w="med" len="lg"/>'));
+  assert(slide.includes('<a:headEnd type="oval"/>'));
+  assert(slide.includes('<a:xfrm flipV="1">'));
+  assert(slide.includes('<a:xfrm rot="2700000">'));
+  assert(slide.includes('<a:xfrm flipH="1">'));
+
+  const pres = createPresentation();
+  const at = (x: number, y: number) => ({ x: u.in(x), y: u.in(y) });
+  pres.addSlide()
+    .addLine({
+      from: at(5, 3),
+      to: at(8, 1),
+      line: { endArrow: { type: "stealth" } },
+    })
+    .addLine({ from: at(5, 3), to: at(2, 5), name: "down-left" });
+  const lines = extractZipText(pres.generate(), "ppt/slides/slide1.xml");
+  // Up and to the right: frame (5,1)-(8,3), mirrored vertically.
+  assert(
+    lines.includes(
+      '<a:xfrm flipV="1"><a:off x="4572000" y="914400"/><a:ext cx="2743200" cy="1828800"/>',
+    ),
+  );
+  // Down and to the left: mirrored horizontally.
+  assert(lines.includes('<a:xfrm flipH="1"><a:off x="1828800" y="2743200"/>'));
+  assert(lines.includes('<a:tailEnd type="stealth"/>'));
+  assert(lines.includes('name="down-left"'));
 });

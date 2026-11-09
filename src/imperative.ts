@@ -5,7 +5,8 @@
  * one model, one layout engine, and one OOXML writer.
  */
 
-import { emu } from "./st.ts";
+import { emu, hex } from "./st.ts";
+import type { LineStyle } from "./style.ts";
 import type { Emu } from "./types.ts";
 import type { PresetGeometry } from "./ooxml/enums.ts";
 import { generate } from "./generate.ts";
@@ -33,6 +34,7 @@ import type {
   PptxChild,
   PptxNode,
   PresentationProps,
+  ShapeNameProps,
   ShapeProps,
   SlideElement,
   SlideProps,
@@ -61,6 +63,23 @@ export type ShapeOptions = Placed<Omit<ShapeProps, "preset">> & {
   readonly text?: PptxChild;
 };
 
+/** A point relative to the slide's top-left corner. */
+export interface Point {
+  readonly x: Emu;
+  readonly y: Emu;
+}
+
+/** Options for {@linkcode SlideBuilder.addLine}. */
+export interface LineOptions extends ShapeNameProps {
+  readonly from: Point;
+  readonly to: Point;
+  /**
+   * Line style, merged over a 1.5pt black line. `beginArrow` sits at `from`,
+   * `endArrow` at `to`.
+   */
+  readonly line?: LineStyle;
+}
+
 /** Options for {@linkcode SlideBuilder.addImage}. */
 export type ImageOptions = Placed<Omit<ImageProps, "data">>;
 
@@ -88,6 +107,8 @@ export interface SlideBuilder {
   addShape(preset: PresetGeometry, options: ShapeOptions): SlideBuilder;
   /** Add a PNG, JPEG, GIF, or BMP image. */
   addImage(data: Uint8Array, options: ImageOptions): SlideBuilder;
+  /** Add a straight line, optionally with arrowheads, between two points. */
+  addLine(options: LineOptions): SlideBuilder;
   /** Add a table from rows of cells. */
   addTable(
     rows: ReadonlyArray<ReadonlyArray<TableCellInput>>,
@@ -168,6 +189,31 @@ class SlideBuilderImpl implements SlideBuilder {
   addImage(data: Uint8Array, options: ImageOptions): SlideBuilder {
     const { placement, props } = splitPlacement(options);
     return this.add(Image({ ...props, data }), placement);
+  }
+
+  addLine(options: LineOptions): SlideBuilder {
+    const { from, to } = options;
+    // A "line" preset runs from the frame's top-left to bottom-right corner;
+    // flips point it from `from` to `to` in any direction.
+    const line = Shape({
+      preset: "line",
+      name: options.name,
+      flipH: to.x < from.x,
+      flipV: to.y < from.y,
+      style: {
+        line: {
+          width: emu(19050),
+          fill: { kind: "solid", color: hex("000000") },
+          ...options.line,
+        },
+      },
+    });
+    return this.add(line, {
+      x: emu(Math.min(from.x, to.x)),
+      y: emu(Math.min(from.y, to.y)),
+      w: emu(Math.abs(to.x - from.x)),
+      h: emu(Math.abs(to.y - from.y)),
+    });
   }
 
   addTable(

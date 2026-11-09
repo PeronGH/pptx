@@ -6,6 +6,7 @@ import type { Background } from "./document.ts";
 import type { AlignAxis } from "./layout.ts";
 import type { Emu, HexColor, Percentage } from "./types.ts";
 import type { PresetGeometry } from "./ooxml/enums.ts";
+import type { ShapeTransform } from "./ooxml/slide.ts";
 import type {
   CropRect,
   CrossAlignment,
@@ -90,6 +91,13 @@ export interface ShapeNameProps {
   readonly name?: string;
 }
 
+/**
+ * Rotation and mirroring for text, shapes, and images. Rotation is clockwise
+ * in degrees about the frame's center; flips also set which way a `"line"`
+ * preset runs across its frame.
+ */
+export type TransformProps = ShapeTransform;
+
 /** Shared row/column child sizing props. */
 export interface LayoutProps {
   readonly basis?: Emu;
@@ -157,20 +165,20 @@ export type AlignProps = LayoutProps & {
   readonly children: PptxChild;
 };
 
-export type TextProps = LayoutProps & ShapeNameProps & {
+export type TextProps = LayoutProps & ShapeNameProps & TransformProps & {
   readonly style?: StyleInput<Style>;
   readonly gap?: Emu;
   readonly children?: PptxChild;
 };
 
-export type ShapeProps = LayoutProps & ShapeNameProps & {
+export type ShapeProps = LayoutProps & ShapeNameProps & TransformProps & {
   readonly preset: PresetGeometry;
   readonly style?: StyleInput<Style>;
   readonly gap?: Emu;
   readonly children?: PptxChild;
 };
 
-export type ImageProps = LayoutProps & ShapeNameProps & {
+export type ImageProps = LayoutProps & ShapeNameProps & TransformProps & {
   /** PNG, JPEG, GIF, or BMP bytes; the format is detected from the data. */
   readonly data: Uint8Array;
   readonly description?: string;
@@ -203,10 +211,14 @@ export interface TableCellProps {
   readonly children?: PptxChild;
 }
 
-export type ParagraphProps = LayoutProps & ShapeNameProps & {
-  readonly style?: StyleInput<Style>;
-  readonly children?: PptxChild;
-};
+export type ParagraphProps =
+  & LayoutProps
+  & ShapeNameProps
+  & TransformProps
+  & {
+    readonly style?: StyleInput<Style>;
+    readonly children?: PptxChild;
+  };
 
 export interface SpanProps {
   readonly style?: TextStyleInput;

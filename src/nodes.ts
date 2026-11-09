@@ -7,9 +7,10 @@ import type { PresetGeometry } from "./ooxml/enums.ts";
 import type { Chart } from "./chart.ts";
 import type { BoxStyle, CellStyle, CropRect, ImageFit } from "./style.ts";
 import type { Paragraph } from "./text.ts";
+import type { ShapeTransform } from "./ooxml/slide.ts";
 
 /** A positionless text box leaf. */
-export interface TextBox {
+export interface TextBox extends ShapeTransform {
   readonly kind: "textbox";
   readonly name?: string;
   /** Written as the slide's title placeholder (`<Title>`). */
@@ -19,7 +20,7 @@ export interface TextBox {
 }
 
 /** A positionless preset shape leaf. */
-export interface Shape {
+export interface Shape extends ShapeTransform {
   readonly kind: "shape";
   readonly name?: string;
   readonly preset: PresetGeometry;
@@ -28,7 +29,7 @@ export interface Shape {
 }
 
 /** A positionless image leaf. */
-export interface Image {
+export interface Image extends ShapeTransform {
   readonly kind: "image";
   readonly name?: string;
   readonly data: Uint8Array;

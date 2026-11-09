@@ -147,6 +147,9 @@ function toSlideShape(node: SceneNode, ctx: SlideContext): SlideShape {
     case "shape": {
       const text = {
         ...placement,
+        rotation: node.rotation,
+        flipH: node.flipH,
+        flipV: node.flipV,
         ...boxProperties(node.style),
         paragraphs: node.paragraphs.map((paragraph) =>
           toTextParagraph(paragraph, ctx)
@@ -171,6 +174,9 @@ function toSlideShape(node: SceneNode, ctx: SlideContext): SlideShape {
       return {
         kind: "picture",
         name: node.name,
+        rotation: node.rotation,
+        flipH: node.flipH,
+        flipV: node.flipV,
         x: frame.x,
         y: frame.y,
         cx: frame.w,

@@ -102,9 +102,10 @@ pres.addSlide({ background: clr.hex("F7F4EE") })
 writeFileSync("review.pptx", pres.generate());
 ```
 
-Slides support `addTitle`, `addText`, `addShape`, `addImage`, `addTable`,
-`addBarChart`, `addLineChart`, `addAreaChart`, `addPieChart`, `addDonutChart`,
-and `add(node, placement)` for placing any component tree (e.g.
+Slides support `addTitle`, `addText`, `addShape`, `addLine` (between two points,
+with optional arrowheads), `addImage`, `addTable`, `addBarChart`,
+`addLineChart`, `addAreaChart`, `addPieChart`, `addDonutChart`, and
+`add(node, placement)` for placing any component tree (e.g.
 `Row({ children: [...] })`) in a frame. Options are the matching component props
 plus `x`, `y`, `w`, and `h`.
 
@@ -141,7 +142,10 @@ plus `x`, `y`, `w`, and `h`.
 - `<Text>` — multi-paragraph text body (`gap` for paragraph spacing)
 - `<Text.P>` — single paragraph; auto-creates a text body at the top level
 - `<Shape preset="...">` — `preset` is a typed DrawingML preset geometry name
-  (`PresetGeometry`)
+  (`PresetGeometry`); `"line"` and connector presets take arrowheads via
+  `line: { beginArrow, endArrow }`
+- `rotation`, `flipH`, and `flipV` on `<Text>`, `<Text.P>`, `<Title>`,
+  `<Shape>`, and `<Image>`; flips also set which way a line runs
 - `<Image data={bytes} />` — PNG, JPEG, GIF, or BMP; the format is detected from
   the bytes
 - `<Table cols=[...]>`
