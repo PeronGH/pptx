@@ -228,10 +228,19 @@ export interface ChartShape {
   readonly rId: string;
 }
 
-/** Slide background. */
-export interface SlideBackground {
-  readonly fill: Fill;
+/** A picture used as the slide background. */
+export interface BackgroundImage {
+  readonly rId: string;
+  readonly crop?: CropRect;
+  /** Insets of the stretched image from the slide edges (`a:fillRect`). */
+  readonly inset?: CropRect;
+  readonly alpha?: Percentage;
 }
+
+/** Slide background: a fill or a picture. */
+export type SlideBackground =
+  | { readonly fill: Fill }
+  | { readonly image: BackgroundImage };
 
 /** Union of all shape types on a slide. */
 export type SlideShape =
@@ -266,7 +275,17 @@ export function renderSlide(
   const cSldChildren: XmlElement[] = [];
   if (background) {
     cSldChildren.push(
-      el("p:bg", {}, el("p:bgPr", {}, renderFill(background.fill))),
+      el(
+        "p:bg",
+        {},
+        el(
+          "p:bgPr",
+          {},
+          "fill" in background
+            ? renderFill(background.fill)
+            : renderBackgroundImage(background.image),
+        ),
+      ),
     );
   }
   cSldChildren.push(
@@ -406,15 +425,46 @@ function renderShadow(shadow: Shadow | undefined): XmlElement | undefined {
   );
 }
 
-function renderCropRect(crop: CropRect | undefined): XmlElement | undefined {
-  if (!crop) return undefined;
-  const attrs: Record<string, string | undefined> = {
-    t: crop.top !== undefined ? percentage(crop.top, "crop") : undefined,
-    r: crop.right !== undefined ? percentage(crop.right, "crop") : undefined,
-    b: crop.bottom !== undefined ? percentage(crop.bottom, "crop") : undefined,
-    l: crop.left !== undefined ? percentage(crop.left, "crop") : undefined,
-  };
-  return el("a:srcRect", attrs);
+function renderRelativeRect(
+  tag: "a:srcRect" | "a:fillRect",
+  rect: CropRect | undefined,
+): XmlElement {
+  const side = (value: Percentage | undefined) =>
+    value === undefined || value === 0 ? undefined : percentage(value, tag);
+  return el(tag, {
+    l: side(rect?.left),
+    t: side(rect?.top),
+    r: side(rect?.right),
+    b: side(rect?.bottom),
+  });
+}
+
+/** `a:blip` with optional opacity, plus source crop and stretch insets. */
+function renderBlipFillContent(
+  rId: string,
+  alpha: Percentage | undefined,
+  crop: CropRect | undefined,
+  inset?: CropRect,
+): ReadonlyArray<XmlElement> {
+  return [
+    el(
+      "a:blip",
+      { "r:embed": rId },
+      alpha === undefined ? undefined : el("a:alphaModFix", {
+        amt: positiveFixedPercentage(alpha, "image alpha"),
+      }),
+    ),
+    ...(crop ? [renderRelativeRect("a:srcRect", crop)] : []),
+    el("a:stretch", {}, renderRelativeRect("a:fillRect", inset)),
+  ];
+}
+
+function renderBackgroundImage(image: BackgroundImage): XmlElement {
+  return el(
+    "a:blipFill",
+    { dpi: "0", rotWithShape: "1" },
+    ...renderBlipFillContent(image.rId, image.alpha, image.crop, image.inset),
+  );
 }
 
 function renderTextFit(
@@ -559,12 +609,6 @@ function renderPresetSp(id: number, shape: PresetShape): XmlElement {
 
 function renderPicture(id: number, shape: PictureShape): XmlElement {
   const desc = shape.description ?? "";
-  const blipChildren: XmlElement[] = [];
-  if (shape.alpha !== undefined) {
-    blipChildren.push(el("a:alphaModFix", {
-      amt: positiveFixedPercentage(shape.alpha, "image alpha"),
-    }));
-  }
   return el(
     "p:pic",
     {},
@@ -578,9 +622,7 @@ function renderPicture(id: number, shape: PictureShape): XmlElement {
     el(
       "p:blipFill",
       {},
-      el("a:blip", { "r:embed": shape.rId }, ...blipChildren),
-      renderCropRect(shape.crop),
-      el("a:stretch", {}, el("a:fillRect", {})),
+      ...renderBlipFillContent(shape.rId, shape.alpha, shape.crop),
     ),
     el(
       "p:spPr",

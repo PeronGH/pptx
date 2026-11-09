@@ -14,7 +14,12 @@ import {
   Text,
   u,
 } from "../mod.ts";
-import { createTestPng, extractZipText, validatePptx } from "./helpers.ts";
+import {
+  createTestBmp,
+  createTestPng,
+  extractZipText,
+  validatePptx,
+} from "./helpers.ts";
 
 Deno.test("e2e: line series color without markers and linked runs with a font", async () => {
   const pptx = generate(
@@ -51,8 +56,10 @@ Deno.test("e2e: line series color without markers and linked runs with a font", 
 });
 
 Deno.test("e2e: control characters are dropped and line breaks become a:br", async () => {
+  const title = "Deck\u0001 title";
+  const altText = "alt\ntext";
   const pptx = generate(
-    <Presentation title={"Deck\u0001 title"}>
+    <Presentation title={title}>
       <Slide>
         <Row>
           <Text.P grow={1} style={{ bold: true }}>
@@ -61,8 +68,7 @@ Deno.test("e2e: control characters are dropped and line breaks become a:br", asy
           <Image
             grow={1}
             data={createTestPng()}
-            contentType="image/png"
-            description={"alt\ntext"}
+            description={altText}
           />
         </Row>
       </Slide>
@@ -130,4 +136,23 @@ Deno.test("e2e: angles normalize and numeric attributes stay integral", async ()
   assert(slide.includes('dir="2700000"'));
   assert(slide.includes('sz="1033"'));
   assert(slide.includes('<a:spcPts val="330"/>'));
+});
+
+Deno.test("e2e: contain background letterboxes with fillRect insets", async () => {
+  const pptx = generate(
+    <Presentation>
+      <Slide
+        background={{
+          data: createTestBmp(8, 4),
+          fit: "contain",
+          alpha: u.pct(60),
+        }}
+      />
+    </Presentation>,
+  );
+
+  await validatePptx(pptx, 1);
+  const slide = extractZipText(pptx, "ppt/slides/slide1.xml");
+  assert(slide.includes('<a:alphaModFix amt="60000"/>'));
+  assert(slide.includes('<a:fillRect t="16667" b="16667"/>'));
 });

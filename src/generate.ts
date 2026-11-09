@@ -4,7 +4,7 @@
 
 import { u } from "./st.ts";
 import type { Chart } from "./chart.ts";
-import type { Emu } from "./types.ts";
+import type { Emu, Percentage } from "./types.ts";
 import type {
   Alignment,
   Fill,
@@ -20,7 +20,7 @@ import type {
   BackgroundImageProps,
   Presentation,
 } from "./document.ts";
-import { resolveImageFit } from "./image_fit.ts";
+import { inspectImage, resolveImageFit } from "./image.ts";
 import { resolveSlideChildren } from "./layout.ts";
 import { normalizePresentation } from "./normalize.ts";
 import type { PptxElement } from "./public_types.ts";
@@ -36,7 +36,6 @@ import { RelationshipIdGenerator } from "./ooxml/relationships.ts";
 import type { ChartDefinition } from "./ooxml/chart.ts";
 import type {
   ChartShape,
-  CropRect as InternalCropRect,
   Fill as InternalFill,
   Insets as InternalInsets,
   LineProperties as InternalLine,
@@ -76,14 +75,17 @@ function asEmu(value: number): Emu {
 /** Context for assembling a slide's resources and relationships. */
 interface SlideContext {
   readonly relGen: RelationshipIdGenerator;
+  readonly layoutRelId: string;
   readonly images: Map<string, ImageResource>;
   readonly charts: Map<string, ChartResource>;
   readonly hyperlinks: Map<string, HyperlinkResource>;
 }
 
 function createSlideContext(): SlideContext {
+  const relGen = new RelationshipIdGenerator();
   return {
-    relGen: new RelationshipIdGenerator(2),
+    relGen,
+    layoutRelId: relGen.next(),
     images: new Map(),
     charts: new Map(),
     hyperlinks: new Map(),
@@ -343,16 +345,12 @@ function toInternalShape(
         shadow: toInternalShadow(node.style?.shadow),
       };
     case "image": {
+      const image = inspectImage(node.data);
       const rId = ctx.relGen.next();
-      ctx.images.set(rId, {
-        data: node.data,
-        extension: mimeToExtension(node.contentType),
-        contentType: node.contentType,
-      });
+      ctx.images.set(rId, { ...image, data: node.data });
       const resolved = resolveImageFit(
         { x: node.x, y: node.y, w: node.w, h: node.h },
-        node.data,
-        node.contentType,
+        image.size,
         node.fit,
         node.crop,
       );
@@ -364,7 +362,7 @@ function toInternalShape(
         cy: resolved.frame.h,
         rId,
         description: node.description,
-        crop: resolved.crop as InternalCropRect | undefined,
+        crop: resolved.crop,
         alpha: node.alpha,
       } satisfies PictureShape;
     }
@@ -401,71 +399,53 @@ function isBackgroundImage(
   return typeof bg === "object" && "data" in bg;
 }
 
-function backgroundToFill(
-  background: Background | undefined,
-): SlideBackground | undefined {
-  if (!background) return undefined;
-  if (typeof background === "string") {
-    return { fill: toInternalFill({ kind: "solid", color: background }) };
-  }
-  if (isBackgroundImage(background)) return undefined;
-  return { fill: toInternalFill(background) };
+function relativeInset(offset: number, extent: number): Percentage {
+  return Math.round(offset / extent * 100000) as Percentage;
 }
 
-function backgroundToPicture(
+function toSlideBackground(
   background: Background | undefined,
   slideFrame: Frame,
   ctx: SlideContext,
-): PictureShape | undefined {
-  if (
-    !background || typeof background === "string" ||
-    !isBackgroundImage(background)
-  ) {
-    return undefined;
+): SlideBackground | undefined {
+  if (background === undefined) return undefined;
+  if (typeof background === "string") {
+    return { fill: { kind: "solid", color: background } };
   }
+  if (!isBackgroundImage(background)) {
+    return { fill: toInternalFill(background) };
+  }
+
+  const image = inspectImage(background.data);
   const rId = ctx.relGen.next();
-  ctx.images.set(rId, {
-    data: background.data,
-    extension: mimeToExtension(background.contentType),
-    contentType: background.contentType,
-  });
-  const resolved = resolveImageFit(
+  ctx.images.set(rId, { ...image, data: background.data });
+  const { frame, crop } = resolveImageFit(
     slideFrame,
-    background.data,
-    background.contentType,
+    image.size,
     background.fit,
     background.crop,
   );
+  // A background fill always spans the slide, so `contain` letterboxing is
+  // expressed as `a:fillRect` insets relative to the slide.
   return {
-    kind: "picture",
-    x: resolved.frame.x,
-    y: resolved.frame.y,
-    cx: resolved.frame.w,
-    cy: resolved.frame.h,
-    rId,
-    description: background.description,
-    crop: resolved.crop as InternalCropRect | undefined,
-    alpha: background.alpha,
+    image: {
+      rId,
+      crop,
+      inset: {
+        left: relativeInset(frame.x - slideFrame.x, slideFrame.w),
+        top: relativeInset(frame.y - slideFrame.y, slideFrame.h),
+        right: relativeInset(
+          slideFrame.x + slideFrame.w - frame.x - frame.w,
+          slideFrame.w,
+        ),
+        bottom: relativeInset(
+          slideFrame.y + slideFrame.h - frame.y - frame.h,
+          slideFrame.h,
+        ),
+      },
+      alpha: background.alpha,
+    },
   };
-}
-
-function mimeToExtension(mime: string): string {
-  switch (mime) {
-    case "image/png":
-      return "png";
-    case "image/jpeg":
-      return "jpeg";
-    case "image/gif":
-      return "gif";
-    case "image/bmp":
-      return "bmp";
-    case "image/tiff":
-      return "tiff";
-    case "image/svg+xml":
-      return "svg";
-    default:
-      return mime.split("/")[1] ?? "bin";
-  }
 }
 
 /** Generate a PPTX file from a JSX-authored presentation. */
@@ -484,17 +464,15 @@ export function generate(root: PptxElement): Uint8Array {
     const contentFrame = insetFrame(slideFrame, slide.props.contentPadding);
     const sceneNodes = resolveSlideChildren(slide.children, contentFrame);
     const ctx = createSlideContext();
-    const backgroundPicture = backgroundToPicture(
+    const background = toSlideBackground(
       slide.props.background,
       slideFrame,
       ctx,
     );
     return {
-      shapes: [
-        ...(backgroundPicture ? [backgroundPicture] : []),
-        ...sceneNodes.map((node) => toInternalShape(node, ctx)),
-      ],
-      background: backgroundToFill(slide.props.background),
+      layoutRelId: ctx.layoutRelId,
+      shapes: sceneNodes.map((node) => toInternalShape(node, ctx)),
+      background,
       images: ctx.images.size > 0 ? ctx.images : undefined,
       charts: ctx.charts.size > 0 ? ctx.charts : undefined,
       hyperlinks: ctx.hyperlinks.size > 0 ? ctx.hyperlinks : undefined,

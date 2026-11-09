@@ -8,9 +8,8 @@ import type { SlideChild } from "./layout.ts";
 
 /** Slide background image properties. */
 export interface BackgroundImageProps {
+  /** PNG, JPEG, GIF, or BMP bytes; the format is detected from the data. */
   readonly data: Uint8Array;
-  readonly contentType: string;
-  readonly description?: string;
   readonly fit?: ImageFit;
   readonly crop?: CropRect;
   readonly alpha?: Percentage;

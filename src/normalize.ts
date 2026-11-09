@@ -924,7 +924,6 @@ function normalizeBaseNode(
     return {
       kind: "image",
       data: props.data,
-      contentType: props.contentType,
       description: props.description,
       fit: props.fit,
       crop: props.crop,

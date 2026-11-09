@@ -8,6 +8,7 @@
 
 import { zipSync } from "fflate";
 import type { Emu } from "./types.ts";
+import type { ImageFormat } from "./image.ts";
 import {
   type ChartDefinition,
   CONTENT_TYPE,
@@ -41,12 +42,8 @@ function encode(text: string): Uint8Array {
 }
 
 /** An image resource to embed in the package. */
-export interface ImageResource {
+export interface ImageResource extends ImageFormat {
   readonly data: Uint8Array;
-  /** File extension without dot, e.g. "png", "jpeg". */
-  readonly extension: string;
-  /** Content type MIME, e.g. "image/png". */
-  readonly contentType: string;
 }
 
 /** A hyperlink target. */
@@ -61,6 +58,8 @@ export interface ChartResource {
 
 /** A slide definition for packaging. */
 export interface PackageSlide {
+  /** Relationship ID the slide uses for its slide layout. */
+  readonly layoutRelId: string;
   readonly shapes: ReadonlyArray<SlideShape>;
   readonly background?: SlideBackground;
   /** Images referenced by shapes on this slide. Map from rId to resource. */
@@ -99,8 +98,9 @@ export function generatePptx(options: PackageOptions): Uint8Array {
   const title = options.title ?? "";
   const creator = options.creator ?? "pptx-deno";
 
-  // Track image extensions for content type defaults
-  const imageExtensions = new Set<string>();
+  // Media parts keyed by image bytes, so a reused image is stored once.
+  const mediaParts = new Map<Uint8Array, string>();
+  const imageFormats = new Map<string, ImageFormat>();
   let hasEmbeddedWorkbook = false;
 
   // --- Presentation-level relationships ---
@@ -239,43 +239,34 @@ export function generatePptx(options: PackageOptions): Uint8Array {
   }
 
   // --- Generate slide XML, relationships, and media ---
-  let mediaCounter = 0;
   let chartCounter = 0;
 
-  for (let i = 0; i < options.slides.length; i++) {
-    const slide = options.slides[i];
-    if (!slide) continue;
-
+  for (const [i, slide] of options.slides.entries()) {
     files[`ppt/slides/slide${i + 1}.xml`] = encode(
       renderSlide(slide.shapes, slide.background),
     );
 
-    // Build per-slide relationships
-    const slideRelGen = new RelationshipIdGenerator();
     const slideRels: Relationship[] = [];
 
-    // Layout relationship (always first)
     slideRels.push({
-      id: slideRelGen.next(),
+      id: slide.layoutRelId,
       type: REL_TYPE.slideLayout,
       target: "../slideLayouts/slideLayout1.xml",
     });
 
-    // Image relationships and media files
     if (slide.images) {
       for (const [rId, img] of slide.images) {
-        mediaCounter++;
-        const mediaPath = `ppt/media/image${mediaCounter}.${img.extension}`;
-        files[mediaPath] = img.data;
-        imageExtensions.add(img.extension);
-
-        // The rId was pre-assigned by the API layer, but we need to
-        // ensure it matches what was assigned by the slide rel generator.
-        // We skip the generator for pre-assigned IDs.
+        let mediaName = mediaParts.get(img.data);
+        if (!mediaName) {
+          mediaName = `image${mediaParts.size + 1}.${img.extension}`;
+          mediaParts.set(img.data, mediaName);
+          files[`ppt/media/${mediaName}`] = img.data;
+          imageFormats.set(img.extension, img);
+        }
         slideRels.push({
           id: rId,
           type: REL_TYPE.image,
-          target: `../media/image${mediaCounter}.${img.extension}`,
+          target: `../media/${mediaName}`,
         });
       }
     }
@@ -333,10 +324,11 @@ export function generatePptx(options: PackageOptions): Uint8Array {
     );
   }
 
-  // Add image extension defaults to content types
-  for (const ext of imageExtensions) {
-    const ct = imageContentType(ext);
-    defaults.push({ extension: ext, contentType: ct });
+  for (const format of imageFormats.values()) {
+    defaults.push({
+      extension: format.extension,
+      contentType: format.contentType,
+    });
   }
   if (hasEmbeddedWorkbook) {
     defaults.push({
@@ -381,26 +373,4 @@ export function generatePptx(options: PackageOptions): Uint8Array {
   files["docProps/app.xml"] = encode(renderAppProps(options.slides.length));
 
   return zipSync(files);
-}
-
-/** Map image file extension to MIME content type. */
-function imageContentType(ext: string): string {
-  switch (ext.toLowerCase()) {
-    case "png":
-      return "image/png";
-    case "jpeg":
-    case "jpg":
-      return "image/jpeg";
-    case "gif":
-      return "image/gif";
-    case "bmp":
-      return "image/bmp";
-    case "tiff":
-    case "tif":
-      return "image/tiff";
-    case "svg":
-      return "image/svg+xml";
-    default:
-      return `image/${ext}`;
-  }
 }

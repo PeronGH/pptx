@@ -193,7 +193,6 @@ export function placeLeaf(
         w: frame.w,
         h: frame.h,
         data: leaf.data,
-        contentType: leaf.contentType,
         description: leaf.description,
         fit: leaf.fit,
         crop: leaf.crop,

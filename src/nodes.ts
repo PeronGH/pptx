@@ -46,7 +46,6 @@ export interface Shape {
 /** Props for an image leaf. */
 export interface ImageProps {
   readonly data: Uint8Array;
-  readonly contentType: string;
   readonly description?: string;
   readonly fit?: ImageFit;
   readonly crop?: CropRect;

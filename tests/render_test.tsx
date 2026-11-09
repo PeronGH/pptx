@@ -19,7 +19,8 @@ import {
   Text,
   u,
 } from "../mod.ts";
-import { createTestBmp, validatePptx } from "./helpers.ts";
+import { unzipSync } from "fflate";
+import { createTestBmp, extractZipText, validatePptx } from "./helpers.ts";
 
 const styles = {
   heroBar: {
@@ -99,7 +100,6 @@ Deno.test("e2e: slide background image", async () => {
       <Slide
         background={{
           data: createTestBmp(8, 4),
-          contentType: "image/bmp",
           fit: "cover",
         }}
       >
@@ -127,7 +127,11 @@ Deno.test("e2e: slide background image", async () => {
 
   const result = await validatePptx(pptx, 1);
   assertEquals(result.slide_count, 1);
-  assertEquals(result.slides[0]?.shape_count, 2);
+  assertEquals(result.slides[0]?.shape_count, 1);
+
+  const slide = extractZipText(pptx, "ppt/slides/slide1.xml");
+  assert(slide.includes('<p:bg><p:bgPr><a:blipFill dpi="0" rotWithShape="1">'));
+  assert(slide.includes('<a:srcRect l="16667" r="16667"/>'));
 });
 
 Deno.test("e2e: image fits", async () => {
@@ -141,7 +145,7 @@ Deno.test("e2e: image fits", async () => {
           w={u.in(4)}
           h={u.in(4)}
         >
-          <Image data={bmp} contentType="image/bmp" fit="contain" />
+          <Image data={bmp} fit="contain" />
         </Positioned>
         <Positioned
           x={u.in(5.5)}
@@ -149,7 +153,7 @@ Deno.test("e2e: image fits", async () => {
           w={u.in(2)}
           h={u.in(2)}
         >
-          <Image data={bmp} contentType="image/bmp" fit="cover" />
+          <Image data={bmp} fit="cover" />
         </Positioned>
       </Slide>
     </Presentation>,
@@ -159,6 +163,12 @@ Deno.test("e2e: image fits", async () => {
   assertEquals(result.slides[0]?.shape_count, 2);
   assertEquals(result.slides[0]?.shapes[0]?.is_picture, true);
   assertEquals(result.slides[0]?.shapes[1]?.is_picture, true);
+  assertEquals(
+    Object.keys(unzipSync(pptx)).filter((name) =>
+      name.startsWith("ppt/media/")
+    ),
+    ["ppt/media/image1.bmp"],
+  );
 });
 
 Deno.test("e2e: chart and table layout", async () => {

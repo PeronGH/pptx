@@ -50,7 +50,7 @@ void (
 
 void (
   // @ts-expect-error Image is self-closing and does not accept children
-  <Image data={new Uint8Array()} contentType="image/png">
+  <Image data={new Uint8Array()}>
     Wrong child
   </Image>
 );

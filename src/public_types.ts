@@ -149,8 +149,8 @@ export type ShapeProps = LayoutProps & {
 };
 
 export type ImageProps = LayoutProps & {
+  /** PNG, JPEG, GIF, or BMP bytes; the format is detected from the data. */
   readonly data: Uint8Array;
-  readonly contentType: string;
   readonly description?: string;
   readonly fit?: ImageFit;
   readonly crop?: CropRect;
