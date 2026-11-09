@@ -740,13 +740,13 @@ function renderParagraph(para: TextParagraph): XmlElement {
   }
 
   for (const run of para.runs) {
-    children.push(renderTextRun(run));
+    children.push(...renderTextRun(run));
   }
 
   return el("a:p", {}, ...children);
 }
 
-function renderTextRun(run: TextRun): XmlElement {
+function renderTextRun(run: TextRun): ReadonlyArray<XmlElement> {
   const rPrAttrs: Record<string, string | undefined> = {};
   if (run.bold) rPrAttrs["b"] = "1";
   if (run.italic) rPrAttrs["i"] = "1";
@@ -772,11 +772,20 @@ function renderTextRun(run: TextRun): XmlElement {
 
   const hasRunProps = Object.keys(rPrAttrs).length > 0 ||
     rPrChildren.length > 0;
+  const rPr = () =>
+    hasRunProps ? el("a:rPr", rPrAttrs, ...rPrChildren) : undefined;
 
-  return el(
-    "a:r",
-    {},
-    hasRunProps ? el("a:rPr", rPrAttrs, ...rPrChildren) : undefined,
-    el("a:t", {}, run.text),
-  );
+  // DrawingML models line breaks as a:br (§21.1.2.2.1), not as newlines in
+  // a:t. Vertical tab is PowerPoint's own soft-return character.
+  const segments = run.text.split(LINE_BREAK);
+  return segments.flatMap((segment, index) => {
+    const parts: XmlElement[] = [];
+    if (segment !== "" || segments.length === 1) {
+      parts.push(el("a:r", {}, rPr(), el("a:t", {}, segment)));
+    }
+    if (index < segments.length - 1) parts.push(el("a:br", {}, rPr()));
+    return parts;
+  });
 }
+
+const LINE_BREAK = /\r\n|[\n\r\v\u2028]/;

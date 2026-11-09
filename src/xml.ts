@@ -33,21 +33,35 @@ export function el(
   return { tag, attrs: attrMap, children: filteredChildren };
 }
 
+// XML 1.0 §2.2 Char production; anything else (C0 controls other than tab/LF/CR,
+// lone surrogates, U+FFFE/U+FFFF) makes the part malformed, so it is dropped.
+const INVALID_XML_CHARS =
+  /[^\t\n\r\u0020-\uD7FF\uE000-\uFFFD\u{10000}-\u{10FFFF}]/gu;
+
 /** Escape XML special characters in text content. */
 function escapeXmlText(text: string): string {
   return text
+    .replace(INVALID_XML_CHARS, "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
 }
 
-/** Escape XML special characters in attribute values. */
+/**
+ * Escape XML special characters in attribute values. Tab, LF, and CR are
+ * written as character references because attribute-value normalization
+ * (XML 1.0 §3.3.3) would otherwise turn them into spaces.
+ */
 function escapeXmlAttr(text: string): string {
   return text
+    .replace(INVALID_XML_CHARS, "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+    .replace(/"/g, "&quot;")
+    .replace(/\t/g, "&#9;")
+    .replace(/\n/g, "&#10;")
+    .replace(/\r/g, "&#13;");
 }
 
 /** Render an XML element tree to a string. */
