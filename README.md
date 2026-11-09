@@ -95,8 +95,10 @@ Full source: [`examples/quarterly-review.tsx`](./examples/quarterly-review.tsx)
 
 - `<Text>` — multi-paragraph text body (`gap` for paragraph spacing)
 - `<Text.P>` — single paragraph; auto-creates a text body at the top level
-- `<Shape preset="...">`
-- `<Image ... />`
+- `<Shape preset="...">` — `preset` is a typed DrawingML preset geometry name
+  (`PresetGeometry`)
+- `<Image data={bytes} />` — PNG, JPEG, GIF, or BMP; the format is detected from
+  the bytes
 - `<Table cols=[...]>`
 - `<Table.Row height={...}>`
 - `<Table.Cell>`
@@ -120,6 +122,10 @@ Full source: [`examples/quarterly-review.tsx`](./examples/quarterly-review.tsx)
 - `style` accepts either one style object or an array of style objects
 - Later style entries win, with nested objects merged structurally
 - Backgrounds, fills, lines, shadows, bullets, and image options are plain data
+- `background` takes a hex color, a fill, or `{ data, fit, crop, alpha }` for an
+  image
+- Opacity (`alpha`), gradient stop positions, and crops are `u.pct(...)` values;
+  angles are degrees
 - Charts use `data`, `category`, and `series=[...]`, with one or more series for
   bar/line and exactly one series for pie/donut
 
@@ -145,6 +151,10 @@ Run the full local checks before committing:
 deno check mod.ts
 deno lint
 deno fmt --check
-deno test
+deno task test
 deno publish --dry-run
 ```
+
+Tests validate every generated deck against the ECMA-376 schemas, the Open XML
+SDK, python-pptx, and LibreOffice. They need `scripts/fetch-spec` to have been
+run once, plus `uv`, `dotnet`, and LibreOffice on `PATH`.

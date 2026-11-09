@@ -18,7 +18,6 @@ import type {
   Positioned,
   ResolvableNode,
   Row,
-  SlideChild,
   Stack,
 } from "./layout.ts";
 import type {
@@ -53,7 +52,9 @@ import {
   RowEndTag,
   RowStartTag,
 } from "./public_types.ts";
+import { emu } from "./st.ts";
 import {
+  mergeInsets,
   mergeParagraphStyles,
   mergeTextStyles,
   resolveStyle,
@@ -72,18 +73,6 @@ function invalidTree(message: string): never {
   // Runtime validation remains for dynamic or plain-JS callers that can bypass
   // the JSX type graph. Typed TypeScript callers should fail before execution.
   throw new Error(message);
-}
-
-function invalidPushContext(tag: string): never {
-  invalidTree(
-    `<${tag}> no longer accepts push; use <Row.End> or <Column.End> instead`,
-  );
-}
-
-function invalidPositionedContext(tag: string): never {
-  invalidTree(
-    `<${tag}> no longer accepts absolute x/y/w/h props; wrap it in <Positioned> instead`,
-  );
 }
 
 function isElement(value: unknown): value is PptxElement {
@@ -202,52 +191,8 @@ function expectElement(
   return child;
 }
 
-function asEmu(value: number): Emu {
-  // `Emu` is a branded number, so normalization only needs a single
-  // cast at the arithmetic boundary where raw numeric math becomes EMU-typed.
-  // PowerPoint expects integer EMUs, so normalize any intermediate math.
-  return Math.round(value) as Emu;
-}
-
 function addEmu(left: Emu | undefined, right: Emu): Emu {
-  return asEmu((left ?? 0) + right);
-}
-
-function mergeInsetValue(
-  base: Emu | {
-    readonly top?: Emu;
-    readonly right?: Emu;
-    readonly bottom?: Emu;
-    readonly left?: Emu;
-  } | undefined,
-  next: Emu | {
-    readonly top?: Emu;
-    readonly right?: Emu;
-    readonly bottom?: Emu;
-    readonly left?: Emu;
-  } | undefined,
-): Emu | {
-  readonly top?: Emu;
-  readonly right?: Emu;
-  readonly bottom?: Emu;
-  readonly left?: Emu;
-} | undefined {
-  if (next === undefined) {
-    if (typeof base === "number" || base === undefined) return base;
-    return { ...base };
-  }
-  if (
-    typeof next === "number" || typeof base === "number" || base === undefined
-  ) {
-    if (typeof next === "number") return next;
-    return { ...next };
-  }
-  return {
-    top: next.top ?? base.top,
-    right: next.right ?? base.right,
-    bottom: next.bottom ?? base.bottom,
-    left: next.left ?? base.left,
-  };
+  return emu((left ?? 0) + right);
 }
 
 function mergeLayoutDefaults(
@@ -255,10 +200,10 @@ function mergeLayoutDefaults(
   next: LayoutDefaults | undefined,
 ): LayoutDefaults {
   return {
-    slidePadding: mergeInsetValue(base?.slidePadding, next?.slidePadding),
+    slidePadding: mergeInsets(base?.slidePadding, next?.slidePadding),
     rowGap: next?.rowGap ?? base?.rowGap,
     columnGap: next?.columnGap ?? base?.columnGap,
-    stackPadding: mergeInsetValue(base?.stackPadding, next?.stackPadding),
+    stackPadding: mergeInsets(base?.stackPadding, next?.stackPadding),
     textGap: next?.textGap ?? base?.textGap,
   };
 }
@@ -508,21 +453,6 @@ function normalizeTextBlocks(
   return withResolvedTextParagraphs(paragraphs, gap);
 }
 
-function dynamicPushOf(
-  element: PptxElement,
-): LayoutItemProps["push"] | undefined {
-  const props = element.props as Record<PropertyKey, unknown>;
-  if (props.push === "start" || props.push === "end") {
-    return props.push;
-  }
-  return undefined;
-}
-
-function hasDynamicAbsolutePlacement(element: PptxElement): boolean {
-  const props = element.props as Record<PropertyKey, unknown>;
-  return typeof props.x === "number" || typeof props.y === "number";
-}
-
 function hasFlowLayoutProps(props: LayoutProps): boolean {
   return props.basis !== undefined || props.grow !== undefined ||
     props.w !== undefined || props.h !== undefined ||
@@ -561,31 +491,6 @@ function normalizePositionedElement(
     h: element.props.h,
     child,
   };
-}
-
-function isFlowLayoutElement(
-  element: PptxElement,
-): element is
-  | TaggedElement<"row">
-  | TaggedElement<"column">
-  | TaggedElement<"stack">
-  | TaggedElement<"align">
-  | TaggedElement<"textbox">
-  | TaggedElement<"shape">
-  | TaggedElement<"image">
-  | TaggedElement<"table">
-  | TaggedElement<"p">
-  | AnyChartElement {
-  if (
-    isTag(element, "row") || isTag(element, "column") ||
-    isTag(element, "stack") || isTag(element, "align") ||
-    isTag(element, "textbox") || isTag(element, "shape") ||
-    isTag(element, "image") || isTag(element, "table") ||
-    isTag(element, "p") || isChartElement(element)
-  ) {
-    return true;
-  }
-  return false;
 }
 
 function flowLayoutProps(props: LayoutProps): LayoutItemProps | undefined {
@@ -711,7 +616,7 @@ function normalizeChart(element: AnyChartElement): Chart {
   if (isChartBarElement(element)) {
     return {
       kind: "chart",
-      chartType: "bar",
+      type: "bar",
       categories,
       series: normalizeChartSeries(element.props.data, element.props.series),
       title: element.props.title,
@@ -725,7 +630,7 @@ function normalizeChart(element: AnyChartElement): Chart {
   if (isChartLineElement(element)) {
     return {
       kind: "chart",
-      chartType: "line",
+      type: "line",
       categories,
       series: normalizeChartSeries(element.props.data, element.props.series),
       title: element.props.title,
@@ -743,7 +648,7 @@ function normalizeChart(element: AnyChartElement): Chart {
     );
     return {
       kind: "chart",
-      chartType: "pie",
+      type: "pie",
       categories,
       series: [series[0]!],
       title: element.props.title,
@@ -754,7 +659,7 @@ function normalizeChart(element: AnyChartElement): Chart {
   const series = normalizeChartSeries(element.props.data, element.props.series);
   return {
     kind: "chart",
-    chartType: "donut",
+    type: "donut",
     categories,
     series: [series[0]!],
     title: element.props.title,
@@ -991,17 +896,8 @@ function normalizeNode(
   element: PptxElement,
   defaults: LayoutDefaults,
 ): ResolvableNode {
-  if (dynamicPushOf(element) !== undefined) {
-    invalidPushContext(elementDisplayTag(element));
-  }
   if (isPositionedElement(element)) {
     return normalizePositionedElement(element, defaults);
-  }
-  if (
-    isFlowLayoutElement(element) && !isTag(element, "align") &&
-    hasDynamicAbsolutePlacement(element)
-  ) {
-    invalidPositionedContext(elementDisplayTag(element));
   }
   return normalizeBaseNode(element, defaults);
 }
@@ -1082,7 +978,7 @@ function normalizeAxisChildren(
       if (endItems.length > 0) {
         const first = endItems[0];
         if (first) {
-          endItems[0] = { ...first, push: "end" };
+          endItems[0] = { ...first, pushEnd: true };
         }
       }
       normalized.push(...endItems);
@@ -1113,7 +1009,7 @@ function normalizeStackChildren(
 function normalizeSlideChildren(
   children: PptxChild,
   defaults: LayoutDefaults,
-): ReadonlyArray<SlideChild> {
+): ReadonlyArray<ResolvableNode> {
   return nonIgnorableChildren(children).map((child) =>
     normalizeNode(expectElement(child, "slide"), defaults)
   );

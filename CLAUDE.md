@@ -42,8 +42,15 @@ Do not add:
 ## Architecture
 
 - Keep the layers separate: DSL, layout, scene, OOXML/package.
-- Default to the DSL. Use scene only as the explicit escape hatch.
+- The scene layer is internal. `<Positioned>` is the public escape hatch for
+  absolute placement.
 - Do not expose raw OOXML or raw XML injection publicly.
+- Plain data types shared by the DSL and the writer (fills, lines, shadows,
+  insets, chart definitions) are defined once in `src/ooxml/` and re-exported by
+  the DSL; do not mirror them.
+- Emit every numeric OOXML attribute through `src/ooxml/simple_types.ts`, which
+  mirrors the XSD simple-type ranges. Spec enumerations used in the public API
+  live in `src/ooxml/enums.ts`, copied from the schemas.
 
 ## Public API
 
@@ -73,7 +80,7 @@ Run before every commit:
 deno check mod.ts
 deno lint
 deno fmt --check
-deno test
+deno task test
 deno publish --dry-run
 ```
 

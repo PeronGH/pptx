@@ -17,10 +17,11 @@ import {
   Text,
   u,
 } from "../mod.ts";
-import { jsx } from "../src/jsx_runtime.ts";
 import { resolveSlideChildren } from "../src/layout.ts";
 import { normalizePresentation } from "../src/normalize.ts";
-import type { SceneTextBox } from "../src/scene.ts";
+import type { SceneNode } from "../src/scene.ts";
+
+type SceneTextBox = Extract<SceneNode, { readonly kind: "textbox" }>;
 import { extractZipText } from "./helpers.ts";
 
 function isSceneTextBox(node: unknown): node is SceneTextBox {
@@ -298,47 +299,6 @@ Deno.test("row slot groups reject mixed direct flow children", () => {
   );
 });
 
-Deno.test("push is rejected for dynamic callers", () => {
-  assertThrows(
-    () =>
-      generate(
-        <Presentation>
-          <Slide>
-            {jsx("textbox", {
-              push: "end",
-              children: "Oops",
-            } as never) as never}
-          </Slide>
-        </Presentation>,
-      ),
-    Error,
-    "no longer accepts push",
-  );
-});
-
-Deno.test("absolute x/y props are rejected for dynamic callers", () => {
-  assertThrows(
-    () =>
-      generate(
-        <Presentation>
-          <Slide>
-            <Row>
-              {jsx("textbox", {
-                x: u.in(1),
-                y: u.in(1),
-                w: u.in(1),
-                h: u.in(1),
-                children: "Oops",
-              } as never) as never}
-            </Row>
-          </Slide>
-        </Presentation>,
-      ),
-    Error,
-    "wrap it in <Positioned>",
-  );
-});
-
 Deno.test("Chart.Bar component normalizes a bar chart leaf", () => {
   const presentation = normalizePresentation(
     <Presentation>
@@ -364,7 +324,7 @@ Deno.test("Chart.Bar component normalizes a bar chart leaf", () => {
 
   const chart = presentation.slides[0]?.children[0];
   assert(chart && chart.kind === "chart");
-  assertEquals(chart.chartType, "bar");
+  assertEquals(chart.type, "bar");
   assertEquals(chart.categories[0], "Q1");
   assertEquals(chart.series[0]?.values[1], 18);
 });
@@ -392,8 +352,8 @@ Deno.test("Chart.Line component normalizes a multi-series line chart leaf", () =
 
   const chart = presentation.slides[0]?.children[0];
   assert(chart && chart.kind === "chart");
-  assertEquals(chart.chartType, "line");
-  if (chart.chartType !== "line") {
+  assertEquals(chart.type, "line");
+  if (chart.type !== "line") {
     throw new Error("Expected a line chart");
   }
   assertEquals(chart.series.length, 2);
@@ -431,9 +391,9 @@ Deno.test("Chart.Pie and Chart.Donut normalize circular chart leaves", () => {
   const donut = presentation.slides[0]?.children[1];
   assert(pie && pie.kind === "chart");
   assert(donut && donut.kind === "chart");
-  assertEquals(pie.chartType, "pie");
-  assertEquals(donut.chartType, "donut");
-  if (donut.chartType !== "donut") {
+  assertEquals(pie.type, "pie");
+  assertEquals(donut.type, "donut");
+  if (donut.type !== "donut") {
     throw new Error("Expected a donut chart");
   }
   assertEquals(donut.holeSize, 60);

@@ -1,10 +1,10 @@
 /**
- * Slides and presentations in the new public API.
+ * Normalized slide and presentation model.
  */
 
 import type { Emu, HexColor, Percentage } from "./types.ts";
 import type { CropRect, Fill, ImageFit, Insets } from "./style.ts";
-import type { SlideChild } from "./layout.ts";
+import type { ResolvableNode } from "./layout.ts";
 
 /** Slide background image properties. */
 export interface BackgroundImageProps {
@@ -27,7 +27,7 @@ export interface SlideProps {
 /** A slide containing layout roots and/or absolute scene nodes. */
 export interface Slide {
   readonly props: SlideProps;
-  readonly children: ReadonlyArray<SlideChild>;
+  readonly children: ReadonlyArray<ResolvableNode>;
 }
 
 /** Options for the presentation. */
@@ -42,32 +42,4 @@ export interface PresentationOptions {
 export interface Presentation {
   readonly options: PresentationOptions;
   readonly slides: ReadonlyArray<Slide>;
-}
-
-function isSlideProps(value: SlideProps | SlideChild): value is SlideProps {
-  return typeof value === "object" && value !== null && !("kind" in value) &&
-    !("x" in value) && !("children" in value);
-}
-
-/** Create a slide. */
-export function slide(
-  first?: SlideProps | SlideChild,
-  ...rest: ReadonlyArray<SlideChild>
-): Slide {
-  if (first === undefined) return { props: {}, children: [] };
-  if (isSlideProps(first)) {
-    return { props: first, children: rest };
-  }
-  return { props: {}, children: [first, ...rest] };
-}
-
-/** Create a presentation from slides. */
-export function presentation(
-  first: Slide | PresentationOptions,
-  ...rest: ReadonlyArray<Slide>
-): Presentation {
-  if ("children" in first) {
-    return { options: {}, slides: [first, ...rest] };
-  }
-  return { options: first, slides: rest };
 }

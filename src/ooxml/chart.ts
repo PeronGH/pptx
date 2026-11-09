@@ -3,8 +3,9 @@
  */
 
 import { el, renderXmlDocument } from "../xml.ts";
-import type { Emu, HexColor } from "../types.ts";
+import type { HexColor } from "../types.ts";
 import { NS_A, NS_C, NS_R } from "./namespaces.ts";
+import { columnName } from "./embedded_workbook.ts";
 
 /** A normalized chart series. */
 export interface ChartSeriesDefinition {
@@ -84,29 +85,8 @@ export type ChartDefinition =
   | PieChartDefinition
   | DonutChartDefinition;
 
-/** Graphic-frame-backed chart shape on a slide. */
-export interface ChartShape {
-  readonly kind: "chart";
-  readonly x: Emu;
-  readonly y: Emu;
-  readonly cx: Emu;
-  readonly cy: Emu;
-  readonly rId: string;
-}
-
 const AXIS_CATEGORY_ID = 100000;
 const AXIS_VALUE_ID = 100001;
-
-function columnName(index: number): string {
-  let value = index + 1;
-  let result = "";
-  while (value > 0) {
-    const remainder = (value - 1) % 26;
-    result = String.fromCharCode(65 + remainder) + result;
-    value = Math.floor((value - 1) / 26);
-  }
-  return result;
-}
 
 function workbookRange(columnIndex: number, count: number): string {
   const column = columnName(columnIndex);

@@ -3,9 +3,8 @@
  *
  * A JSX-first Deno library for generating PPTX files.
  *
- * Author slides with intrinsic JSX tags, then generate a valid
- * Office Open XML package. Output opens in LibreOffice Impress
- * and round-trips through python-pptx.
+ * Author slides with JSX components, then generate an Office Open XML
+ * (ECMA-376) presentation package.
  *
  * @example
  * ```tsx
@@ -14,22 +13,20 @@
  *
  * const pptx = generate(
  *   <Presentation title="My Presentation">
- *     <Slide
- *       background={{
- *         kind: "fill",
- *         fill: { kind: "solid", color: clr.hex("F7F4EE") },
- *       }}
- *     >
- *       <Shape
- *         preset="roundRect"
- *         w={u.in(8.5)}
- *         h={u.in(1)}
- *         style={{ fill: { kind: "solid", color: clr.hex("17324D") } }}
- *       />
- *       <Align x="center" y="center" w={u.in(8)} h={u.in(1)}>
- *         <Text.P style={{ bold: true, fontSize: u.font(22), fontColor: clr.hex("FFFFFF") }}>
- *           Hello, World!
- *         </Text.P>
+ *     <Slide background={{ kind: "solid", color: clr.hex("F7F4EE") }}>
+ *       <Align x="center" y="center" w={u.in(8)} h={u.in(1.2)}>
+ *         <Shape
+ *           preset="roundRect"
+ *           style={{
+ *             fill: { kind: "solid", color: clr.hex("17324D") },
+ *             verticalAlign: "middle",
+ *             fontSize: u.font(22),
+ *             fontColor: clr.hex("FFFFFF"),
+ *             bold: true,
+ *           }}
+ *         >
+ *           <Text.P style={{ align: "center" }}>Hello, World!</Text.P>
+ *         </Shape>
  *       </Align>
  *     </Slide>
  *   </Presentation>,

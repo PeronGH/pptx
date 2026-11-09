@@ -24,7 +24,8 @@ function encode(text: string): Uint8Array {
   return new TextEncoder().encode(text);
 }
 
-function columnName(index: number): string {
+/** Spreadsheet column letters for a zero-based index (0 -> A, 26 -> AA). */
+export function columnName(index: number): string {
   let value = index + 1;
   let result = "";
   while (value > 0) {

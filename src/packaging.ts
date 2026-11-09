@@ -63,11 +63,11 @@ export interface PackageSlide {
   readonly shapes: ReadonlyArray<SlideShape>;
   readonly background?: SlideBackground;
   /** Images referenced by shapes on this slide. Map from rId to resource. */
-  readonly images?: ReadonlyMap<string, ImageResource>;
+  readonly images: ReadonlyMap<string, ImageResource>;
   /** Charts referenced by shapes on this slide. Map from rId to resource. */
-  readonly charts?: ReadonlyMap<string, ChartResource>;
+  readonly charts: ReadonlyMap<string, ChartResource>;
   /** Hyperlinks referenced by shapes. Map from rId to resource. */
-  readonly hyperlinks?: ReadonlyMap<string, HyperlinkResource>;
+  readonly hyperlinks: ReadonlyMap<string, HyperlinkResource>;
 }
 
 /** Options for generating a PPTX package. */
@@ -252,69 +252,62 @@ export function generatePptx(options: PackageOptions): Uint8Array {
       target: "../slideLayouts/slideLayout1.xml",
     });
 
-    if (slide.images) {
-      for (const [rId, img] of slide.images) {
-        let mediaName = mediaParts.get(img.data);
-        if (!mediaName) {
-          mediaName = `image${mediaParts.size + 1}.${img.extension}`;
-          mediaParts.set(img.data, mediaName);
-          files[`ppt/media/${mediaName}`] = img.data;
-          imageFormats.set(img.extension, img);
-        }
-        slideRels.push({
-          id: rId,
-          type: REL_TYPE.image,
-          target: `../media/${mediaName}`,
-        });
+    for (const [rId, img] of slide.images) {
+      let mediaName = mediaParts.get(img.data);
+      if (!mediaName) {
+        mediaName = `image${mediaParts.size + 1}.${img.extension}`;
+        mediaParts.set(img.data, mediaName);
+        files[`ppt/media/${mediaName}`] = img.data;
+        imageFormats.set(img.extension, img);
       }
+      slideRels.push({
+        id: rId,
+        type: REL_TYPE.image,
+        target: `../media/${mediaName}`,
+      });
     }
 
-    if (slide.charts) {
-      for (const [rId, chart] of slide.charts) {
-        chartCounter++;
+    for (const [rId, chart] of slide.charts) {
+      chartCounter++;
 
-        files[`ppt/charts/chart${chartCounter}.xml`] = encode(
-          renderChartSpace(chart.definition, "rId1"),
+      files[`ppt/charts/chart${chartCounter}.xml`] = encode(
+        renderChartSpace(chart.definition, "rId1"),
+      );
+      files[`ppt/charts/_rels/chart${chartCounter}.xml.rels`] = encode(
+        renderRelationships([
+          {
+            id: "rId1",
+            type: REL_TYPE.package,
+            target: `../embeddings/chart${chartCounter}.xlsx`,
+          },
+        ]),
+      );
+      files[`ppt/embeddings/chart${chartCounter}.xlsx`] =
+        createEmbeddedWorkbook(
+          chart.definition.categories,
+          chart.definition.series,
         );
-        files[`ppt/charts/_rels/chart${chartCounter}.xml.rels`] = encode(
-          renderRelationships([
-            {
-              id: "rId1",
-              type: REL_TYPE.package,
-              target: `../embeddings/chart${chartCounter}.xlsx`,
-            },
-          ]),
-        );
-        files[`ppt/embeddings/chart${chartCounter}.xlsx`] =
-          createEmbeddedWorkbook(
-            chart.definition.categories,
-            chart.definition.series,
-          );
-        hasEmbeddedWorkbook = true;
+      hasEmbeddedWorkbook = true;
 
-        overrides.push({
-          partName: `/ppt/charts/chart${chartCounter}.xml`,
-          contentType: CONTENT_TYPE.chart,
-        });
+      overrides.push({
+        partName: `/ppt/charts/chart${chartCounter}.xml`,
+        contentType: CONTENT_TYPE.chart,
+      });
 
-        slideRels.push({
-          id: rId,
-          type: REL_TYPE.chart,
-          target: `../charts/chart${chartCounter}.xml`,
-        });
-      }
+      slideRels.push({
+        id: rId,
+        type: REL_TYPE.chart,
+        target: `../charts/chart${chartCounter}.xml`,
+      });
     }
 
-    // Hyperlink relationships
-    if (slide.hyperlinks) {
-      for (const [rId, link] of slide.hyperlinks) {
-        slideRels.push({
-          id: rId,
-          type: REL_TYPE.hyperlink,
-          target: link.url,
-          targetMode: "External",
-        });
-      }
+    for (const [rId, link] of slide.hyperlinks) {
+      slideRels.push({
+        id: rId,
+        type: REL_TYPE.hyperlink,
+        target: link.url,
+        targetMode: "External",
+      });
     }
 
     files[`ppt/slides/_rels/slide${i + 1}.xml.rels`] = encode(

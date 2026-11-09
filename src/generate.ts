@@ -2,77 +2,49 @@
  * Public generation pipeline: presentation -> layout -> scene -> OOXML package.
  */
 
-import { u } from "./st.ts";
-import type { Chart } from "./chart.ts";
+import { emu, u } from "./st.ts";
 import type { Emu, Percentage } from "./types.ts";
-import type {
-  Alignment,
-  Fill,
-  Insets,
-  LineStyle,
-  Shadow,
-  TextFit,
-  VerticalAlignment,
-} from "./style.ts";
+import type { BoxStyle, CellStyle, VerticalAlignment } from "./style.ts";
 import type { Paragraph, TextRun } from "./text.ts";
-import type {
-  Background,
-  BackgroundImageProps,
-  Presentation,
-} from "./document.ts";
+import type { Background, BackgroundImageProps } from "./document.ts";
 import { inspectImage, resolveImageFit } from "./image.ts";
-import { resolveSlideChildren } from "./layout.ts";
+import { insetFrame, resolveSlideChildren } from "./layout.ts";
 import { normalizePresentation } from "./normalize.ts";
 import type { PptxElement } from "./public_types.ts";
 import type { Frame, SceneNode } from "./scene.ts";
-import type { TableCell, TableRow } from "./nodes.ts";
+import type { TableCell } from "./nodes.ts";
 import type {
   ChartResource,
   HyperlinkResource,
   ImageResource,
+  PackageSlide,
 } from "./packaging.ts";
 import { generatePptx } from "./packaging.ts";
 import { RelationshipIdGenerator } from "./ooxml/relationships.ts";
-import type { ChartDefinition } from "./ooxml/chart.ts";
 import type {
-  ChartShape,
-  Fill as InternalFill,
-  Insets as InternalInsets,
-  LineProperties as InternalLine,
-  PictureShape,
-  Shadow as InternalShadow,
+  Insets,
   SlideBackground,
   SlideShape,
-  TableCell as InternalTableCell,
-  TableRow as InternalTableRow,
-  TableShape as InternalTableShape,
-  TextFit as InternalTextFit,
-  TextParagraph as InternalParagraph,
-  TextRun as InternalRun,
-  VerticalAlignment as InternalVAlign,
+  TableCell as OoxmlTableCell,
+  TextParagraph,
+  TextRun as OoxmlTextRun,
+  VerticalAlignment as OoxmlVerticalAlignment,
 } from "./ooxml/slide.ts";
 
-const ALIGNMENT_MAP: Record<Alignment, "l" | "ctr" | "r" | "just"> = {
+const ALIGNMENT = {
   left: "l",
   center: "ctr",
   right: "r",
   justify: "just",
-};
+} as const;
 
-const VALIGN_MAP: Record<VerticalAlignment, InternalVAlign> = {
+const VERTICAL_ALIGNMENT: Record<VerticalAlignment, OoxmlVerticalAlignment> = {
   top: "t",
   middle: "ctr",
   bottom: "b",
 };
 
-function asEmu(value: number): Emu {
-  // `Emu` is a branded number, so generator math converts numeric frame
-  // calculations back into the branded type at this single boundary.
-  // OOXML coordinate/extents are integer-valued and PowerPoint is strict here.
-  return Math.round(value) as Emu;
-}
-
-/** Context for assembling a slide's resources and relationships. */
+/** Relationship IDs and resources collected while writing one slide. */
 interface SlideContext {
   readonly relGen: RelationshipIdGenerator;
   readonly layoutRelId: string;
@@ -92,313 +64,133 @@ function createSlideContext(): SlideContext {
   };
 }
 
-function toInternalFill(fill: Fill): InternalFill {
-  switch (fill.kind) {
-    case "solid":
-      return { kind: "solid", color: fill.color, alpha: fill.alpha };
-    case "linear-gradient":
-      return {
-        kind: "linear-gradient",
-        angle: fill.angle,
-        stops: fill.stops,
-      };
-    case "none":
-      return { kind: "none" };
-  }
+function toInsets(padding: Emu | Insets | undefined): Insets | undefined {
+  if (typeof padding !== "number") return padding;
+  return { top: padding, right: padding, bottom: padding, left: padding };
 }
 
-function toInternalLine(line: LineStyle): InternalLine {
-  return {
-    width: line.width,
-    fill: line.fill ? toInternalFill(line.fill) : undefined,
-    dash: line.dash,
-  };
-}
-
-function toInternalInsets(
-  padding: Emu | Insets | undefined,
-): InternalInsets | undefined {
-  if (padding === undefined) return undefined;
-  if (typeof padding === "number") {
-    return { top: padding, right: padding, bottom: padding, left: padding };
-  }
-  return {
-    top: padding.top,
-    right: padding.right,
-    bottom: padding.bottom,
-    left: padding.left,
-  };
-}
-
-function insetFrame(frame: Frame, padding: Emu | Insets | undefined): Frame {
-  const insets = toInternalInsets(padding);
-  if (!insets) return frame;
-  return {
-    x: asEmu(frame.x + (insets.left ?? 0)),
-    y: asEmu(frame.y + (insets.top ?? 0)),
-    w: asEmu(Math.max(
-      0,
-      frame.w - (insets.left ?? 0) - (insets.right ?? 0),
-    )),
-    h: asEmu(Math.max(
-      0,
-      frame.h - (insets.top ?? 0) - (insets.bottom ?? 0),
-    )),
-  };
-}
-
-function toInternalShadow(
-  shadow: Shadow | undefined,
-): InternalShadow | undefined {
-  if (!shadow) return undefined;
-  return {
-    color: shadow.color,
-    blur: shadow.blur,
-    distance: shadow.distance,
-    angle: shadow.angle,
-    alpha: shadow.alpha,
-  };
-}
-
-function toInternalTextFit(
-  fit: TextFit | undefined,
-): InternalTextFit | undefined {
-  return fit;
-}
-
-function toInternalChartDefinition(chart: Chart): ChartDefinition {
-  switch (chart.chartType) {
-    case "bar":
-      return {
-        type: "bar",
-        title: chart.title,
-        categories: chart.categories,
-        series: chart.series,
-        labels: chart.labels,
-        legend: chart.legend,
-        direction: chart.direction,
-        categoryAxis: chart.categoryAxis,
-        valueAxis: chart.valueAxis,
-      };
-    case "line":
-      return {
-        type: "line",
-        title: chart.title,
-        categories: chart.categories,
-        series: chart.series,
-        labels: chart.labels,
-        legend: chart.legend,
-        markers: chart.markers,
-        categoryAxis: chart.categoryAxis,
-        valueAxis: chart.valueAxis,
-      };
-    case "pie":
-      return {
-        type: "pie",
-        title: chart.title,
-        categories: chart.categories,
-        series: chart.series,
-        labels: chart.labels,
-        legend: chart.legend,
-      };
-    case "donut":
-      return {
-        type: "donut",
-        title: chart.title,
-        categories: chart.categories,
-        series: chart.series,
-        labels: chart.labels,
-        legend: chart.legend,
-        holeSize: chart.holeSize,
-      };
-  }
-}
-
-function toInternalRun(run: TextRun, ctx: SlideContext): InternalRun {
-  let hyperlinkInfo: { rId: string } | undefined;
+function toTextRun(run: TextRun, ctx: SlideContext): OoxmlTextRun {
+  let hyperlink: OoxmlTextRun["hyperlink"];
   if (run.hyperlink) {
     const rId = ctx.relGen.next();
     // Relationship targets are xsd:anyURI (ECMA-376 Part 2 §6.5.3.4). Parsing
     // rejects non-URLs and the serialized form percent-encodes spaces and
     // non-ASCII characters.
     ctx.hyperlinks.set(rId, { url: new URL(run.hyperlink).href });
-    hyperlinkInfo = { rId };
+    hyperlink = { rId };
   }
-
-  return {
-    text: run.text,
-    bold: run.style?.bold,
-    italic: run.style?.italic,
-    underline: run.style?.underline,
-    fontSize: run.style?.fontSize,
-    fontColor: run.style?.fontColor,
-    fontFamily: run.style?.fontFamily,
-    hyperlink: hyperlinkInfo,
-  };
+  return { ...run.style, text: run.text, hyperlink };
 }
 
-function toInternalParagraph(
+function toTextParagraph(
   paragraph: Paragraph,
   ctx: SlideContext,
-): InternalParagraph {
+): TextParagraph {
+  const style = paragraph.style;
   return {
-    runs: paragraph.runs.map((run) => toInternalRun(run, ctx)),
-    level: paragraph.style?.level,
-    alignment: paragraph.style?.align
-      ? ALIGNMENT_MAP[paragraph.style.align]
-      : undefined,
-    bullet: paragraph.style?.bullet,
-    spacing: paragraph.style?.spacing,
+    runs: paragraph.runs.map((run) => toTextRun(run, ctx)),
+    level: style?.level,
+    alignment: style?.align && ALIGNMENT[style.align],
+    bullet: style?.bullet,
+    spacing: style?.spacing,
   };
 }
 
-function toInternalCell(
-  cell: TableCell,
-  ctx: SlideContext,
-): InternalTableCell {
+function boxProperties(style: BoxStyle | CellStyle | undefined) {
   return {
+    fill: style?.fill,
+    line: style?.line,
+    padding: toInsets(style?.padding),
+    verticalAlignment: style?.verticalAlign &&
+      VERTICAL_ALIGNMENT[style.verticalAlign],
+  };
+}
+
+function toTableCell(cell: TableCell, ctx: SlideContext): OoxmlTableCell {
+  return {
+    ...boxProperties(cell.style),
     paragraphs: cell.paragraphs.map((paragraph) =>
-      toInternalParagraph(paragraph, ctx)
+      toTextParagraph(paragraph, ctx)
     ),
-    fill: cell.style?.fill ? toInternalFill(cell.style.fill) : undefined,
-    line: cell.style?.line ? toInternalLine(cell.style.line) : undefined,
-    padding: toInternalInsets(cell.style?.padding),
-    verticalAlignment: cell.style?.verticalAlign
-      ? VALIGN_MAP[cell.style.verticalAlign]
-      : undefined,
   };
 }
 
-function toInternalTableRow(
-  row: TableRow,
-  ctx: SlideContext,
-): InternalTableRow {
-  return {
-    height: row.height,
-    cells: row.cells.map((cell) => toInternalCell(cell, ctx)),
-  };
-}
-
+/** Scale column widths so the grid spans the table frame exactly. */
 function fitTableColumns(
   tableWidth: Emu,
   columns: ReadonlyArray<Emu>,
 ): ReadonlyArray<Emu> {
-  if (columns.length === 0) return columns;
-
   const total = columns.reduce((sum, width) => sum + width, 0);
   if (total === tableWidth) return columns;
-
-  if (total <= 0) {
-    const equal = Math.floor(tableWidth / columns.length);
-    const fitted = columns.map(() => equal);
-    const remainder = tableWidth - equal * columns.length;
-    fitted[fitted.length - 1] = equal + remainder;
-    return fitted.map((width) => width as Emu);
-  }
-
-  const scale = tableWidth / total;
-  const fitted = columns.map((width) => Math.round(width * scale));
+  const fitted = columns.map((width) =>
+    total > 0
+      ? emu(width * tableWidth / total)
+      : emu(Math.floor(tableWidth / columns.length))
+  );
   const diff = tableWidth - fitted.reduce((sum, width) => sum + width, 0);
-  fitted[fitted.length - 1] = (fitted[fitted.length - 1] ?? 0) + diff;
-  return fitted.map((width) => width as Emu);
+  fitted[fitted.length - 1] = emu(fitted[fitted.length - 1]! + diff);
+  return fitted;
 }
 
-function toInternalShape(
-  node: SceneNode,
-  ctx: SlideContext,
-): SlideShape {
+function toSlideShape(node: SceneNode, ctx: SlideContext): SlideShape {
+  const placement = { x: node.x, y: node.y, cx: node.w, cy: node.h };
   switch (node.kind) {
     case "textbox":
-      return {
-        kind: "textbox",
-        x: node.x,
-        y: node.y,
-        cx: node.w,
-        cy: node.h,
+    case "shape": {
+      const text = {
+        ...placement,
+        ...boxProperties(node.style),
         paragraphs: node.paragraphs.map((paragraph) =>
-          toInternalParagraph(paragraph, ctx)
+          toTextParagraph(paragraph, ctx)
         ),
-        fill: node.style?.fill ? toInternalFill(node.style.fill) : undefined,
-        line: node.style?.line ? toInternalLine(node.style.line) : undefined,
-        verticalAlignment: node.style?.verticalAlign
-          ? VALIGN_MAP[node.style.verticalAlign]
-          : undefined,
-        padding: toInternalInsets(node.style?.padding),
-        fit: toInternalTextFit(node.style?.fit),
-        shadow: toInternalShadow(node.style?.shadow),
+        fit: node.style?.fit,
+        shadow: node.style?.shadow,
       };
-    case "shape":
-      return {
-        kind: "preset",
-        x: node.x,
-        y: node.y,
-        cx: node.w,
-        cy: node.h,
-        preset: node.preset,
-        paragraphs: node.paragraphs.map((paragraph) =>
-          toInternalParagraph(paragraph, ctx)
-        ),
-        fill: node.style?.fill ? toInternalFill(node.style.fill) : undefined,
-        line: node.style?.line ? toInternalLine(node.style.line) : undefined,
-        verticalAlignment: node.style?.verticalAlign
-          ? VALIGN_MAP[node.style.verticalAlign]
-          : undefined,
-        padding: toInternalInsets(node.style?.padding),
-        fit: toInternalTextFit(node.style?.fit),
-        shadow: toInternalShadow(node.style?.shadow),
-      };
+      return node.kind === "textbox"
+        ? { ...text, kind: "textbox" }
+        : { ...text, kind: "preset", preset: node.preset };
+    }
     case "image": {
       const image = inspectImage(node.data);
       const rId = ctx.relGen.next();
       ctx.images.set(rId, { ...image, data: node.data });
-      const resolved = resolveImageFit(
-        { x: node.x, y: node.y, w: node.w, h: node.h },
+      const { frame, crop } = resolveImageFit(
+        node,
         image.size,
         node.fit,
         node.crop,
       );
       return {
         kind: "picture",
-        x: resolved.frame.x,
-        y: resolved.frame.y,
-        cx: resolved.frame.w,
-        cy: resolved.frame.h,
+        x: frame.x,
+        y: frame.y,
+        cx: frame.w,
+        cy: frame.h,
         rId,
         description: node.description,
-        crop: resolved.crop,
+        crop,
         alpha: node.alpha,
-      } satisfies PictureShape;
+      };
     }
     case "table":
       return {
+        ...placement,
         kind: "table",
-        x: node.x,
-        y: node.y,
-        cx: node.w,
-        cy: node.h,
         columns: fitTableColumns(node.w, node.cols),
-        rows: node.rows.map((row) => toInternalTableRow(row, ctx)),
-      } satisfies InternalTableShape;
+        rows: node.rows.map((row) => ({
+          height: row.height,
+          cells: row.cells.map((cell) => toTableCell(cell, ctx)),
+        })),
+      };
     case "chart": {
       const rId = ctx.relGen.next();
-      ctx.charts.set(rId, {
-        definition: toInternalChartDefinition(node),
-      });
-      return {
-        kind: "chart",
-        x: node.x,
-        y: node.y,
-        cx: node.w,
-        cy: node.h,
-        rId,
-      } satisfies ChartShape;
+      ctx.charts.set(rId, { definition: node });
+      return { ...placement, kind: "chart", rId };
     }
   }
 }
 
-function isBackgroundImage(
-  bg: Background,
-): bg is BackgroundImageProps {
+function isBackgroundImage(bg: Background): bg is BackgroundImageProps {
   return typeof bg === "object" && "data" in bg;
 }
 
@@ -415,9 +207,7 @@ function toSlideBackground(
   if (typeof background === "string") {
     return { fill: { kind: "solid", color: background } };
   }
-  if (!isBackgroundImage(background)) {
-    return { fill: toInternalFill(background) };
-  }
+  if (!isBackgroundImage(background)) return { fill: background };
 
   const image = inspectImage(background.data);
   const rId = ctx.relGen.next();
@@ -453,17 +243,17 @@ function toSlideBackground(
 
 /** Generate a PPTX file from a JSX-authored presentation. */
 export function generate(root: PptxElement): Uint8Array {
-  const presentation: Presentation = normalizePresentation(root);
+  const presentation = normalizePresentation(root);
   const slideWidth = presentation.options.slideWidth ?? u.in(10);
   const slideHeight = presentation.options.slideHeight ?? u.in(7.5);
-  const slideFrame = {
-    x: 0 as Emu,
-    y: 0 as Emu,
+  const slideFrame: Frame = {
+    x: emu(0),
+    y: emu(0),
     w: slideWidth,
     h: slideHeight,
   };
 
-  const slides = presentation.slides.map((slide) => {
+  const slides = presentation.slides.map((slide): PackageSlide => {
     const contentFrame = insetFrame(slideFrame, slide.props.contentPadding);
     const sceneNodes = resolveSlideChildren(slide.children, contentFrame);
     const ctx = createSlideContext();
@@ -474,11 +264,11 @@ export function generate(root: PptxElement): Uint8Array {
     );
     return {
       layoutRelId: ctx.layoutRelId,
-      shapes: sceneNodes.map((node) => toInternalShape(node, ctx)),
+      shapes: sceneNodes.map((node) => toSlideShape(node, ctx)),
       background,
-      images: ctx.images.size > 0 ? ctx.images : undefined,
-      charts: ctx.charts.size > 0 ? ctx.charts : undefined,
-      hyperlinks: ctx.hyperlinks.size > 0 ? ctx.hyperlinks : undefined,
+      images: ctx.images,
+      charts: ctx.charts,
+      hyperlinks: ctx.hyperlinks,
     };
   });
 

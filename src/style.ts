@@ -1,9 +1,41 @@
 /**
  * Public style types and merge helpers for the JSX API.
+ *
+ * Plain data types shared with the OOXML writer (fills, lines, shadows, ...)
+ * are defined once in `ooxml/slide.ts` and re-exported here.
  */
 
-import type { Emu, HexColor, HundredthPoint, Percentage } from "./types.ts";
-import type { AutoNumberScheme, TextLevel } from "./ooxml/enums.ts";
+import type { Emu, HexColor, HundredthPoint } from "./types.ts";
+import type { TextLevel } from "./ooxml/enums.ts";
+import type {
+  Bullet,
+  CropRect,
+  Fill,
+  GradientStop,
+  Insets,
+  LineDash,
+  LineProperties,
+  ParagraphSpacing,
+  Shadow,
+  TextFit,
+} from "./ooxml/slide.ts";
+
+export type {
+  Bullet,
+  CropRect,
+  Fill,
+  GradientStop,
+  Insets,
+  LineDash,
+  Shadow,
+  TextFit,
+};
+
+/** Line (outline) properties for shapes and table cells. */
+export type LineStyle = LineProperties;
+
+/** Paragraph spacing in EMUs. */
+export type Spacing = ParagraphSpacing;
 
 /** Alignment options for paragraphs. */
 export type Alignment = "left" | "center" | "right" | "justify";
@@ -17,83 +49,8 @@ export type CrossAlignment = "start" | "center" | "end" | "stretch";
 /** Vertical alignment for text within a text body. */
 export type VerticalAlignment = "top" | "middle" | "bottom";
 
-/** Bullet specification for a paragraph. */
-export type Bullet =
-  | { readonly kind: "char"; readonly char: string }
-  | { readonly kind: "autonum"; readonly type: AutoNumberScheme }
-  | { readonly kind: "none" };
-
-/** Paragraph spacing in EMUs. */
-export interface Spacing {
-  readonly before?: Emu;
-  readonly after?: Emu;
-}
-
-/** A gradient stop position and color. */
-export interface GradientStop {
-  readonly pos: Percentage;
-  readonly color: HexColor;
-  readonly alpha?: Percentage;
-}
-
-/** Fill specification for shapes and cells. */
-export type Fill =
-  | {
-    readonly kind: "solid";
-    readonly color: HexColor;
-    readonly alpha?: Percentage;
-  }
-  | {
-    readonly kind: "linear-gradient";
-    readonly angle: number;
-    readonly stops: readonly [
-      GradientStop,
-      GradientStop,
-      ...GradientStop[],
-    ];
-  }
-  | { readonly kind: "none" };
-
-/** Preset dash styles for lines. */
-export type LineDash = "solid" | "dash" | "dot" | "dash-dot";
-
-/** Line (outline) properties for shapes. */
-export interface LineStyle {
-  readonly width?: Emu;
-  readonly fill?: Fill;
-  readonly dash?: LineDash;
-}
-
-/** Text fit behavior within a text body. */
-export type TextFit = "none" | "shrink-text" | "resize-shape";
-
-/** A simple outer shadow. */
-export interface Shadow {
-  readonly color: HexColor;
-  readonly blur: Emu;
-  readonly distance: Emu;
-  readonly angle: number;
-  readonly alpha?: Percentage;
-}
-
-/** Crop percentages relative to the image source. */
-export interface CropRect {
-  readonly top?: Percentage;
-  readonly right?: Percentage;
-  readonly bottom?: Percentage;
-  readonly left?: Percentage;
-}
-
 /** Image fit behavior within an allocated frame. */
 export type ImageFit = "contain" | "cover" | "stretch";
-
-/** Padding values in EMUs. */
-export interface Insets {
-  readonly top?: Emu;
-  readonly right?: Emu;
-  readonly bottom?: Emu;
-  readonly left?: Emu;
-}
 
 /** Inline text styling. */
 export interface TextStyle {
@@ -134,327 +91,140 @@ export interface CellStyle {
 /** Unified styling for content containers: box, paragraph, and text-run fields. */
 export interface Style extends BoxStyle, ParagraphStyle, TextStyle {}
 
-export type StyleEntry<T> = T | false | null | undefined;
+type StyleEntry<T> = T | false | null | undefined;
+
+/** One style object or an array merged left to right; falsy entries are skipped. */
 export type StyleInput<T> = StyleEntry<T> | ReadonlyArray<StyleEntry<T>>;
 
-export type BoxStyleInput = StyleInput<BoxStyle>;
+/** Style input restricted to text-run fields. */
 export type TextStyleInput = StyleInput<TextStyle>;
-export type ParagraphStyleInput = StyleInput<ParagraphStyle>;
-export type CellStyleInput = StyleInput<CellStyle>;
-
-function isStyleValue<T>(entry: StyleEntry<T>): entry is T {
-  return entry !== undefined && entry !== false && entry !== null;
-}
-
-function isSingleStyleValue<T>(input: StyleInput<T> | undefined): input is T {
-  return !Array.isArray(input) && input !== undefined && input !== false &&
-    input !== null;
-}
 
 function styleEntries<T>(input?: StyleInput<T>): ReadonlyArray<T> {
   if (input === undefined || input === false || input === null) return [];
   if (Array.isArray(input)) {
-    return input.filter(isStyleValue);
+    return input.filter((entry): entry is T =>
+      entry !== undefined && entry !== false && entry !== null
+    );
   }
-  if (isSingleStyleValue(input)) {
-    return [input];
+  return [input as T];
+}
+
+/** Merge two optional objects field by field, later defined values winning. */
+function mergeFields<T extends object>(
+  base: T | undefined,
+  next: T | undefined,
+): T | undefined {
+  if (!base) return next;
+  if (!next) return base;
+  const merged = { ...base } as Record<string, unknown>;
+  for (const [key, value] of Object.entries(next)) {
+    if (value !== undefined) merged[key] = value;
   }
-  return [];
+  return merged as T;
 }
 
-function cloneFill(fill: Fill | undefined): Fill | undefined {
-  if (!fill) return undefined;
-  if (fill.kind !== "linear-gradient") return { ...fill };
-  return {
-    kind: "linear-gradient",
-    angle: fill.angle,
-    stops: [
-      { ...fill.stops[0] },
-      { ...fill.stops[1] },
-      ...fill.stops.slice(2).map((stop) => ({ ...stop })),
-    ],
-  };
-}
-
-function mergeFill(
-  base: Fill | undefined,
-  next: Fill | undefined,
-): Fill | undefined {
-  return next === undefined ? cloneFill(base) : cloneFill(next);
-}
-
-function mergeLineStyle(
-  base: LineStyle | undefined,
-  next: LineStyle | undefined,
-): LineStyle | undefined {
-  if (!base && !next) return undefined;
-  if (!base) {
-    return {
-      width: next?.width,
-      fill: cloneFill(next?.fill),
-      dash: next?.dash,
-    };
-  }
-  if (!next) {
-    return {
-      width: base.width,
-      fill: cloneFill(base.fill),
-      dash: base.dash,
-    };
-  }
-  return {
-    width: next.width ?? base.width,
-    fill: mergeFill(base.fill, next.fill),
-    dash: next.dash ?? base.dash,
-  };
-}
-
-function mergeShadow(
-  base: Shadow | undefined,
-  next: Shadow | undefined,
-): Shadow | undefined {
-  if (!base && !next) return undefined;
-  if (!base) return next ? { ...next } : undefined;
-  if (!next) return { ...base };
-  return {
-    color: next.color ?? base.color,
-    blur: next.blur ?? base.blur,
-    distance: next.distance ?? base.distance,
-    angle: next.angle ?? base.angle,
-    alpha: next.alpha ?? base.alpha,
-  };
-}
-
-function mergeSpacing(
-  base: Spacing | undefined,
-  next: Spacing | undefined,
-): Spacing | undefined {
-  if (!base && !next) return undefined;
-  if (!base) return next ? { ...next } : undefined;
-  if (!next) return { ...base };
-  return {
-    before: next.before ?? base.before,
-    after: next.after ?? base.after,
-  };
-}
-
-function mergeInsets(
+/** Merge padding values; per-side objects merge, scalars replace. */
+export function mergeInsets(
   base: Emu | Insets | undefined,
   next: Emu | Insets | undefined,
 ): Emu | Insets | undefined {
-  if (next === undefined) {
-    if (typeof base === "number" || base === undefined) return base;
-    return { ...base };
-  }
-  if (
-    typeof next === "number" || typeof base === "number" || base === undefined
-  ) {
-    if (typeof next === "number") return next;
-    return { ...next };
-  }
-  return {
-    top: next.top ?? base.top,
-    right: next.right ?? base.right,
-    bottom: next.bottom ?? base.bottom,
-    left: next.left ?? base.left,
-  };
+  if (next === undefined) return base;
+  if (typeof next === "number" || typeof base !== "object") return next;
+  return mergeFields(base, next);
 }
 
-function mergeBoxDefinitions(
-  definitions: ReadonlyArray<BoxStyle>,
-): BoxStyle | undefined {
-  if (definitions.length === 0) return undefined;
-  let merged: BoxStyle = {};
-  for (const definition of definitions) {
-    merged = {
-      fill: mergeFill(merged.fill, definition.fill),
-      line: mergeLineStyle(merged.line, definition.line),
-      verticalAlign: definition.verticalAlign ?? merged.verticalAlign,
-      padding: mergeInsets(merged.padding, definition.padding),
-      fit: definition.fit ?? merged.fit,
-      shadow: mergeShadow(merged.shadow, definition.shadow),
-    };
-  }
-  return merged;
-}
-
+/** Merge text styles, later defined fields winning. */
 export function mergeTextStyles(
   base: TextStyle | undefined,
   next: TextStyle | undefined,
 ): TextStyle | undefined {
-  if (!base && !next) return undefined;
-  if (!base) return next ? { ...next } : undefined;
-  if (!next) return { ...base };
-  return {
-    bold: next.bold ?? base.bold,
-    italic: next.italic ?? base.italic,
-    underline: next.underline ?? base.underline,
-    fontSize: next.fontSize ?? base.fontSize,
-    fontColor: next.fontColor ?? base.fontColor,
-    fontFamily: next.fontFamily ?? base.fontFamily,
-  };
+  return mergeFields(base, next);
 }
 
-function mergeTextDefinitions(
-  definitions: ReadonlyArray<TextStyle>,
-): TextStyle | undefined {
-  if (definitions.length === 0) return undefined;
-  let merged: TextStyle = {};
-  for (const definition of definitions) {
-    merged = mergeTextStyles(merged, definition) ?? {};
-  }
-  return merged;
-}
-
+/** Merge paragraph styles, later defined fields winning. */
 export function mergeParagraphStyles(
   base: ParagraphStyle | undefined,
   next: ParagraphStyle | undefined,
 ): ParagraphStyle | undefined {
-  if (!base && !next) return undefined;
-  if (!base) return next ? { ...next } : undefined;
-  if (!next) return { ...base };
+  if (!base || !next) return next ?? base;
   return {
-    level: next.level ?? base.level,
-    align: next.align ?? base.align,
-    bullet: next.bullet ?? base.bullet,
-    spacing: mergeSpacing(base.spacing, next.spacing),
+    ...mergeFields(base, next),
+    spacing: mergeFields(base.spacing, next.spacing),
   };
-}
-
-function mergeParagraphDefinitions(
-  definitions: ReadonlyArray<ParagraphStyle>,
-): ParagraphStyle | undefined {
-  if (definitions.length === 0) return undefined;
-  let merged: ParagraphStyle = {};
-  for (const definition of definitions) {
-    merged = mergeParagraphStyles(merged, definition) ?? {};
-  }
-  return merged;
-}
-
-function mergeCellDefinitions(
-  definitions: ReadonlyArray<CellStyle>,
-): CellStyle | undefined {
-  if (definitions.length === 0) return undefined;
-  let merged: CellStyle = {};
-  for (const definition of definitions) {
-    merged = {
-      fill: mergeFill(merged.fill, definition.fill),
-      line: mergeLineStyle(merged.line, definition.line),
-      padding: mergeInsets(merged.padding, definition.padding),
-      verticalAlign: definition.verticalAlign ?? merged.verticalAlign,
-    };
-  }
-  return merged;
-}
-
-/** Resolve box style input into a concrete style object. */
-export function resolveBoxStyle(style?: BoxStyleInput): BoxStyle | undefined {
-  return mergeBoxDefinitions(styleEntries(style));
 }
 
 /** Resolve text style input into a concrete style object. */
 export function resolveTextStyle(
   style?: TextStyleInput,
 ): TextStyle | undefined {
-  return mergeTextDefinitions(styleEntries(style));
+  return styleEntries(style).reduce<TextStyle | undefined>(
+    mergeTextStyles,
+    undefined,
+  );
 }
 
-/** Resolve paragraph style input into a concrete style object. */
-export function resolveParagraphStyle(
-  style?: ParagraphStyleInput,
-): ParagraphStyle | undefined {
-  return mergeParagraphDefinitions(styleEntries(style));
-}
-
-/** Resolve cell style input into a concrete style object. */
-export function resolveCellStyle(
-  style?: CellStyleInput,
-): CellStyle | undefined {
-  return mergeCellDefinitions(styleEntries(style));
-}
-
-/** Resolve a unified style input into a concrete style object. */
+/**
+ * Resolve a unified style input. Fills replace; lines, shadows, spacing, and
+ * per-side padding merge field by field.
+ */
 export function resolveStyle(
   style?: StyleInput<Style>,
 ): Style | undefined {
-  const entries = styleEntries(style);
-  if (entries.length === 0) return undefined;
-  let merged: Style = {};
-  for (const entry of entries) {
-    merged = {
-      fill: mergeFill(merged.fill, entry.fill),
-      line: mergeLineStyle(merged.line, entry.line),
-      verticalAlign: entry.verticalAlign ?? merged.verticalAlign,
+  return styleEntries(style).reduce<Style | undefined>((merged, entry) => {
+    if (!merged) return entry;
+    return {
+      ...mergeFields(merged, entry),
+      line: mergeFields(merged.line, entry.line),
+      shadow: mergeFields(merged.shadow, entry.shadow),
+      spacing: mergeFields(merged.spacing, entry.spacing),
       padding: mergeInsets(merged.padding, entry.padding),
-      fit: entry.fit ?? merged.fit,
-      shadow: mergeShadow(merged.shadow, entry.shadow),
-      level: entry.level ?? merged.level,
-      align: entry.align ?? merged.align,
-      bullet: entry.bullet ?? merged.bullet,
-      spacing: mergeSpacing(merged.spacing, entry.spacing),
-      bold: entry.bold ?? merged.bold,
-      italic: entry.italic ?? merged.italic,
-      underline: entry.underline ?? merged.underline,
-      fontSize: entry.fontSize ?? merged.fontSize,
-      fontColor: entry.fontColor ?? merged.fontColor,
-      fontFamily: entry.fontFamily ?? merged.fontFamily,
     };
-  }
-  return merged;
+  }, undefined);
 }
 
 /** Split result for a unified style. */
-export interface SplitStyle {
+interface SplitStyle {
   readonly box: BoxStyle | undefined;
   readonly paragraph: ParagraphStyle | undefined;
   readonly text: TextStyle | undefined;
 }
 
+function pick<T extends object>(
+  style: Style,
+  keys: ReadonlyArray<keyof T & keyof Style>,
+): T | undefined {
+  const picked: Record<string, unknown> = {};
+  for (const key of keys) {
+    if (style[key] !== undefined) picked[key] = style[key];
+  }
+  return Object.keys(picked).length > 0 ? picked as T : undefined;
+}
+
 /** Decompose a unified style into box, paragraph, and text parts. */
-export function splitStyle(
-  style: Style | undefined,
-): SplitStyle {
+export function splitStyle(style: Style | undefined): SplitStyle {
   if (!style) return { box: undefined, paragraph: undefined, text: undefined };
-
-  const hasBox = style.fill !== undefined || style.line !== undefined ||
-    style.verticalAlign !== undefined || style.padding !== undefined ||
-    style.fit !== undefined || style.shadow !== undefined;
-  const hasParagraph = style.level !== undefined ||
-    style.align !== undefined || style.bullet !== undefined ||
-    style.spacing !== undefined;
-  const hasText = style.bold !== undefined || style.italic !== undefined ||
-    style.underline !== undefined || style.fontSize !== undefined ||
-    style.fontColor !== undefined || style.fontFamily !== undefined;
-
   return {
-    box: hasBox
-      ? {
-        fill: style.fill,
-        line: style.line,
-        verticalAlign: style.verticalAlign,
-        padding: style.padding,
-        fit: style.fit,
-        shadow: style.shadow,
-      }
-      : undefined,
-    paragraph: hasParagraph
-      ? {
-        level: style.level,
-        align: style.align,
-        bullet: style.bullet,
-        spacing: style.spacing,
-      }
-      : undefined,
-    text: hasText
-      ? {
-        bold: style.bold,
-        italic: style.italic,
-        underline: style.underline,
-        fontSize: style.fontSize,
-        fontColor: style.fontColor,
-        fontFamily: style.fontFamily,
-      }
-      : undefined,
+    box: pick<BoxStyle>(style, [
+      "fill",
+      "line",
+      "verticalAlign",
+      "padding",
+      "fit",
+      "shadow",
+    ]),
+    paragraph: pick<ParagraphStyle>(style, [
+      "level",
+      "align",
+      "bullet",
+      "spacing",
+    ]),
+    text: pick<TextStyle>(style, [
+      "bold",
+      "italic",
+      "underline",
+      "fontSize",
+      "fontColor",
+      "fontFamily",
+    ]),
   };
 }
