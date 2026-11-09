@@ -21,6 +21,7 @@ import {
   Title,
 } from "./jsx_components.ts";
 import type {
+  ChartAreaProps,
   ChartBarProps,
   ChartDonutProps,
   ChartLineProps,
@@ -99,6 +100,10 @@ export interface SlideBuilder {
   /** Add a line chart. */
   addLineChart<Row extends object, Category extends KeysOfType<Row, string>>(
     options: ChartOptions<ChartLineProps<Row, Category>>,
+  ): SlideBuilder;
+  /** Add an area chart. */
+  addAreaChart<Row extends object, Category extends KeysOfType<Row, string>>(
+    options: ChartOptions<ChartAreaProps<Row, Category>>,
   ): SlideBuilder;
   /** Add a single-series pie chart. */
   addPieChart<Row extends object, Category extends KeysOfType<Row, string>>(
@@ -201,6 +206,13 @@ class SlideBuilderImpl implements SlideBuilder {
   ): SlideBuilder {
     const { placement, props } = splitPlacement(options);
     return this.add(Chart.Line(props), placement);
+  }
+
+  addAreaChart<Row extends object, Category extends KeysOfType<Row, string>>(
+    options: ChartOptions<ChartAreaProps<Row, Category>>,
+  ): SlideBuilder {
+    const { placement, props } = splitPlacement(options);
+    return this.add(Chart.Area(props), placement);
   }
 
   addPieChart<Row extends object, Category extends KeysOfType<Row, string>>(

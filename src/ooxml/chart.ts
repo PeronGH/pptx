@@ -1,8 +1,8 @@
 /**
- * Chart part XML generation.
+ * Chart part XML generation. ECMA-376 Part 1 §21.2 (DrawingML Charts).
  */
 
-import { el, renderXmlDocument } from "../xml.ts";
+import { el, renderXmlDocument, type XmlElement } from "../xml.ts";
 import type { HexColor } from "../types.ts";
 import { NS_A, NS_C, NS_R } from "./namespaces.ts";
 import { columnName } from "./embedded_workbook.ts";
@@ -34,35 +34,52 @@ export interface ChartValueAxisDefinition extends ChartAxisDefinition {
   readonly max?: number;
 }
 
+/**
+ * Series stacking for bar and area charts: `"stacked"` adds series on top of
+ * each other, `"percent"` scales each category to 100%.
+ */
+export type ChartStacking = "stacked" | "percent";
+
 interface ChartDefinitionBase {
   readonly title?: string;
   readonly categories: ReadonlyArray<string>;
   readonly labels: boolean;
   readonly legend: ChartLegendDefinition;
+  /**
+   * Excel number format code for values, data labels, and the value axis,
+   * e.g. `"0%"`, `"$#,##0"`, `"#,##0.0"`.
+   */
+  readonly numberFormat?: string;
+}
+
+type MultiSeries = readonly [
+  ChartSeriesDefinition,
+  ...ReadonlyArray<ChartSeriesDefinition>,
+];
+
+interface AxisChartDefinition extends ChartDefinitionBase {
+  readonly series: MultiSeries;
+  readonly categoryAxis?: ChartAxisDefinition;
+  readonly valueAxis?: ChartValueAxisDefinition;
 }
 
 /** Internal bar chart definition. */
-export interface BarChartDefinition extends ChartDefinitionBase {
+export interface BarChartDefinition extends AxisChartDefinition {
   readonly type: "bar";
-  readonly series: readonly [
-    ChartSeriesDefinition,
-    ...ReadonlyArray<ChartSeriesDefinition>,
-  ];
   readonly direction: "column" | "bar";
-  readonly categoryAxis?: ChartAxisDefinition;
-  readonly valueAxis?: ChartValueAxisDefinition;
+  readonly stacking?: ChartStacking;
 }
 
 /** Internal line chart definition. */
-export interface LineChartDefinition extends ChartDefinitionBase {
+export interface LineChartDefinition extends AxisChartDefinition {
   readonly type: "line";
-  readonly series: readonly [
-    ChartSeriesDefinition,
-    ...ReadonlyArray<ChartSeriesDefinition>,
-  ];
   readonly markers: boolean;
-  readonly categoryAxis?: ChartAxisDefinition;
-  readonly valueAxis?: ChartValueAxisDefinition;
+}
+
+/** Internal area chart definition. */
+export interface AreaChartDefinition extends AxisChartDefinition {
+  readonly type: "area";
+  readonly stacking?: ChartStacking;
 }
 
 /** Internal pie chart definition. */
@@ -82,8 +99,11 @@ export interface DonutChartDefinition extends ChartDefinitionBase {
 export type ChartDefinition =
   | BarChartDefinition
   | LineChartDefinition
+  | AreaChartDefinition
   | PieChartDefinition
   | DonutChartDefinition;
+
+type AxisChart = BarChartDefinition | LineChartDefinition | AreaChartDefinition;
 
 const AXIS_CATEGORY_ID = 100000;
 const AXIS_VALUE_ID = 100001;
@@ -97,7 +117,19 @@ function seriesTitleRef(index: number): string {
   return `Sheet1!$${columnName(index + 1)}$1`;
 }
 
-function renderBarSeriesColor(color: HexColor | undefined) {
+/** `c:grouping` value (§21.2.3.4 `ST_BarGrouping`, §21.2.3.17 `ST_Grouping`). */
+function grouping(stacking: ChartStacking | undefined, unstacked: string) {
+  switch (stacking) {
+    case undefined:
+      return unstacked;
+    case "stacked":
+      return "stacked";
+    case "percent":
+      return "percentStacked";
+  }
+}
+
+function renderFillSeriesColor(color: HexColor | undefined) {
   if (!color) return undefined;
   return el(
     "c:spPr",
@@ -120,6 +152,12 @@ function renderLineSeriesColor(color: HexColor | undefined) {
   );
 }
 
+function renderNumFmt(formatCode: string | undefined) {
+  return formatCode === undefined
+    ? undefined
+    : el("c:numFmt", { formatCode, sourceLinked: "0" });
+}
+
 function renderStrCache(categories: ReadonlyArray<string>) {
   return el(
     "c:strCache",
@@ -131,11 +169,14 @@ function renderStrCache(categories: ReadonlyArray<string>) {
   );
 }
 
-function renderNumCache(values: ReadonlyArray<number>) {
+function renderNumCache(
+  values: ReadonlyArray<number>,
+  formatCode: string | undefined,
+) {
   return el(
     "c:numCache",
     {},
-    el("c:formatCode", {}, "General"),
+    el("c:formatCode", {}, formatCode ?? "General"),
     el("c:ptCount", { val: String(values.length) }),
     ...values.map((value, index) =>
       el("c:pt", { idx: String(index) }, el("c:v", {}, String(value)))
@@ -156,7 +197,7 @@ function legendPosValue(position: ChartLegendPosition): "r" | "b" | "t" | "l" {
   }
 }
 
-function renderAxisTitle(title: string) {
+function renderTitle(title: string) {
   return el(
     "c:title",
     {},
@@ -176,10 +217,6 @@ function renderAxisTitle(title: string) {
   );
 }
 
-function renderChartTitle(title: string) {
-  return renderAxisTitle(title);
-}
-
 function renderLegend(legend: ChartLegendDefinition) {
   return el(
     "c:legend",
@@ -190,32 +227,29 @@ function renderLegend(legend: ChartLegendDefinition) {
   );
 }
 
-function renderAxisDataLabels(kind: "bar" | "line") {
-  // CT_DLbls order: dLblPos precedes the show* flags; showLeaderLines follows.
+/**
+ * Value data labels (§21.2.2.49 `c:dLbls`). `position` must be one the chart
+ * type supports: outside ends do not exist on stacked bars, and area charts
+ * accept no position at all.
+ */
+function renderDataLabels(
+  definition: ChartDefinition,
+  position: "outEnd" | "ctr" | undefined,
+  showLeaderLines = false,
+) {
+  // CT_DLbls order: numFmt, dLblPos, show* flags, showLeaderLines.
   return el(
     "c:dLbls",
     {},
-    kind === "bar" ? el("c:dLblPos", { val: "outEnd" }) : undefined,
+    renderNumFmt(definition.numberFormat),
+    position && el("c:dLblPos", { val: position }),
     el("c:showLegendKey", { val: "0" }),
     el("c:showVal", { val: "1" }),
     el("c:showCatName", { val: "0" }),
     el("c:showSerName", { val: "0" }),
     el("c:showPercent", { val: "0" }),
     el("c:showBubbleSize", { val: "0" }),
-  );
-}
-
-function renderCircularDataLabels() {
-  return el(
-    "c:dLbls",
-    {},
-    el("c:showLegendKey", { val: "0" }),
-    el("c:showVal", { val: "1" }),
-    el("c:showCatName", { val: "0" }),
-    el("c:showSerName", { val: "0" }),
-    el("c:showPercent", { val: "0" }),
-    el("c:showBubbleSize", { val: "0" }),
-    el("c:showLeaderLines", { val: "1" }),
+    showLeaderLines && el("c:showLeaderLines", { val: "1" }),
   );
 }
 
@@ -253,6 +287,7 @@ function renderCategoryRef(categories: ReadonlyArray<string>) {
 function renderValueRef(
   values: ReadonlyArray<number>,
   seriesIndex: number,
+  formatCode: string | undefined,
 ) {
   return el(
     "c:val",
@@ -261,15 +296,19 @@ function renderValueRef(
       "c:numRef",
       {},
       el("c:f", {}, workbookRange(seriesIndex + 1, values.length)),
-      renderNumCache(values),
+      renderNumCache(values, formatCode),
     ),
   );
 }
 
-function renderBarSeries(
-  definition: BarChartDefinition,
+/** Series content shared by every chart type, in `EG_SerShared` order. */
+function renderSeries(
+  definition: ChartDefinition,
   series: ChartSeriesDefinition,
   index: number,
+  spPr: XmlElement | undefined,
+  afterSpPr: ReadonlyArray<XmlElement | undefined> = [],
+  trailing: ReadonlyArray<XmlElement> = [],
 ) {
   return el(
     "c:ser",
@@ -277,62 +316,28 @@ function renderBarSeries(
     el("c:idx", { val: String(index) }),
     el("c:order", { val: String(index) }),
     renderSeriesText(index, series.name),
-    renderBarSeriesColor(series.color),
+    spPr,
+    ...afterSpPr,
     renderCategoryRef(definition.categories),
-    renderValueRef(series.values, index),
+    renderValueRef(series.values, index, definition.numberFormat),
+    ...trailing,
   );
 }
 
-function renderLineSeries(
-  definition: LineChartDefinition,
-  series: ChartSeriesDefinition,
-  index: number,
-) {
-  return el(
-    "c:ser",
-    {},
-    el("c:idx", { val: String(index) }),
-    el("c:order", { val: String(index) }),
-    renderSeriesText(index, series.name),
-    renderLineSeriesColor(series.color),
-    definition.markers
-      ? undefined
-      : el("c:marker", {}, el("c:symbol", { val: "none" })),
-    renderCategoryRef(definition.categories),
-    renderValueRef(series.values, index),
-    el("c:smooth", { val: "0" }),
-  );
-}
-
-function renderPieSeries(
-  definition: PieChartDefinition | DonutChartDefinition,
-  series: ChartSeriesDefinition,
-  index: number,
-) {
-  return el(
-    "c:ser",
-    {},
-    el("c:idx", { val: String(index) }),
-    el("c:order", { val: String(index) }),
-    renderSeriesText(index, series.name),
-    renderBarSeriesColor(series.color),
-    renderCategoryRef(definition.categories),
-    renderValueRef(series.values, index),
-  );
-}
-
-function renderCategoryAxis(
-  definition: BarChartDefinition | LineChartDefinition,
-) {
+function renderCategoryAxis(definition: AxisChart) {
   return el(
     "c:catAx",
     {},
     el("c:axId", { val: String(AXIS_CATEGORY_ID) }),
     el("c:scaling", {}, el("c:orientation", { val: "minMax" })),
     el("c:delete", { val: "0" }),
-    el("c:axPos", { val: "b" }),
+    el("c:axPos", {
+      val: definition.type === "bar" && definition.direction === "bar"
+        ? "l"
+        : "b",
+    }),
     definition.categoryAxis?.title
-      ? renderAxisTitle(definition.categoryAxis.title)
+      ? renderTitle(definition.categoryAxis.title)
       : undefined,
     el("c:majorTickMark", { val: "out" }),
     el("c:minorTickMark", { val: "none" }),
@@ -346,7 +351,7 @@ function renderCategoryAxis(
   );
 }
 
-function renderValueAxis(definition: BarChartDefinition | LineChartDefinition) {
+function renderValueAxis(definition: AxisChart) {
   const scalingChildren = [el("c:orientation", { val: "minMax" })];
   if (definition.valueAxis?.max !== undefined) {
     scalingChildren.push(
@@ -358,6 +363,11 @@ function renderValueAxis(definition: BarChartDefinition | LineChartDefinition) {
       el("c:min", { val: String(definition.valueAxis.min) }),
     );
   }
+  // A 100% stacked axis shows shares, whatever the format of the values is.
+  const axisFormat = definition.type !== "line" &&
+      definition.stacking === "percent"
+    ? "0%"
+    : definition.numberFormat;
 
   return el(
     "c:valAx",
@@ -365,11 +375,16 @@ function renderValueAxis(definition: BarChartDefinition | LineChartDefinition) {
     el("c:axId", { val: String(AXIS_VALUE_ID) }),
     el("c:scaling", {}, ...scalingChildren),
     el("c:delete", { val: "0" }),
-    el("c:axPos", { val: "l" }),
+    el("c:axPos", {
+      val: definition.type === "bar" && definition.direction === "bar"
+        ? "b"
+        : "l",
+    }),
     el("c:majorGridlines", {}),
     definition.valueAxis?.title
-      ? renderAxisTitle(definition.valueAxis.title)
+      ? renderTitle(definition.valueAxis.title)
       : undefined,
+    renderNumFmt(axisFormat),
     el("c:majorTickMark", { val: "out" }),
     el("c:minorTickMark", { val: "none" }),
     el("c:tickLblPos", { val: "nextTo" }),
@@ -378,22 +393,38 @@ function renderValueAxis(definition: BarChartDefinition | LineChartDefinition) {
   );
 }
 
+function renderAxisIds() {
+  return [
+    el("c:axId", { val: String(AXIS_CATEGORY_ID) }),
+    el("c:axId", { val: String(AXIS_VALUE_ID) }),
+  ];
+}
+
 function renderBarChart(definition: BarChartDefinition) {
+  const stacked = definition.stacking !== undefined;
   return el(
     "c:barChart",
     {},
     el("c:barDir", {
       val: definition.direction === "column" ? "col" : "bar",
     }),
-    el("c:grouping", { val: "clustered" }),
+    el("c:grouping", { val: grouping(definition.stacking, "clustered") }),
     el("c:varyColors", { val: "0" }),
     ...definition.series.map((series, index) =>
-      renderBarSeries(definition, series, index)
+      renderSeries(
+        definition,
+        series,
+        index,
+        renderFillSeriesColor(series.color),
+      )
     ),
-    definition.labels ? renderAxisDataLabels("bar") : undefined,
+    definition.labels
+      ? renderDataLabels(definition, stacked ? "ctr" : "outEnd")
+      : undefined,
     el("c:gapWidth", { val: "60" }),
-    el("c:axId", { val: String(AXIS_CATEGORY_ID) }),
-    el("c:axId", { val: String(AXIS_VALUE_ID) }),
+    // Stacked series must fully overlap to sit on top of each other.
+    stacked ? el("c:overlap", { val: "100" }) : undefined,
+    ...renderAxisIds(),
   );
 }
 
@@ -404,39 +435,94 @@ function renderLineChart(definition: LineChartDefinition) {
     el("c:grouping", { val: "standard" }),
     el("c:varyColors", { val: "0" }),
     ...definition.series.map((series, index) =>
-      renderLineSeries(definition, series, index)
+      renderSeries(
+        definition,
+        series,
+        index,
+        renderLineSeriesColor(series.color),
+        [
+          definition.markers
+            ? undefined
+            : el("c:marker", {}, el("c:symbol", { val: "none" })),
+        ],
+        [el("c:smooth", { val: "0" })],
+      )
     ),
-    definition.labels ? renderAxisDataLabels("line") : undefined,
+    definition.labels ? renderDataLabels(definition, undefined) : undefined,
     el("c:marker", { val: definition.markers ? "1" : "0" }),
-    el("c:smooth", { val: "0" }),
-    el("c:axId", { val: String(AXIS_CATEGORY_ID) }),
-    el("c:axId", { val: String(AXIS_VALUE_ID) }),
+    ...renderAxisIds(),
   );
 }
 
-function renderPieChart(definition: PieChartDefinition) {
+function renderAreaChart(definition: AreaChartDefinition) {
   return el(
-    "c:pieChart",
+    "c:areaChart",
     {},
-    el("c:varyColors", { val: "1" }),
-    renderPieSeries(definition, definition.series[0], 0),
-    definition.labels ? renderCircularDataLabels() : undefined,
-    el("c:firstSliceAng", { val: "0" }),
+    el("c:grouping", { val: grouping(definition.stacking, "standard") }),
+    el("c:varyColors", { val: "0" }),
+    ...definition.series.map((series, index) =>
+      renderSeries(
+        definition,
+        series,
+        index,
+        renderFillSeriesColor(series.color),
+      )
+    ),
+    definition.labels ? renderDataLabels(definition, undefined) : undefined,
+    ...renderAxisIds(),
   );
 }
 
-function renderDonutChart(definition: DonutChartDefinition) {
-  return el(
-    "c:doughnutChart",
-    {},
+function renderPieChart(definition: PieChartDefinition | DonutChartDefinition) {
+  return [
     el("c:varyColors", { val: "1" }),
-    renderPieSeries(definition, definition.series[0], 0),
-    definition.labels ? renderCircularDataLabels() : undefined,
+    renderSeries(
+      definition,
+      definition.series[0],
+      0,
+      renderFillSeriesColor(definition.series[0].color),
+    ),
+    definition.labels
+      ? renderDataLabels(definition, undefined, true)
+      : undefined,
     el("c:firstSliceAng", { val: "0" }),
-    // Transitional ST_HoleSize also allows "NN%", but Office only reads the
-    // unsignedByte form.
-    el("c:holeSize", { val: String(definition.holeSize) }),
-  );
+  ];
+}
+
+function renderPlotArea(definition: ChartDefinition) {
+  switch (definition.type) {
+    case "bar":
+      return [
+        renderBarChart(definition),
+        renderCategoryAxis(definition),
+        renderValueAxis(definition),
+      ];
+    case "line":
+      return [
+        renderLineChart(definition),
+        renderCategoryAxis(definition),
+        renderValueAxis(definition),
+      ];
+    case "area":
+      return [
+        renderAreaChart(definition),
+        renderCategoryAxis(definition),
+        renderValueAxis(definition),
+      ];
+    case "pie":
+      return [el("c:pieChart", {}, ...renderPieChart(definition))];
+    case "donut":
+      return [
+        el(
+          "c:doughnutChart",
+          {},
+          ...renderPieChart(definition),
+          // Transitional ST_HoleSize also allows "NN%", but Office only reads
+          // the unsignedByte form.
+          el("c:holeSize", { val: String(definition.holeSize) }),
+        ),
+      ];
+  }
 }
 
 /** Generate a chart part. */
@@ -444,23 +530,6 @@ export function renderChartSpace(
   definition: ChartDefinition,
   workbookRelId: string,
 ): string {
-  const plotAreaChildren = [
-    el("c:layout", {}),
-    definition.type === "bar"
-      ? renderBarChart(definition)
-      : definition.type === "line"
-      ? renderLineChart(definition)
-      : definition.type === "pie"
-      ? renderPieChart(definition)
-      : renderDonutChart(definition),
-    definition.type === "bar" || definition.type === "line"
-      ? renderCategoryAxis(definition)
-      : undefined,
-    definition.type === "bar" || definition.type === "line"
-      ? renderValueAxis(definition)
-      : undefined,
-  ];
-
   const root = el(
     "c:chartSpace",
     {
@@ -473,9 +542,14 @@ export function renderChartSpace(
     el(
       "c:chart",
       {},
-      definition.title ? renderChartTitle(definition.title) : undefined,
+      definition.title ? renderTitle(definition.title) : undefined,
       el("c:autoTitleDeleted", { val: definition.title ? "0" : "1" }),
-      el("c:plotArea", {}, ...plotAreaChildren),
+      el(
+        "c:plotArea",
+        {},
+        el("c:layout", {}),
+        ...renderPlotArea(definition),
+      ),
       definition.legend.show ? renderLegend(definition.legend) : undefined,
       el("c:plotVisOnly", { val: "1" }),
       el("c:dispBlanksAs", { val: "gap" }),

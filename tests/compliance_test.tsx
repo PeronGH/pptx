@@ -334,3 +334,114 @@ Deno.test("e2e: <Title> is the slide's title placeholder", async () => {
   const imperative = extractZipText(pres.generate(), "ppt/slides/slide1.xml");
   assert(imperative.includes('<p:ph type="title"/>'));
 });
+
+Deno.test("e2e: stacked bars, area charts, and number formats", async () => {
+  const data = [
+    { q: "Q1", north: 0.12, south: 0.2 },
+    { q: "Q2", north: 0.18, south: 0.25 },
+    { q: "Q3", north: 0.15, south: 0.3 },
+  ];
+  const series = [
+    { name: "North", value: "north", color: clr.hex("1F4E79") },
+    { name: "South", value: "south", color: clr.hex("2E86C1") },
+  ] as const;
+  const pptx = generate(
+    <Presentation>
+      <Slide>
+        <Column gap={u.in(0.2)}>
+          <Row gap={u.in(0.2)} grow={1}>
+            <Chart.Bar
+              grow={1}
+              data={data}
+              category="q"
+              stacking="stacked"
+              numberFormat="0%"
+              labels
+              series={series}
+            />
+            <Chart.Bar
+              grow={1}
+              data={data}
+              category="q"
+              direction="bar"
+              stacking="percent"
+              labels
+              series={series}
+            />
+            <Chart.Area
+              grow={1}
+              data={data}
+              category="q"
+              stacking="stacked"
+              numberFormat="0.0%"
+              labels
+              legend={{ position: "bottom" }}
+              series={series}
+            />
+          </Row>
+          <Row gap={u.in(0.2)} grow={1}>
+            <Chart.Area grow={1} data={data} category="q" series={series} />
+            <Chart.Bar
+              grow={1}
+              data={[{ q: "Q1", revenue: 1250000 }, {
+                q: "Q2",
+                revenue: 1600000,
+              }]}
+              category="q"
+              numberFormat="$#,##0"
+              labels
+              series={[{ name: "Revenue", value: "revenue" }]}
+            />
+            <Chart.Pie
+              grow={1}
+              data={[{ c: "A", share: 0.6 }, { c: "B", share: 0.4 }]}
+              category="c"
+              numberFormat="0%"
+              labels
+              series={[{ name: "Share", value: "share" }]}
+            />
+          </Row>
+        </Column>
+      </Slide>
+    </Presentation>,
+  );
+  const result = await validatePptx(pptx, 1);
+  assertEquals(result.slides[0]?.shape_count, 6);
+
+  const stacked = extractZipText(pptx, "ppt/charts/chart1.xml");
+  assert(stacked.includes('<c:grouping val="stacked"/>'));
+  assert(stacked.includes('<c:overlap val="100"/>'));
+  assert(stacked.includes('<c:dLblPos val="ctr"/>'));
+  assert(stacked.includes("<c:formatCode>0%</c:formatCode>"));
+  assert(stacked.includes('<c:numFmt formatCode="0%" sourceLinked="0"/>'));
+
+  const percent = extractZipText(pptx, "ppt/charts/chart2.xml");
+  assert(percent.includes('<c:grouping val="percentStacked"/>'));
+  assert(percent.includes('<c:numFmt formatCode="0%" sourceLinked="0"/>'));
+  // Horizontal bars put the category axis on the left.
+  assert(/<c:catAx>(?:(?!<\/c:catAx>).)*<c:axPos val="l"\/>/.test(percent));
+
+  const area = extractZipText(pptx, "ppt/charts/chart3.xml");
+  assert(area.includes("<c:areaChart>"));
+  assert(!area.includes("c:dLblPos"));
+
+  const currency = extractZipText(pptx, "ppt/charts/chart5.xml");
+  assert(currency.includes('<c:dLblPos val="outEnd"/>'));
+  assert(currency.includes('formatCode="$#,##0"'));
+
+  const pres = createPresentation();
+  pres.addSlide().addAreaChart({
+    x: u.in(1),
+    y: u.in(1),
+    w: u.in(4),
+    h: u.in(3),
+    data,
+    category: "q",
+    series,
+  });
+  assert(
+    extractZipText(pres.generate(), "ppt/charts/chart1.xml").includes(
+      "<c:areaChart>",
+    ),
+  );
+});

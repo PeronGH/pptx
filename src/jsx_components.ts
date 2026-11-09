@@ -5,11 +5,14 @@
 import {
   type AlignElement,
   type AlignProps,
+  type AnyChartAreaElement,
   type AnyChartBarElement,
   type AnyChartDonutElement,
   type AnyChartLineElement,
   type AnyChartPieElement,
   type BoldElement,
+  type ChartAreaProps,
+  ChartAreaTag,
   type ChartBarProps,
   ChartBarTag,
   type ChartDonutProps,
@@ -121,6 +124,12 @@ type ChartComponentFamily = {
   >(
     props: ChartLineProps<Row, CategoryKey>,
   ) => AnyChartLineElement;
+  readonly Area: <
+    Row extends object,
+    CategoryKey extends KeysOfType<Row, string>,
+  >(
+    props: ChartAreaProps<Row, CategoryKey>,
+  ) => AnyChartAreaElement;
   readonly Pie: <
     Row extends object,
     CategoryKey extends KeysOfType<Row, string>,
@@ -279,6 +288,15 @@ function ChartLine<
   return node(ChartLineTag, props);
 }
 
+function ChartArea<
+  Row extends object,
+  CategoryKey extends KeysOfType<Row, string>,
+>(
+  props: ChartAreaProps<Row, CategoryKey>,
+): AnyChartAreaElement {
+  return node(ChartAreaTag, props);
+}
+
 function ChartPie<
   Row extends object,
   CategoryKey extends KeysOfType<Row, string>,
@@ -300,6 +318,7 @@ function ChartDonut<
 export const Chart: ChartComponentFamily = {
   Bar: ChartBar,
   Line: ChartLine,
+  Area: ChartArea,
   Pie: ChartPie,
   Donut: ChartDonut,
 } as const;

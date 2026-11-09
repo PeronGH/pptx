@@ -5,17 +5,19 @@
 
 import type { HexColor } from "./types.ts";
 import type {
+  AreaChartDefinition,
   BarChartDefinition,
   ChartAxisDefinition,
   ChartLegendPosition,
   ChartSeriesDefinition,
+  ChartStacking,
   ChartValueAxisDefinition,
   DonutChartDefinition,
   LineChartDefinition,
   PieChartDefinition,
 } from "./ooxml/chart.ts";
 
-export type { ChartLegendPosition };
+export type { ChartLegendPosition, ChartStacking };
 
 type KeysOfType<T, Value> = Extract<
   {
@@ -65,6 +67,9 @@ export type BarChart = BarChartDefinition & ChartLeaf;
 /** A normalized multi-series line chart leaf. */
 export type LineChart = LineChartDefinition & ChartLeaf;
 
+/** A normalized multi-series area chart leaf. */
+export type AreaChart = AreaChartDefinition & ChartLeaf;
+
 /** A normalized single-series pie chart leaf. */
 export type PieChart = PieChartDefinition & ChartLeaf;
 
@@ -72,4 +77,9 @@ export type PieChart = PieChartDefinition & ChartLeaf;
 export type DonutChart = DonutChartDefinition & ChartLeaf;
 
 /** Union of normalized chart leaves. */
-export type Chart = BarChart | LineChart | PieChart | DonutChart;
+export type Chart =
+  | BarChart
+  | LineChart
+  | AreaChart
+  | PieChart
+  | DonutChart;

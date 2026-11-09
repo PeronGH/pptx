@@ -82,6 +82,7 @@ export type {
 } from "./src/style.ts";
 
 export type {
+  AreaChart,
   BarChart,
   Chart as ChartNode,
   ChartAxis,
@@ -89,6 +90,7 @@ export type {
   ChartLegend,
   ChartSeries,
   ChartSeriesData,
+  ChartStacking,
   ChartValueAxis,
   DonutChart,
   LineChart,
@@ -105,6 +107,7 @@ export type {
 
 export type {
   AlignProps,
+  ChartAreaProps,
   ChartBarProps,
   ChartDonutProps,
   ChartLineProps,

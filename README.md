@@ -103,8 +103,8 @@ writeFileSync("review.pptx", pres.generate());
 ```
 
 Slides support `addTitle`, `addText`, `addShape`, `addImage`, `addTable`,
-`addBarChart`, `addLineChart`, `addPieChart`, `addDonutChart`, and
-`add(node, placement)` for placing any component tree (e.g.
+`addBarChart`, `addLineChart`, `addAreaChart`, `addPieChart`, `addDonutChart`,
+and `add(node, placement)` for placing any component tree (e.g.
 `Row({ children: [...] })`) in a frame. Options are the matching component props
 plus `x`, `y`, `w`, and `h`.
 
@@ -149,6 +149,7 @@ plus `x`, `y`, `w`, and `h`.
 - `<Table.Cell>`
 - `<Chart.Bar ... />`
 - `<Chart.Line ... />`
+- `<Chart.Area ... />`
 - `<Chart.Pie ... />`
 - `<Chart.Donut ... />`
 
@@ -172,7 +173,10 @@ plus `x`, `y`, `w`, and `h`.
 - Opacity (`alpha`), gradient stop positions, and crops are `u.pct(...)` values;
   angles are degrees
 - Charts use `data`, `category`, and `series=[...]`, with one or more series for
-  bar/line and exactly one series for pie/donut
+  bar/line/area and exactly one series for pie/donut
+- `numberFormat` takes an Excel format code (`"0%"`, `"$#,##0"`) for values,
+  labels, and the value axis; bar and area charts take `stacking: "stacked"` or
+  `"percent"`
 
 ### Placement model
 

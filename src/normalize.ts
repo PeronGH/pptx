@@ -30,11 +30,13 @@ import type {
 } from "./nodes.ts";
 import type { Paragraph, TextRun } from "./text.ts";
 import {
+  type AnyChartAreaElement,
   type AnyChartBarElement,
   type AnyChartDonutElement,
   type AnyChartElement,
   type AnyChartLineElement,
   type AnyChartPieElement,
+  ChartAreaTag,
   ChartBarTag,
   ChartDonutTag,
   ChartLineTag,
@@ -92,6 +94,12 @@ function isChartLineElement(
   return element.type === ChartLineTag;
 }
 
+function isChartAreaElement(
+  element: PptxElement,
+): element is AnyChartAreaElement {
+  return element.type === ChartAreaTag;
+}
+
 function isChartPieElement(
   element: PptxElement,
 ): element is AnyChartPieElement {
@@ -106,6 +114,7 @@ function isChartDonutElement(
 
 function isChartElement(element: PptxElement): element is AnyChartElement {
   return isChartBarElement(element) || isChartLineElement(element) ||
+    isChartAreaElement(element) ||
     isChartPieElement(element) || isChartDonutElement(element);
 }
 
@@ -611,67 +620,58 @@ function normalizeValueAxis(
 }
 
 function normalizeChart(element: AnyChartElement): Chart {
-  const categories = element.props.data.map((row) =>
-    (row as Record<string, unknown>)[element.props.category] as string
-  );
-  const legend = normalizeLegend(element.props.legend);
+  const props = element.props;
+  const base = {
+    kind: "chart" as const,
+    name: props.name,
+    categories: props.data.map((row) =>
+      (row as Record<string, unknown>)[props.category] as string
+    ),
+    title: props.title,
+    labels: props.labels ?? false,
+    legend: normalizeLegend(props.legend),
+    numberFormat: props.numberFormat,
+  };
+  const series = normalizeChartSeries(props.data, props.series);
 
   if (isChartBarElement(element)) {
     return {
-      kind: "chart",
-      name: element.props.name,
+      ...base,
       type: "bar",
-      categories,
-      series: normalizeChartSeries(element.props.data, element.props.series),
-      title: element.props.title,
-      labels: element.props.labels ?? false,
-      legend,
+      series,
       direction: element.props.direction ?? "column",
+      stacking: element.props.stacking,
       categoryAxis: element.props.categoryAxis,
       valueAxis: normalizeValueAxis(element.props.valueAxis),
     };
   }
   if (isChartLineElement(element)) {
     return {
-      kind: "chart",
-      name: element.props.name,
+      ...base,
       type: "line",
-      categories,
-      series: normalizeChartSeries(element.props.data, element.props.series),
-      title: element.props.title,
-      labels: element.props.labels ?? false,
-      legend,
+      series,
       markers: element.props.markers ?? false,
       categoryAxis: element.props.categoryAxis,
       valueAxis: normalizeValueAxis(element.props.valueAxis),
     };
   }
-  if (isChartPieElement(element)) {
-    const series = normalizeChartSeries(
-      element.props.data,
-      element.props.series,
-    );
+  if (isChartAreaElement(element)) {
     return {
-      kind: "chart",
-      name: element.props.name,
-      type: "pie",
-      categories,
-      series: [series[0]!],
-      title: element.props.title,
-      labels: element.props.labels ?? false,
-      legend,
+      ...base,
+      type: "area",
+      series,
+      stacking: element.props.stacking,
+      categoryAxis: element.props.categoryAxis,
+      valueAxis: normalizeValueAxis(element.props.valueAxis),
     };
   }
-  const series = normalizeChartSeries(element.props.data, element.props.series);
+  if (isChartPieElement(element)) {
+    return { ...base, type: "pie", series: [series[0]] };
+  }
   return {
-    kind: "chart",
-    name: element.props.name,
+    ...base,
     type: "donut",
-    categories,
-    series: [series[0]!],
-    title: element.props.title,
-    labels: element.props.labels ?? false,
-    legend,
+    series: [series[0]],
     holeSize: normalizeHoleSize(element.props.holeSize),
   };
 }
@@ -894,6 +894,7 @@ function normalizeBaseNode(
 function elementDisplayTag(element: PptxElement): string {
   if (isChartBarElement(element)) return "Chart.Bar";
   if (isChartLineElement(element)) return "Chart.Line";
+  if (isChartAreaElement(element)) return "Chart.Area";
   if (isChartPieElement(element)) return "Chart.Pie";
   if (isChartDonutElement(element)) return "Chart.Donut";
   if (isPositionedElement(element)) return "Positioned";

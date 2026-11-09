@@ -27,12 +27,14 @@ import type {
   ChartBarDirection,
   ChartLegend,
   ChartSeries,
+  ChartStacking,
   ChartValueAxis,
 } from "./chart.ts";
 
 export const Fragment = Symbol.for("@pixel/pptx.fragment");
 export const ChartBarTag = Symbol.for("@pixel/pptx.chart.bar");
 export const ChartLineTag = Symbol.for("@pixel/pptx.chart.line");
+export const ChartAreaTag = Symbol.for("@pixel/pptx.chart.area");
 export const ChartPieTag = Symbol.for("@pixel/pptx.chart.pie");
 export const ChartDonutTag = Symbol.for("@pixel/pptx.chart.donut");
 export const PositionedTag = Symbol.for("@pixel/pptx.positioned");
@@ -217,8 +219,14 @@ export interface TextTagProps {
 
 type ChartSharedProps = ShapeNameProps & {
   readonly title?: string;
+  /** Show each value as a data label. */
   readonly labels?: boolean;
   readonly legend?: ChartLegend;
+  /**
+   * Excel number format code for values, data labels, and the value axis,
+   * e.g. `"0%"`, `"$#,##0"`, `"#,##0.0"`.
+   */
+  readonly numberFormat?: string;
   readonly children?: never;
 };
 
@@ -239,6 +247,7 @@ type MultiSeriesChartBaseProps = CategoryChartBaseProps & {
 
 type ChartBarBaseProps = MultiSeriesChartBaseProps & {
   readonly direction?: ChartBarDirection;
+  readonly stacking?: ChartStacking;
   readonly categoryAxis?: ChartAxis;
   readonly valueAxis?: ChartValueAxis;
 };
@@ -254,6 +263,8 @@ export type ChartBarProps<
     ...ReadonlyArray<ChartSeries<Row>>,
   ];
   readonly direction?: ChartBarDirection;
+  /** Stack series (`"stacked"`) or scale each category to 100% (`"percent"`). */
+  readonly stacking?: ChartStacking;
   readonly categoryAxis?: ChartAxis;
   readonly valueAxis?: ChartValueAxis;
 };
@@ -275,6 +286,28 @@ export type ChartLineProps<
     ...ReadonlyArray<ChartSeries<Row>>,
   ];
   readonly markers?: boolean;
+  readonly categoryAxis?: ChartAxis;
+  readonly valueAxis?: ChartValueAxis;
+};
+
+type ChartAreaBaseProps = MultiSeriesChartBaseProps & {
+  readonly stacking?: ChartStacking;
+  readonly categoryAxis?: ChartAxis;
+  readonly valueAxis?: ChartValueAxis;
+};
+
+export type ChartAreaProps<
+  Row extends object,
+  CategoryKey extends KeysOfType<Row, string>,
+> = LayoutProps & ChartSharedProps & {
+  readonly data: ReadonlyArray<Row>;
+  readonly category: CategoryKey;
+  readonly series: readonly [
+    ChartSeries<Row>,
+    ...ReadonlyArray<ChartSeries<Row>>,
+  ];
+  /** Stack series (`"stacked"`) or scale each category to 100% (`"percent"`). */
+  readonly stacking?: ChartStacking;
   readonly categoryAxis?: ChartAxis;
   readonly valueAxis?: ChartValueAxis;
 };
@@ -332,6 +365,7 @@ interface InternalElementProps {
   readonly u: TextTagProps;
   readonly [ChartBarTag]: ChartBarBaseProps;
   readonly [ChartLineTag]: ChartLineBaseProps;
+  readonly [ChartAreaTag]: ChartAreaBaseProps;
   readonly [ChartPieTag]: PieLikeChartBaseProps;
   readonly [ChartDonutTag]: ChartDonutBaseProps;
   readonly [PositionedTag]: PositionedProps;
@@ -392,6 +426,14 @@ export type AnyChartLineElement = PptxElement<
   typeof ChartLineTag,
   ChartLineBaseProps
 >;
+export type ChartAreaElement<
+  Row extends object,
+  CategoryKey extends KeysOfType<Row, string>,
+> = PptxElement<typeof ChartAreaTag, ChartAreaProps<Row, CategoryKey>>;
+export type AnyChartAreaElement = PptxElement<
+  typeof ChartAreaTag,
+  ChartAreaBaseProps
+>;
 export type ChartPieElement<
   Row extends object,
   CategoryKey extends KeysOfType<Row, string>,
@@ -411,6 +453,7 @@ export type AnyChartDonutElement = PptxElement<
 export type AnyChartElement =
   | AnyChartBarElement
   | AnyChartLineElement
+  | AnyChartAreaElement
   | AnyChartPieElement
   | AnyChartDonutElement;
 
