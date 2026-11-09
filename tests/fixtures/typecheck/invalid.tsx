@@ -173,3 +173,8 @@ imperativeSlide.addPieChart({
   // @ts-expect-error pie charts accept exactly one series
   series: [{ name: "A", value: "amount" }, { name: "B", value: "amount" }],
 });
+
+void (
+  // @ts-expect-error shrink-on-overflow is unsupported (renders differ)
+  <Text.P style={{ fit: "shrink-text" }}>Too long</Text.P>
+);

@@ -230,7 +230,7 @@ Deno.test("style arrays merge left to right", () => {
             },
             {
               line: { width: u.emu(12700), dash: "dash" },
-              fit: "shrink-text",
+              fit: "resize-shape",
             },
           ]}
         >
@@ -244,7 +244,7 @@ Deno.test("style arrays merge left to right", () => {
   assert(textbox && textbox.kind === "textbox");
   assertEquals(textbox.style?.fill?.kind, "solid");
   assertEquals(textbox.style?.line?.dash, "dash");
-  assertEquals(textbox.style?.fit, "shrink-text");
+  assertEquals(textbox.style?.fit, "resize-shape");
   assertEquals(textbox.style?.padding, u.in(0.1));
 });
 

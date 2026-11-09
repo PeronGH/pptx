@@ -82,7 +82,14 @@ export interface Insets {
 }
 
 /** Supported text fit modes. */
-export type TextFit = "none" | "shrink-text" | "resize-shape";
+/**
+ * How a text body relates to its frame. `"none"` (the default) keeps the
+ * frame. `"resize-shape"` lets consumers grow the shape to fit its text:
+ * LibreOffice does so when rendering, PowerPoint only once the text is
+ * edited, so a LibreOffice render will not match PowerPoint. Shrinking text
+ * to fit is deliberately unsupported for the same reason.
+ */
+export type TextFit = "none" | "resize-shape";
 
 /** Simple outer shadow effect. */
 export interface Shadow {
@@ -481,8 +488,6 @@ function renderTextFit(fit: TextFit | undefined): XmlElement | undefined {
   switch (fit) {
     case "none":
       return el("a:noAutofit", {});
-    case "shrink-text":
-      return el("a:normAutofit", {});
     case "resize-shape":
       return el("a:spAutoFit", {});
     case undefined:

@@ -41,6 +41,15 @@ Do not add:
   bodies; this library owns sibling layout, resource relationships, and OOXML
   correctness.
 
+## Consumers
+
+- The primary consumer is a coding agent writing Deno code in an environment
+  like this one. It learns the API from the README, types, JSDoc, and error
+  messages; do not add agent-specific docs or input formats.
+- Assume the agent runs a render-and-check loop (LibreOffice to PDF to PNG).
+  Prefer output whose LibreOffice render matches PowerPoint, and do not add
+  features that only look right in one of them (e.g. shrink text on overflow).
+
 ## Architecture
 
 - Keep the layers separate: DSL, layout, scene, OOXML/package.
