@@ -16,6 +16,8 @@ import {
   PRESET_GEOMETRIES,
   type PresetGeometry,
   type TextLevel,
+  UNDERLINE_STYLES,
+  type UnderlineStyle,
 } from "./enums.ts";
 import { NS_A, NS_C, NS_P, NS_R } from "./namespaces.ts";
 import {
@@ -31,6 +33,8 @@ import {
   textIndent,
   textIndentLevel,
   textMargin,
+  textPoint,
+  textSpacingPercent,
   textSpacingPoint,
 } from "./simple_types.ts";
 
@@ -113,15 +117,33 @@ export interface HyperlinkInfo {
   readonly rId: string;
 }
 
-/** A text run. */
-export interface TextRun {
-  readonly text: string;
+/** Character formatting for a text run (§21.1.2.3.9 `a:rPr`). */
+export interface TextRunStyle {
   readonly bold?: boolean;
   readonly italic?: boolean;
-  readonly underline?: boolean;
+  /** `true` for a single underline, or a specific underline style. */
+  readonly underline?: boolean | UnderlineStyle;
+  /** `true` for a single strikethrough line, `"double"` for two. */
+  readonly strike?: boolean | "double";
+  /**
+   * Vertical offset: `"superscript"` and `"subscript"` match PowerPoint's
+   * buttons; a percentage of the font size (`u.pct(30)`) sets it exactly.
+   */
+  readonly baseline?: "superscript" | "subscript" | Percentage;
+  /** Background highlight color. */
+  readonly highlight?: HexColor;
+  /** Extra space between characters; negative values condense. */
+  readonly characterSpacing?: Emu;
+  /** Show lowercase letters as capitals (`"all"`) or small capitals. */
+  readonly caps?: "all" | "small";
   readonly fontSize?: HundredthPoint;
   readonly fontColor?: HexColor;
   readonly fontFamily?: string;
+}
+
+/** A text run. */
+export interface TextRun extends TextRunStyle {
+  readonly text: string;
   readonly hyperlink?: HyperlinkInfo;
 }
 
@@ -151,6 +173,14 @@ export interface ParagraphSpacing {
   readonly after?: Emu;
 }
 
+/**
+ * Line spacing: a multiple of single spacing (`{ multiple: 1.5 }`) or an
+ * exact line height (`{ exactly: u.pt(24) }`).
+ */
+export type LineSpacing =
+  | { readonly multiple: number }
+  | { readonly exactly: Emu };
+
 /** A text paragraph. */
 export interface TextParagraph {
   readonly runs: ReadonlyArray<TextRun>;
@@ -158,6 +188,7 @@ export interface TextParagraph {
   readonly alignment?: "l" | "ctr" | "r" | "just";
   readonly bullet?: Bullet;
   readonly spacing?: ParagraphSpacing;
+  readonly lineSpacing?: LineSpacing;
 }
 
 /** Vertical alignment for text bodies. */
@@ -814,7 +845,8 @@ function renderParagraph(para: TextParagraph): XmlElement {
   const children: XmlElement[] = [];
 
   const hasPPr = para.level !== undefined || para.alignment !== undefined ||
-    para.bullet !== undefined || para.spacing !== undefined;
+    para.bullet !== undefined || para.spacing !== undefined ||
+    para.lineSpacing !== undefined;
 
   if (hasPPr) {
     const pPrAttrs: Record<string, string | undefined> = {};
@@ -830,7 +862,24 @@ function renderParagraph(para: TextParagraph): XmlElement {
     if (para.level !== undefined) pPrAttrs["lvl"] = textIndentLevel(para.level);
     if (para.alignment !== undefined) pPrAttrs["algn"] = para.alignment;
 
+    // CT_TextParagraphProperties order: lnSpc, spcBef, spcAft, bullets.
     const pPrChildren: XmlElement[] = [];
+
+    if (para.lineSpacing !== undefined) {
+      pPrChildren.push(
+        el(
+          "a:lnSpc",
+          {},
+          "multiple" in para.lineSpacing
+            ? el("a:spcPct", {
+              val: textSpacingPercent(para.lineSpacing.multiple),
+            })
+            : el("a:spcPts", {
+              val: textSpacingPoint(para.lineSpacing.exactly),
+            }),
+        ),
+      );
+    }
 
     if (para.spacing?.before !== undefined) {
       pPrChildren.push(
@@ -885,15 +934,38 @@ function renderTextRun(run: TextRun): ReadonlyArray<XmlElement> {
   const rPrAttrs: Record<string, string | undefined> = {};
   if (run.bold) rPrAttrs["b"] = "1";
   if (run.italic) rPrAttrs["i"] = "1";
-  if (run.underline) rPrAttrs["u"] = "sng";
+  if (run.underline) {
+    rPrAttrs["u"] = run.underline === true
+      ? "sng"
+      : enumeration(run.underline, UNDERLINE_STYLES, "underline style");
+  }
+  if (run.strike) {
+    rPrAttrs["strike"] = run.strike === "double" ? "dblStrike" : "sngStrike";
+  }
+  if (run.caps) rPrAttrs["cap"] = run.caps;
+  if (run.characterSpacing !== undefined) {
+    rPrAttrs["spc"] = textPoint(run.characterSpacing);
+  }
+  if (run.baseline !== undefined) {
+    // PowerPoint's superscript and subscript buttons use these offsets.
+    rPrAttrs["baseline"] = run.baseline === "superscript"
+      ? "30000"
+      : run.baseline === "subscript"
+      ? "-25000"
+      : percentage(run.baseline, "baseline");
+  }
   if (run.fontSize !== undefined) rPrAttrs["sz"] = textFontSize(run.fontSize);
 
-  // CT_TextCharacterProperties order: fill, ..., latin, ea, cs, ..., hlinkClick.
+  // CT_TextCharacterProperties order: fill, effectLst, highlight, ..., latin,
+  // ea, cs, ..., hlinkClick.
   const rPrChildren: XmlElement[] = [];
   if (run.fontColor !== undefined) {
     rPrChildren.push(
       el("a:solidFill", {}, renderColor(run.fontColor)),
     );
+  }
+  if (run.highlight !== undefined) {
+    rPrChildren.push(el("a:highlight", {}, renderColor(run.highlight)));
   }
   if (run.fontFamily !== undefined) {
     rPrChildren.push(

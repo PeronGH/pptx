@@ -14,6 +14,8 @@ import {
   slideSizeCoordinate,
   textFontSize,
   textIndentLevel,
+  textPoint,
+  textSpacingPercent,
   textSpacingPoint,
 } from "../src/ooxml/simple_types.ts";
 
@@ -67,4 +69,12 @@ Deno.test("enumerations, levels, and counts are checked at runtime", () => {
     RangeError,
     "at least 2",
   );
+});
+
+Deno.test("character and line spacing stay within their ranges", () => {
+  assertEquals(textPoint(u.pt(-2)), "-200");
+  assertThrows(() => textPoint(u.pt(4001)), RangeError, "character spacing");
+  assertEquals(textSpacingPercent(1.25), "125000");
+  assertThrows(() => textSpacingPercent(-1), RangeError, "line spacing");
+  assertThrows(() => textSpacingPercent(133), RangeError, "line spacing");
 });

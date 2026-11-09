@@ -69,6 +69,7 @@ export type {
   ImageFit,
   Insets,
   LineDash,
+  LineSpacing,
   LineStyle,
   MainAlignment,
   Shadow,
@@ -103,6 +104,7 @@ export type {
   AutoNumberScheme,
   PresetGeometry,
   TextLevel,
+  UnderlineStyle,
 } from "./src/ooxml/enums.ts";
 
 export type {

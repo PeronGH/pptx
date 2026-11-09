@@ -247,3 +247,27 @@ export type AutoNumberScheme = typeof AUTO_NUMBER_SCHEMES[number];
 
 /** Paragraph outline level. ECMA-376 Part 1 §20.1.10.71 (`ST_TextIndentLevelType`). */
 export type TextLevel = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+
+/** `ST_TextUnderlineType` values except `none`. */
+export const UNDERLINE_STYLES = [
+  "words",
+  "sng",
+  "dbl",
+  "heavy",
+  "dotted",
+  "dottedHeavy",
+  "dash",
+  "dashHeavy",
+  "dashLong",
+  "dashLongHeavy",
+  "dotDash",
+  "dotDashHeavy",
+  "dotDotDash",
+  "dotDotDashHeavy",
+  "wavy",
+  "wavyHeavy",
+  "wavyDbl",
+] as const;
+
+/** Underline styles. ECMA-376 Part 1 §20.1.10.82 (`ST_TextUnderlineType`). */
+export type UnderlineStyle = typeof UNDERLINE_STYLES[number];

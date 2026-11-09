@@ -116,3 +116,21 @@ export function minOccurs<T>(
   }
   return items;
 }
+
+/** `ST_TextPoint` (§20.1.10.74): EMU converted to 1/100 pt, within ±4000pt. */
+export function textPoint(value: Emu): string {
+  return integerIn(
+    Math.round(value / 127),
+    -400000,
+    400000,
+    "character spacing",
+  );
+}
+
+/**
+ * `ST_TextSpacingPercent` (§20.1.10.77): a line-height multiple (1.5 = 150%)
+ * in 1/1000 %, up to 13200%.
+ */
+export function textSpacingPercent(multiple: number): string {
+  return integerIn(Math.round(multiple * 100000), 0, 13200000, "line spacing");
+}

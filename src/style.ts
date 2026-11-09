@@ -5,7 +5,7 @@
  * are defined once in `ooxml/slide.ts` and re-exported here.
  */
 
-import type { Emu, HexColor, HundredthPoint } from "./types.ts";
+import type { Emu } from "./types.ts";
 import type { TextLevel } from "./ooxml/enums.ts";
 import type {
   Bullet,
@@ -15,9 +15,11 @@ import type {
   Insets,
   LineDash,
   LineProperties,
+  LineSpacing,
   ParagraphSpacing,
   Shadow,
   TextFit,
+  TextRunStyle,
 } from "./ooxml/slide.ts";
 
 export type {
@@ -27,6 +29,7 @@ export type {
   GradientStop,
   Insets,
   LineDash,
+  LineSpacing,
   Shadow,
   TextFit,
 };
@@ -53,14 +56,7 @@ export type VerticalAlignment = "top" | "middle" | "bottom";
 export type ImageFit = "contain" | "cover" | "stretch";
 
 /** Inline text styling. */
-export interface TextStyle {
-  readonly bold?: boolean;
-  readonly italic?: boolean;
-  readonly underline?: boolean;
-  readonly fontSize?: HundredthPoint;
-  readonly fontColor?: HexColor;
-  readonly fontFamily?: string;
-}
+export type TextStyle = TextRunStyle;
 
 /** Paragraph styling. */
 export interface ParagraphStyle {
@@ -68,6 +64,7 @@ export interface ParagraphStyle {
   readonly align?: Alignment;
   readonly bullet?: Bullet;
   readonly spacing?: Spacing;
+  readonly lineSpacing?: LineSpacing;
 }
 
 /** Shape-backed text box styling. */
@@ -217,11 +214,17 @@ export function splitStyle(style: Style | undefined): SplitStyle {
       "align",
       "bullet",
       "spacing",
+      "lineSpacing",
     ]),
     text: pick<TextStyle>(style, [
       "bold",
       "italic",
       "underline",
+      "strike",
+      "baseline",
+      "highlight",
+      "characterSpacing",
+      "caps",
       "fontSize",
       "fontColor",
       "fontFamily",

@@ -504,3 +504,52 @@ Deno.test("e2e: table cells span columns and rows", async () => {
     "needs more than the table's 2 columns",
   );
 });
+
+Deno.test("e2e: character and line spacing styles", async () => {
+  const pptx = generate(
+    <Presentation>
+      <Slide>
+        <Text style={{ fontSize: u.font(20), lineSpacing: { multiple: 1.5 } }}>
+          <Text.P>
+            <Text.Span style={{ strike: true }}>strike</Text.Span>{" "}
+            <Text.Span style={{ strike: "double" }}>double</Text.Span> H
+            <Text.Span style={{ baseline: "subscript" }}>2</Text.Span>O x
+            <Text.Span style={{ baseline: "superscript" }}>2</Text.Span>{" "}
+            <Text.Span style={{ baseline: u.pct(10) }}>raised</Text.Span>
+          </Text.P>
+          <Text.P style={{ lineSpacing: { exactly: u.pt(30) } }}>
+            <Text.Span style={{ highlight: clr.hex("FFFF00") }}>
+              highlighted
+            </Text.Span>{" "}
+            <Text.Span style={{ characterSpacing: u.pt(3) }}>spaced</Text.Span>
+            {" "}
+            <Text.Span style={{ characterSpacing: u.pt(-1) }}>tight</Text.Span>
+            {" "}
+            <Text.Span style={{ caps: "small" }}>small caps</Text.Span>{" "}
+            <Text.Span style={{ underline: "wavy" }}>wavy</Text.Span>
+          </Text.P>
+        </Text>
+      </Slide>
+    </Presentation>,
+  );
+  await validatePptx(pptx, 1);
+  const slide = extractZipText(pptx, "ppt/slides/slide1.xml");
+  for (
+    const fragment of [
+      'strike="sngStrike"',
+      'strike="dblStrike"',
+      'baseline="-25000"',
+      'baseline="30000"',
+      'baseline="10000"',
+      '<a:highlight><a:srgbClr val="FFFF00"/></a:highlight>',
+      'spc="300"',
+      'spc="-100"',
+      'cap="small"',
+      'u="wavy"',
+      '<a:lnSpc><a:spcPct val="150000"/></a:lnSpc>',
+      '<a:lnSpc><a:spcPts val="3000"/></a:lnSpc>',
+    ]
+  ) {
+    assert(slide.includes(fragment), fragment);
+  }
+});

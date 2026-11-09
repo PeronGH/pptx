@@ -94,6 +94,7 @@ function toTextParagraph(
     alignment: style?.align && ALIGNMENT[style.align],
     bullet: style?.bullet,
     spacing: style?.spacing,
+    lineSpacing: style?.lineSpacing,
   };
 }
 

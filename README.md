@@ -169,6 +169,10 @@ plus `x`, `y`, `w`, and `h`.
 - `style` accepts either one style object or an array of style objects
 - Later style entries win, with nested objects merged structurally
 - Backgrounds, fills, lines, shadows, bullets, and image options are plain data
+- Text styles cover `bold`, `italic`, `underline` (or a style like `"wavy"`),
+  `strike`, `baseline` (`"superscript"`/`"subscript"`), `highlight`,
+  `characterSpacing`, `caps`, fonts, and colors; paragraphs add `align`,
+  `bullet`, `spacing`, and `lineSpacing` (`{ multiple }` or `{ exactly }`)
 - `background` takes a hex color, a fill, or `{ data, fit, crop, alpha }` for an
   image
 - Opacity (`alpha`), gradient stop positions, and crops are `u.pct(...)` values;
