@@ -43,6 +43,15 @@ Deno.test("unit helpers convert correctly", () => {
   assertEquals(Number(u.pct(50)), 50000);
 });
 
+Deno.test("unit helpers round to the integer units OOXML requires", () => {
+  assertEquals(Number(u.font(10.333)), 1033);
+  assertEquals(Number(u.pct(12.3456)), 12346);
+  assertEquals(Number(u.emu(0.5)), 1);
+  assertEquals(Number(u.in(1 / 3)), 304800);
+  assertThrows(() => u.in(NaN), Error, "finite");
+  assertThrows(() => u.font(Infinity), Error, "finite");
+});
+
 Deno.test("clr.hex validates and normalizes colors", () => {
   assertEquals(String(clr.hex("ff0000")), "FF0000");
   assertThrows(() => clr.hex("#FF0000"), Error);
@@ -493,6 +502,90 @@ Deno.test("Chart.Donut validates holeSize range", () => {
       ),
     Error,
     "holeSize",
+  );
+  assertThrows(
+    () =>
+      normalizePresentation(
+        <Presentation>
+          <Slide>
+            <Chart.Donut
+              data={[{ segment: "Won", value: 9 }]}
+              category="segment"
+              holeSize={9}
+              series={[{ name: "Deals", value: "value" }]}
+            />
+          </Slide>
+        </Presentation>,
+      ),
+    Error,
+    "10 to 90",
+  );
+});
+
+Deno.test("charts reject non-finite values and axis bounds", () => {
+  assertThrows(
+    () =>
+      normalizePresentation(
+        <Presentation>
+          <Slide>
+            <Chart.Bar
+              data={[{ c: "A", v: NaN }]}
+              category="c"
+              series={[{ name: "S", value: "v" }]}
+            />
+          </Slide>
+        </Presentation>,
+      ),
+    Error,
+    "non-finite",
+  );
+  assertThrows(
+    () =>
+      normalizePresentation(
+        <Presentation>
+          <Slide>
+            <Chart.Line
+              data={[{ c: "A", v: 1 }]}
+              category="c"
+              valueAxis={{ max: Infinity }}
+              series={[{ name: "S", value: "v" }]}
+            />
+          </Slide>
+        </Presentation>,
+      ),
+    Error,
+    "valueAxis.max",
+  );
+});
+
+Deno.test("tables reject missing rows and ragged rows", () => {
+  assertThrows(
+    () =>
+      normalizePresentation(
+        <Presentation>
+          <Slide>
+            <Table cols={[u.in(1)]} />
+          </Slide>
+        </Presentation>,
+      ),
+    Error,
+    "at least one row",
+  );
+  assertThrows(
+    () =>
+      normalizePresentation(
+        <Presentation>
+          <Slide>
+            <Table cols={[u.in(1), u.in(1)]}>
+              <Table.Row height={u.in(0.4)}>
+                <Table.Cell>only one</Table.Cell>
+              </Table.Row>
+            </Table>
+          </Slide>
+        </Presentation>,
+      ),
+    Error,
+    "has 1 cells but the table has 2 columns",
   );
 });
 

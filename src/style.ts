@@ -3,6 +3,7 @@
  */
 
 import type { Emu, HexColor, HundredthPoint, Percentage } from "./types.ts";
+import type { AutoNumberScheme, TextLevel } from "./ooxml/enums.ts";
 
 /** Alignment options for paragraphs. */
 export type Alignment = "left" | "center" | "right" | "justify";
@@ -19,7 +20,7 @@ export type VerticalAlignment = "top" | "middle" | "bottom";
 /** Bullet specification for a paragraph. */
 export type Bullet =
   | { readonly kind: "char"; readonly char: string }
-  | { readonly kind: "autonum"; readonly type: string }
+  | { readonly kind: "autonum"; readonly type: AutoNumberScheme }
   | { readonly kind: "none" };
 
 /** Paragraph spacing in EMUs. */
@@ -32,7 +33,7 @@ export interface Spacing {
 export interface GradientStop {
   readonly pos: Percentage;
   readonly color: HexColor;
-  readonly alpha?: number;
+  readonly alpha?: Percentage;
 }
 
 /** Fill specification for shapes and cells. */
@@ -40,12 +41,16 @@ export type Fill =
   | {
     readonly kind: "solid";
     readonly color: HexColor;
-    readonly alpha?: number;
+    readonly alpha?: Percentage;
   }
   | {
     readonly kind: "linear-gradient";
     readonly angle: number;
-    readonly stops: ReadonlyArray<GradientStop>;
+    readonly stops: readonly [
+      GradientStop,
+      GradientStop,
+      ...GradientStop[],
+    ];
   }
   | { readonly kind: "none" };
 
@@ -68,7 +73,7 @@ export interface Shadow {
   readonly blur: Emu;
   readonly distance: Emu;
   readonly angle: number;
-  readonly alpha?: number;
+  readonly alpha?: Percentage;
 }
 
 /** Crop percentages relative to the image source. */
@@ -102,7 +107,7 @@ export interface TextStyle {
 
 /** Paragraph styling. */
 export interface ParagraphStyle {
-  readonly level?: number;
+  readonly level?: TextLevel;
   readonly align?: Alignment;
   readonly bullet?: Bullet;
   readonly spacing?: Spacing;
@@ -163,7 +168,11 @@ function cloneFill(fill: Fill | undefined): Fill | undefined {
   return {
     kind: "linear-gradient",
     angle: fill.angle,
-    stops: fill.stops.map((stop) => ({ ...stop })),
+    stops: [
+      { ...fill.stops[0] },
+      { ...fill.stops[1] },
+      ...fill.stops.slice(2).map((stop) => ({ ...stop })),
+    ],
   };
 }
 
@@ -448,56 +457,4 @@ export function splitStyle(
       }
       : undefined,
   };
-}
-
-/** Create a solid color fill. */
-export function solidFill(color: HexColor, alpha?: number): Fill {
-  return { kind: "solid", color, alpha };
-}
-
-/** Create a gradient stop. */
-export function gradientStop(
-  pos: Percentage,
-  color: HexColor,
-  alpha?: number,
-): GradientStop {
-  return { pos, color, alpha };
-}
-
-/** Create a linear gradient fill. */
-export function linearGradient(
-  angle: number,
-  ...stops: ReadonlyArray<GradientStop>
-): Fill {
-  return { kind: "linear-gradient", angle, stops };
-}
-
-/** Create a "no fill" specification. */
-export function noFill(): Fill {
-  return { kind: "none" };
-}
-
-/** Create line style properties. */
-export function lineStyle(options: LineStyle): LineStyle {
-  return options;
-}
-
-/** Create a simple outer shadow. */
-export function shadow(options: Shadow): Shadow {
-  return options;
-}
-
-/** Create a paragraph bullet character. */
-export function bulletChar(char: string): Bullet {
-  return { kind: "char", char };
-}
-
-/** Create an auto-numbered bullet specification. */
-export function bulletAutoNum(type: string): Bullet {
-  return { kind: "autonum", type };
-}
-
-/** Create a "no bullet" specification. */
-export function bulletNone(): Bullet {
-  return { kind: "none" };
 }

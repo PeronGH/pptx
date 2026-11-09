@@ -2,7 +2,8 @@
  * Positionless content nodes for the public DSL.
  */
 
-import type { Emu } from "./types.ts";
+import type { Emu, Percentage } from "./types.ts";
+import type { PresetGeometry } from "./ooxml/enums.ts";
 import type { Chart } from "./chart.ts";
 import type {
   BoxStyle,
@@ -37,7 +38,7 @@ export interface TextBox {
 /** A positionless preset shape leaf. */
 export interface Shape {
   readonly kind: "shape";
-  readonly preset: string;
+  readonly preset: PresetGeometry;
   readonly style?: BoxStyle;
   readonly paragraphs: ReadonlyArray<Paragraph>;
 }
@@ -49,7 +50,7 @@ export interface ImageProps {
   readonly description?: string;
   readonly fit?: ImageFit;
   readonly crop?: CropRect;
-  readonly alpha?: number;
+  readonly alpha?: Percentage;
 }
 
 /** A positionless image leaf. */
@@ -82,13 +83,13 @@ export interface TableRow {
 
 /** Props for a table leaf. */
 export interface TableProps {
-  readonly cols: ReadonlyArray<Emu>;
+  readonly cols: readonly [Emu, ...Emu[]];
 }
 
 /** A positionless table leaf. */
 export interface Table {
   readonly kind: "table";
-  readonly cols: ReadonlyArray<Emu>;
+  readonly cols: readonly [Emu, ...Emu[]];
   readonly rows: ReadonlyArray<TableRow>;
 }
 
@@ -116,7 +117,7 @@ export function textbox(
 
 /** Create a positionless preset shape. */
 export function shape(
-  preset: string,
+  preset: PresetGeometry,
   first?: TextBoxOptions | ParagraphContent,
   ...rest: ReadonlyArray<ParagraphContent>
 ): Shape {

@@ -4,7 +4,8 @@
 
 import type { Background } from "./document.ts";
 import type { AlignAxis } from "./layout.ts";
-import type { Emu, HexColor } from "./types.ts";
+import type { Emu, HexColor, Percentage } from "./types.ts";
+import type { PresetGeometry } from "./ooxml/enums.ts";
 import type {
   CropRect,
   CrossAlignment,
@@ -141,7 +142,7 @@ export type TextProps = LayoutProps & {
 };
 
 export type ShapeProps = LayoutProps & {
-  readonly preset: string;
+  readonly preset: PresetGeometry;
   readonly style?: StyleInput<Style>;
   readonly gap?: Emu;
   readonly children?: PptxChild;
@@ -153,12 +154,12 @@ export type ImageProps = LayoutProps & {
   readonly description?: string;
   readonly fit?: ImageFit;
   readonly crop?: CropRect;
-  readonly alpha?: number;
+  readonly alpha?: Percentage;
   readonly children?: never;
 };
 
 export type TableProps = LayoutProps & {
-  readonly cols: ReadonlyArray<Emu>;
+  readonly cols: readonly [Emu, ...Emu[]];
   readonly children?: PptxChild;
 };
 

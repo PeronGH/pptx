@@ -3,6 +3,7 @@
  */
 
 import type { Emu } from "./types.ts";
+import type { PresetGeometry } from "./ooxml/enums.ts";
 import type { Chart } from "./chart.ts";
 import type { BoxStyle, BoxStyleInput } from "./style.ts";
 import { resolveBoxStyle } from "./style.ts";
@@ -47,7 +48,7 @@ export interface SceneShapeProps extends Frame {
 /** A positioned shape scene node. */
 export interface SceneShape extends Frame {
   readonly kind: "shape";
-  readonly preset: string;
+  readonly preset: PresetGeometry;
   readonly style?: BoxStyle;
   readonly paragraphs: ReadonlyArray<ReturnType<typeof toParagraph>>;
 }
@@ -97,7 +98,7 @@ export function sceneTextbox(
 
 /** Create a positioned shape scene node. */
 export function sceneShape(
-  preset: string,
+  preset: PresetGeometry,
   props: SceneShapeProps,
   ...children: ReadonlyArray<ParagraphContent>
 ): SceneShape {

@@ -10,27 +10,39 @@
 
 import { el, renderXmlDocument, type XmlElement } from "../xml.ts";
 import type { Emu, HexColor, HundredthPoint, Percentage } from "../types.ts";
+import type { AutoNumberScheme, PresetGeometry, TextLevel } from "./enums.ts";
 import { NS_A, NS_C, NS_P, NS_R } from "./namespaces.ts";
+import {
+  coordinate,
+  lineWidth,
+  percentage,
+  positiveCoordinate,
+  positiveFixedAngle,
+  positiveFixedPercentage,
+  textFontSize,
+  textMargin,
+  textSpacingPoint,
+} from "./simple_types.ts";
 
 /** Solid color fill. */
 export interface SolidFill {
   readonly kind: "solid";
   readonly color: HexColor;
-  readonly alpha?: number;
+  readonly alpha?: Percentage;
 }
 
 /** Linear gradient stop. */
 export interface GradientStop {
   readonly pos: Percentage;
   readonly color: HexColor;
-  readonly alpha?: number;
+  readonly alpha?: Percentage;
 }
 
 /** Linear gradient fill. */
 export interface LinearGradientFill {
   readonly kind: "linear-gradient";
   readonly angle: number;
-  readonly stops: ReadonlyArray<GradientStop>;
+  readonly stops: readonly [GradientStop, GradientStop, ...GradientStop[]];
 }
 
 /** No fill. */
@@ -68,7 +80,7 @@ export interface Shadow {
   readonly blur: Emu;
   readonly distance: Emu;
   readonly angle: number;
-  readonly alpha?: number;
+  readonly alpha?: Percentage;
 }
 
 /** Crop percentages relative to the image source. */
@@ -105,7 +117,7 @@ export interface BulletChar {
 /** Auto-numbered bullet. */
 export interface BulletAutoNum {
   readonly kind: "autonum";
-  readonly type: string;
+  readonly type: AutoNumberScheme;
 }
 
 /** No bullets. */
@@ -125,7 +137,7 @@ export interface ParagraphSpacing {
 /** A text paragraph. */
 export interface TextParagraph {
   readonly runs: ReadonlyArray<TextRun>;
-  readonly level?: number;
+  readonly level?: TextLevel;
   readonly alignment?: "l" | "ctr" | "r" | "just";
   readonly bullet?: Bullet;
   readonly spacing?: ParagraphSpacing;
@@ -157,7 +169,7 @@ export interface PresetShape {
   readonly y: Emu;
   readonly cx: Emu;
   readonly cy: Emu;
-  readonly preset: string;
+  readonly preset: PresetGeometry;
   readonly paragraphs?: ReadonlyArray<TextParagraph>;
   readonly fill?: Fill;
   readonly line?: LineProperties;
@@ -177,7 +189,7 @@ export interface PictureShape {
   readonly rId: string;
   readonly description?: string;
   readonly crop?: CropRect;
-  readonly alpha?: number;
+  readonly alpha?: Percentage;
 }
 
 /** A table cell. */
@@ -287,14 +299,31 @@ export function renderSlide(
   return renderXmlDocument(root);
 }
 
-function degreesToAngle(degrees: number): string {
-  return String(Math.round(degrees * 60000));
+interface Placement {
+  readonly x: Emu;
+  readonly y: Emu;
+  readonly cx: Emu;
+  readonly cy: Emu;
 }
 
-function renderColor(color: HexColor, alpha?: number): XmlElement {
+function renderTransform(tag: "a:xfrm" | "p:xfrm", shape: Placement) {
+  return el(
+    tag,
+    {},
+    el("a:off", { x: coordinate(shape.x, "x"), y: coordinate(shape.y, "y") }),
+    el("a:ext", {
+      cx: positiveCoordinate(shape.cx, "width"),
+      cy: positiveCoordinate(shape.cy, "height"),
+    }),
+  );
+}
+
+function renderColor(color: HexColor, alpha?: Percentage): XmlElement {
   const children: XmlElement[] = [];
   if (alpha !== undefined) {
-    children.push(el("a:alpha", { val: String(alpha) }));
+    children.push(
+      el("a:alpha", { val: positiveFixedPercentage(alpha, "alpha") }),
+    );
   }
   return el("a:srgbClr", { val: color }, ...children);
 }
@@ -314,12 +343,12 @@ function renderFill(fill: Fill | undefined): XmlElement | undefined {
           ...fill.stops.map((stop) =>
             el(
               "a:gs",
-              { pos: String(stop.pos) },
+              { pos: positiveFixedPercentage(stop.pos, "gradient stop") },
               renderColor(stop.color, stop.alpha),
             )
           ),
         ),
-        el("a:lin", { ang: degreesToAngle(fill.angle), scaled: "1" }),
+        el("a:lin", { ang: positiveFixedAngle(fill.angle), scaled: "1" }),
       );
     case "none":
       return el("a:noFill", {});
@@ -346,7 +375,7 @@ function renderLine(
 ): XmlElement | undefined {
   if (!line) return undefined;
   const attrs: Record<string, string | undefined> = {};
-  if (line.width !== undefined) attrs["w"] = String(line.width);
+  if (line.width !== undefined) attrs["w"] = lineWidth(line.width);
   const children: XmlElement[] = [];
   if (line.fill) {
     const fillEl = renderFill(line.fill);
@@ -367,9 +396,9 @@ function renderShadow(shadow: Shadow | undefined): XmlElement | undefined {
     el(
       "a:outerShdw",
       {
-        blurRad: String(shadow.blur),
-        dist: String(shadow.distance),
-        dir: degreesToAngle(shadow.angle),
+        blurRad: positiveCoordinate(shadow.blur, "shadow blur"),
+        dist: positiveCoordinate(shadow.distance, "shadow distance"),
+        dir: positiveFixedAngle(shadow.angle),
         rotWithShape: "0",
       },
       renderColor(shadow.color, shadow.alpha),
@@ -380,10 +409,10 @@ function renderShadow(shadow: Shadow | undefined): XmlElement | undefined {
 function renderCropRect(crop: CropRect | undefined): XmlElement | undefined {
   if (!crop) return undefined;
   const attrs: Record<string, string | undefined> = {
-    t: crop.top !== undefined ? String(crop.top) : undefined,
-    r: crop.right !== undefined ? String(crop.right) : undefined,
-    b: crop.bottom !== undefined ? String(crop.bottom) : undefined,
-    l: crop.left !== undefined ? String(crop.left) : undefined,
+    t: crop.top !== undefined ? percentage(crop.top, "crop") : undefined,
+    r: crop.right !== undefined ? percentage(crop.right, "crop") : undefined,
+    b: crop.bottom !== undefined ? percentage(crop.bottom, "crop") : undefined,
+    l: crop.left !== undefined ? percentage(crop.left, "crop") : undefined,
   };
   return el("a:srcRect", attrs);
 }
@@ -411,21 +440,20 @@ function renderBodyPr(
   defaultFit?: TextFit,
 ): XmlElement {
   const bodyAttrs: Record<string, string> = { ...attrs };
-  if (padding?.left !== undefined) bodyAttrs["lIns"] = String(padding.left);
-  if (padding?.right !== undefined) bodyAttrs["rIns"] = String(padding.right);
-  if (padding?.top !== undefined) bodyAttrs["tIns"] = String(padding.top);
-  if (padding?.bottom !== undefined) bodyAttrs["bIns"] = String(padding.bottom);
+  if (padding?.left !== undefined) bodyAttrs["lIns"] = textMargin(padding.left);
+  if (padding?.right !== undefined) {
+    bodyAttrs["rIns"] = textMargin(padding.right);
+  }
+  if (padding?.top !== undefined) bodyAttrs["tIns"] = textMargin(padding.top);
+  if (padding?.bottom !== undefined) {
+    bodyAttrs["bIns"] = textMargin(padding.bottom);
+  }
   return el("a:bodyPr", bodyAttrs, renderTextFit(fit, defaultFit));
 }
 
 function renderTextBoxSp(id: number, shape: TextBoxShape): XmlElement {
   const spPrChildren: XmlElement[] = [
-    el(
-      "a:xfrm",
-      {},
-      el("a:off", { x: String(shape.x), y: String(shape.y) }),
-      el("a:ext", { cx: String(shape.cx), cy: String(shape.cy) }),
-    ),
+    renderTransform("a:xfrm", shape),
     el("a:prstGeom", { prst: "rect" }, el("a:avLst", {})),
   ];
 
@@ -464,12 +492,7 @@ function renderTextBoxSp(id: number, shape: TextBoxShape): XmlElement {
 
 function renderPresetSp(id: number, shape: PresetShape): XmlElement {
   const spPrChildren: XmlElement[] = [
-    el(
-      "a:xfrm",
-      {},
-      el("a:off", { x: String(shape.x), y: String(shape.y) }),
-      el("a:ext", { cx: String(shape.cx), cy: String(shape.cy) }),
-    ),
+    renderTransform("a:xfrm", shape),
     el("a:prstGeom", { prst: shape.preset }, el("a:avLst", {})),
   ];
 
@@ -538,7 +561,9 @@ function renderPicture(id: number, shape: PictureShape): XmlElement {
   const desc = shape.description ?? "";
   const blipChildren: XmlElement[] = [];
   if (shape.alpha !== undefined) {
-    blipChildren.push(el("a:alphaModFix", { amt: String(shape.alpha) }));
+    blipChildren.push(el("a:alphaModFix", {
+      amt: positiveFixedPercentage(shape.alpha, "image alpha"),
+    }));
   }
   return el(
     "p:pic",
@@ -560,12 +585,7 @@ function renderPicture(id: number, shape: PictureShape): XmlElement {
     el(
       "p:spPr",
       {},
-      el(
-        "a:xfrm",
-        {},
-        el("a:off", { x: String(shape.x), y: String(shape.y) }),
-        el("a:ext", { cx: String(shape.cx), cy: String(shape.cy) }),
-      ),
+      renderTransform("a:xfrm", shape),
       el("a:prstGeom", { prst: "rect" }, el("a:avLst", {})),
     ),
   );
@@ -575,7 +595,9 @@ const TABLE_URI = "http://schemas.openxmlformats.org/drawingml/2006/table";
 const CHART_URI = "http://schemas.openxmlformats.org/drawingml/2006/chart";
 
 function renderTable(id: number, shape: TableShape): XmlElement {
-  const gridCols = shape.columns.map((w) => el("a:gridCol", { w: String(w) }));
+  const gridCols = shape.columns.map((w) =>
+    el("a:gridCol", { w: positiveCoordinate(w, "column width") })
+  );
 
   const rows = shape.rows.map((row) => {
     const cells = row.cells.map((cell) => {
@@ -592,16 +614,16 @@ function renderTable(id: number, shape: TableShape): XmlElement {
       ];
       const tcPrAttrs: Record<string, string | undefined> = {};
       if (cell.padding?.left !== undefined) {
-        tcPrAttrs["marL"] = String(cell.padding.left);
+        tcPrAttrs["marL"] = textMargin(cell.padding.left);
       }
       if (cell.padding?.right !== undefined) {
-        tcPrAttrs["marR"] = String(cell.padding.right);
+        tcPrAttrs["marR"] = textMargin(cell.padding.right);
       }
       if (cell.padding?.top !== undefined) {
-        tcPrAttrs["marT"] = String(cell.padding.top);
+        tcPrAttrs["marT"] = textMargin(cell.padding.top);
       }
       if (cell.padding?.bottom !== undefined) {
-        tcPrAttrs["marB"] = String(cell.padding.bottom);
+        tcPrAttrs["marB"] = textMargin(cell.padding.bottom);
       }
       if (cell.verticalAlignment) tcPrAttrs["anchor"] = cell.verticalAlignment;
       const tcPrChildren: XmlElement[] = [];
@@ -622,7 +644,11 @@ function renderTable(id: number, shape: TableShape): XmlElement {
       }
       return el("a:tc", {}, ...tcChildren);
     });
-    return el("a:tr", { h: String(row.height) }, ...cells);
+    return el(
+      "a:tr",
+      { h: positiveCoordinate(row.height, "row height") },
+      ...cells,
+    );
   });
 
   return el(
@@ -635,12 +661,7 @@ function renderTable(id: number, shape: TableShape): XmlElement {
       el("p:cNvGraphicFramePr", {}, el("a:graphicFrameLocks", { noGrp: "1" })),
       el("p:nvPr", {}),
     ),
-    el(
-      "p:xfrm",
-      {},
-      el("a:off", { x: String(shape.x), y: String(shape.y) }),
-      el("a:ext", { cx: String(shape.cx), cy: String(shape.cy) }),
-    ),
+    renderTransform("p:xfrm", shape),
     el(
       "a:graphic",
       {},
@@ -670,12 +691,7 @@ function renderChart(id: number, shape: ChartShape): XmlElement {
       el("p:cNvGraphicFramePr", {}, el("a:graphicFrameLocks", { noGrp: "1" })),
       el("p:nvPr", {}),
     ),
-    el(
-      "p:xfrm",
-      {},
-      el("a:off", { x: String(shape.x), y: String(shape.y) }),
-      el("a:ext", { cx: String(shape.cx), cy: String(shape.cy) }),
-    ),
+    renderTransform("p:xfrm", shape),
     el(
       "a:graphic",
       {},
@@ -706,9 +722,7 @@ function renderParagraph(para: TextParagraph): XmlElement {
         el(
           "a:spcBef",
           {},
-          el("a:spcPts", {
-            val: String(Math.round(para.spacing.before / 127)),
-          }),
+          el("a:spcPts", { val: textSpacingPoint(para.spacing.before) }),
         ),
       );
     }
@@ -717,7 +731,7 @@ function renderParagraph(para: TextParagraph): XmlElement {
         el(
           "a:spcAft",
           {},
-          el("a:spcPts", { val: String(Math.round(para.spacing.after / 127)) }),
+          el("a:spcPts", { val: textSpacingPoint(para.spacing.after) }),
         ),
       );
     }
@@ -751,7 +765,7 @@ function renderTextRun(run: TextRun): ReadonlyArray<XmlElement> {
   if (run.bold) rPrAttrs["b"] = "1";
   if (run.italic) rPrAttrs["i"] = "1";
   if (run.underline) rPrAttrs["u"] = "sng";
-  if (run.fontSize !== undefined) rPrAttrs["sz"] = String(run.fontSize);
+  if (run.fontSize !== undefined) rPrAttrs["sz"] = textFontSize(run.fontSize);
 
   // CT_TextCharacterProperties order: fill, ..., latin, ea, cs, ..., hlinkClick.
   const rPrChildren: XmlElement[] = [];

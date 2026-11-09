@@ -3,11 +3,14 @@
 import {
   Align,
   Chart,
+  clr,
   Image,
   Positioned,
   Presentation,
   Row,
+  Shape,
   Slide,
+  Table,
   Text,
   u,
 } from "../../../mod.ts";
@@ -94,4 +97,50 @@ void (
       </Row>
     </Slide>
   </Presentation>
+);
+
+void (
+  // @ts-expect-error preset must be an ST_ShapeType name
+  <Shape preset="notAShape" />
+);
+
+void (
+  // @ts-expect-error paragraph level is 0..8 (ST_TextIndentLevelType)
+  <Text.P style={{ level: 9 }}>Too deep</Text.P>
+);
+
+void (
+  <Text.P
+    // @ts-expect-error autonum type must be an ST_TextAutonumberScheme name
+    style={{ bullet: { kind: "autonum", type: "romanBogus" } }}
+  >
+    Wrong scheme
+  </Text.P>
+);
+
+void (
+  <Shape
+    preset="rect"
+    // @ts-expect-error gradients need at least two stops
+    style={{
+      fill: {
+        kind: "linear-gradient",
+        angle: 0,
+        stops: [{ pos: u.pct(0), color: clr.hex("FF0000") }],
+      },
+    }}
+  />
+);
+
+void (
+  <Shape
+    preset="rect"
+    // @ts-expect-error alpha is a Percentage from u.pct, not a bare number
+    style={{ fill: { kind: "solid", color: clr.hex("FF0000"), alpha: 0.5 } }}
+  />
+);
+
+void (
+  // @ts-expect-error tables need at least one column
+  <Table cols={[]} />
 );

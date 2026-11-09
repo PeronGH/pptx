@@ -2,7 +2,7 @@
  * Slides and presentations in the new public API.
  */
 
-import type { Emu, HexColor } from "./types.ts";
+import type { Emu, HexColor, Percentage } from "./types.ts";
 import type { CropRect, Fill, ImageFit, Insets } from "./style.ts";
 import type { SlideChild } from "./layout.ts";
 
@@ -13,7 +13,7 @@ export interface BackgroundImageProps {
   readonly description?: string;
   readonly fit?: ImageFit;
   readonly crop?: CropRect;
-  readonly alpha?: number;
+  readonly alpha?: Percentage;
 }
 
 /** A slide background: a hex color, a fill, or an image. */

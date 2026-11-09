@@ -99,6 +99,12 @@ export type {
 export type { Paragraph, TextRun } from "./src/text.ts";
 
 export type {
+  AutoNumberScheme,
+  PresetGeometry,
+  TextLevel,
+} from "./src/ooxml/enums.ts";
+
+export type {
   AlignProps,
   ChartBarProps,
   ChartDonutProps,

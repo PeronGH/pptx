@@ -3,7 +3,12 @@
  */
 
 import type { Presentation, Slide } from "./document.ts";
-import type { Chart, ChartLegend, ChartSeriesData } from "./chart.ts";
+import type {
+  Chart,
+  ChartLegend,
+  ChartSeriesData,
+  ChartValueAxis,
+} from "./chart.ts";
 import type {
   Align,
   Col,
@@ -632,9 +637,10 @@ function normalizeLegend(legend: ChartLegend | undefined) {
 
 function normalizeHoleSize(holeSize: number | undefined): number {
   const value = holeSize ?? 50;
-  if (!Number.isInteger(value) || value < 1 || value > 90) {
+  // ECMA-376 Part 1 §21.2.2.82: the hole is between 10% and 90%.
+  if (!Number.isInteger(value) || value < 10 || value > 90) {
     invalidTree(
-      `Invalid donut holeSize "${value}": expected an integer from 1 to 90`,
+      `Invalid donut holeSize "${value}": expected an integer from 10 to 90`,
     );
   }
   return value;
@@ -663,10 +669,37 @@ function normalizeChartSeries(
   return requireNonEmptySeries(series.map((entry) => ({
     name: entry.name,
     values: data.map((row) =>
-      (row as Record<string, unknown>)[entry.value] as number
+      finiteChartNumber(
+        (row as Record<string, unknown>)[entry.value] as number,
+        `series "${entry.name}"`,
+      )
     ),
     color: entry.color,
   })));
+}
+
+function finiteChartNumber(value: number, what: string): number {
+  // Chart rows are runtime data; NaN/Infinity would be written verbatim into
+  // the chart cache and the embedded workbook.
+  if (!Number.isFinite(value)) {
+    invalidTree(`Chart ${what} contains a non-finite value: ${value}`);
+  }
+  return value;
+}
+
+function normalizeValueAxis(
+  axis: ChartValueAxis | undefined,
+): ChartValueAxis | undefined {
+  if (!axis) return undefined;
+  return {
+    title: axis.title,
+    min: axis.min === undefined
+      ? undefined
+      : finiteChartNumber(axis.min, "valueAxis.min"),
+    max: axis.max === undefined
+      ? undefined
+      : finiteChartNumber(axis.max, "valueAxis.max"),
+  };
 }
 
 function normalizeChart(element: AnyChartElement): Chart {
@@ -686,7 +719,7 @@ function normalizeChart(element: AnyChartElement): Chart {
       legend,
       direction: element.props.direction ?? "column",
       categoryAxis: element.props.categoryAxis,
-      valueAxis: element.props.valueAxis,
+      valueAxis: normalizeValueAxis(element.props.valueAxis),
     };
   }
   if (isChartLineElement(element)) {
@@ -700,7 +733,7 @@ function normalizeChart(element: AnyChartElement): Chart {
       legend,
       markers: element.props.markers ?? false,
       categoryAxis: element.props.categoryAxis,
-      valueAxis: element.props.valueAxis,
+      valueAxis: normalizeValueAxis(element.props.valueAxis),
     };
   }
   if (isChartPieElement(element)) {
@@ -903,6 +936,18 @@ function normalizeBaseNode(
     const rows = nonIgnorableChildren(props.children).map((child) =>
       normalizeTableRow(expectElement(child, "table"), defaults)
     );
+    // Row and cell counts come from JSX children, which TypeScript cannot
+    // count. PowerPoint rejects tables without rows or with ragged rows.
+    if (rows.length === 0) invalidTree("<Table> requires at least one row");
+    for (const [index, row] of rows.entries()) {
+      if (row.cells.length !== props.cols.length) {
+        invalidTree(
+          `<Table.Row> ${
+            index + 1
+          } has ${row.cells.length} cells but the table has ${props.cols.length} columns`,
+        );
+      }
+    }
     return {
       kind: "table",
       cols: props.cols,

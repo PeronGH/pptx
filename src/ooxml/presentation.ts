@@ -9,6 +9,7 @@
 import { el, renderXmlDocument } from "../xml.ts";
 import type { Emu } from "../types.ts";
 import { NS_A, NS_P, NS_R } from "./namespaces.ts";
+import { positiveCoordinate, slideSizeCoordinate } from "./simple_types.ts";
 
 /** Slide reference with its relationship ID and numeric ID. */
 export interface SlideRef {
@@ -35,12 +36,13 @@ export function renderPresentation(
   const sldIdLst = el("p:sldIdLst", {}, ...slideIdElements);
 
   const sldSz = el("p:sldSz", {
-    cx: String(slideWidth),
-    cy: String(slideHeight),
+    cx: slideSizeCoordinate(slideWidth, "slide width (EMU)"),
+    cy: slideSizeCoordinate(slideHeight, "slide height (EMU)"),
   });
+  // Notes pages are portrait, matching PowerPoint's default.
   const notesSz = el("p:notesSz", {
-    cx: String(slideHeight),
-    cy: String(slideWidth),
+    cx: positiveCoordinate(slideHeight),
+    cy: positiveCoordinate(slideWidth),
   });
 
   const root = el(

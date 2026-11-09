@@ -9,6 +9,7 @@ import {
   Image,
   Presentation,
   Row,
+  Shape,
   Slide,
   Text,
   u,
@@ -79,4 +80,54 @@ Deno.test("e2e: control characters are dropped and line breaks become a:br", asy
       "<dc:title>Deck title</dc:title>",
     ),
   );
+});
+
+Deno.test("e2e: angles normalize and numeric attributes stay integral", async () => {
+  const pptx = generate(
+    <Presentation>
+      <Slide>
+        <Row gap={u.in(0.2)}>
+          <Shape
+            preset="roundRect"
+            grow={1}
+            style={{
+              fill: {
+                kind: "linear-gradient",
+                angle: -45,
+                stops: [
+                  { pos: u.pct(0), color: clr.hex("1F4E79") },
+                  {
+                    pos: u.pct(100),
+                    color: clr.hex("2678B4"),
+                    alpha: u.pct(40),
+                  },
+                ],
+              },
+              line: { width: u.pt(1.25) },
+              shadow: {
+                color: clr.hex("000000"),
+                blur: u.pt(4),
+                distance: u.pt(2),
+                angle: 360 + 45,
+                alpha: u.pct(33.3333),
+              },
+            }}
+          />
+          <Text.P
+            grow={1}
+            style={{ fontSize: u.font(10.333), spacing: { before: u.pt(3.3) } }}
+          >
+            Integral
+          </Text.P>
+        </Row>
+      </Slide>
+    </Presentation>,
+  );
+
+  await validatePptx(pptx, 1);
+  const slide = extractZipText(pptx, "ppt/slides/slide1.xml");
+  assert(slide.includes('<a:lin ang="18900000"'));
+  assert(slide.includes('dir="2700000"'));
+  assert(slide.includes('sz="1033"'));
+  assert(slide.includes('<a:spcPts val="330"/>'));
 });
