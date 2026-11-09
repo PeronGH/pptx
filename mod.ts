@@ -4,7 +4,8 @@
  * A JSX-first Deno library for generating PPTX files.
  *
  * Author slides with JSX components, then generate an Office Open XML
- * (ECMA-376) presentation package.
+ * (ECMA-376) presentation package. A JSX-free imperative builder is available
+ * from `@pixel/pptx/imperative`.
  *
  * @example
  * ```tsx

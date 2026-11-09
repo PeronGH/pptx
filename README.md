@@ -1,15 +1,17 @@
 # @pixel/pptx
 
-Deno library for generating PPTX files with a JSX-first layout DSL that lowers
-to layout, scene, and OOXML.
+Library for generating PPTX files with a JSX-first layout DSL that lowers to
+layout, scene, and OOXML. Runs on Deno and Node; an imperative, JSX-free API is
+available for plain JavaScript.
 
 ## Install
 
 ```bash
-deno add @pixel/pptx
+deno add jsr:@pixel/pptx      # Deno
+npx jsr add @pixel/pptx       # Node (npm); pnpm, yarn, and bun also support jsr
 ```
 
-Configure Deno to use `@pixel/pptx` as the JSX import source:
+The package is ESM-only. For JSX, use `@pixel/pptx` as the JSX import source:
 
 ```json
 {
@@ -66,6 +68,44 @@ Preview rendered from [`examples/minimal.tsx`](./examples/minimal.tsx).
 Full source: [`examples/quarterly-review.tsx`](./examples/quarterly-review.tsx)
 
 ![Quarterly review slide](./assets/quarterly-review.webp)
+
+## Imperative API (no JSX)
+
+The declarative JSX API above is recommended. For plain JavaScript, or code
+coming from PptxGenJS, `@pixel/pptx/imperative` places items at absolute
+positions and builds the same components underneath:
+
+```js
+import { writeFileSync } from "node:fs";
+import { clr, u } from "@pixel/pptx";
+import { createPresentation } from "@pixel/pptx/imperative";
+
+const pres = createPresentation({ title: "Q2 review" });
+pres.addSlide({ background: clr.hex("F7F4EE") })
+  .addText("Quarterly Review", {
+    x: u.in(0.5),
+    y: u.in(0.4),
+    w: u.in(9),
+    h: u.in(1),
+    style: { fontSize: u.font(32), bold: true },
+  })
+  .addBarChart({
+    x: u.in(0.5),
+    y: u.in(1.6),
+    w: u.in(5),
+    h: u.in(3.5),
+    data: [{ q: "Q1", v: 8 }, { q: "Q2", v: 12 }],
+    category: "q",
+    series: [{ name: "Pipeline", value: "v" }],
+  });
+
+writeFileSync("review.pptx", pres.generate());
+```
+
+Slides support `addText`, `addShape`, `addImage`, `addTable`, `addBarChart`,
+`addLineChart`, `addPieChart`, `addDonutChart`, and `add(node, placement)` for
+placing any component tree (e.g. `Row({ children: [...] })`) in a frame. Options
+are the matching component props plus `x`, `y`, `w`, and `h`.
 
 ## Public API
 
@@ -157,4 +197,4 @@ deno publish --dry-run
 
 Tests validate every generated deck against the ECMA-376 schemas, the Open XML
 SDK, python-pptx, and LibreOffice. They need `scripts/fetch-spec` to have been
-run once, plus `uv`, `dotnet`, and LibreOffice on `PATH`.
+run once, plus `uv`, `dotnet`, `node`, and LibreOffice on `PATH`.

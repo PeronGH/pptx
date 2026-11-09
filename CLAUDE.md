@@ -29,7 +29,9 @@ Do not add:
 
 ## Design constraints
 
-- Keep the library Deno-native and JSR-publishable.
+- Keep the library Deno-native and JSR-publishable, and keep library code
+  runtime-agnostic (no `Deno.*` outside tests and scripts) so it runs on Node.
+  `tests/node_test.ts` enforces this.
 - Push correctness into the type system as far as practical so invalid states
   are hard to represent and runtime failures stay exceptional.
 - Do not build XML with string concatenation.
@@ -59,6 +61,9 @@ Do not add:
 - Keep the public authoring surface component-based; do not expose public
   lowercase intrinsic JSX tags.
 - Do not reintroduce the old function-builder DSL publicly.
+- `@pixel/pptx/imperative` is the only non-JSX authoring surface. It must only
+  build component elements (no second model, no direct writer calls), derive its
+  option types from component props, and stay secondary in the docs.
 - Keep layout inference spec-safe: infer from container geometry, flex/grow,
   defaults, and intrinsic non-text metadata, but do not add text-measurement
   heuristics that try to predict Office wrapping/autofit.
@@ -94,8 +99,8 @@ deno publish --dry-run
   statically or at the validation boundary.
 - Use `scripts/python3` for Python validation, `scripts/libreoffice` for
   LibreOffice invocation, and `scripts/openxml-validate` for the Open XML SDK.
-- If `python-pptx`, `lxml`, LibreOffice, `dotnet`, fonts, or rasterizer tools
-  are missing, stop and ask the user to install them.
+- If `python-pptx`, `lxml`, LibreOffice, `dotnet`, `node`, fonts, or rasterizer
+  tools are missing, stop and ask the user to install them.
 - After large layout, styling, or public API changes, do a manual visual check
   by generating a complex deck, converting it with LibreOffice, rasterizing it,
   and inspecting the images.
